@@ -22,6 +22,10 @@ target_link_libraries(z_gamestate_tool PRIVATE
     zi_always
 )
 
+if(WIN32 OR "${CMAKE_SYSTEM}" MATCHES "Windows")
+    target_compile_definitions(z_gamestate_tool PRIVATE _AFXDLL)
+endif()
+
 target_include_directories(z_gamestate_tool PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}

@@ -1,157 +1,235 @@
-#include <windows.h>
-#include <stdlib.h>
-#include <crtdbg.h>
+#include <afxwin.h>
+#include <afxcmn.h>
+#include <tchar.h>
+#include <vector>
 
-#include "Lib/BaseType.h"
+#pragma warning(push)
+#pragma warning(disable : 4996) // Match legacy MFC init used elsewhere (Enable3dControls).
 
-#include "Common/CommandLine.h"
-#include "Common/CriticalSection.h"
-#include "Common/GameEngine.h"
-#include "Common/GameMemory.h"
-#include "Common/GlobalData.h"
-#include "Common/StackDump.h"
-#include "Common/version.h"
-
-#include "GameClient/ClientInstance.h"
-
-#include "Win32Device/Common/Win32GameEngine.h"
-
-#include "BuildVersion.h"
-#include "GeneratedVersion.h"
-
-#ifdef RTS_PROFILE
-#include <rts/profile.h>
-#endif
-
-// Globals required by the engine (mirrors Main/WinMain.cpp where needed).
-HINSTANCE ApplicationHInstance = NULL;
-HWND ApplicationHWnd = NULL;
-
-class Win32Mouse;
-Win32Mouse *TheWin32Mouse = NULL;
-
-DWORD TheMessageTime = 0;
-
-const Char *g_strFile = "data\\Generals.str";
-const Char *g_csfFile = "data\\%s\\Generals.csf";
-const char *gAppPrefix = "";
-
-static Bool isWinMainActive = TRUE;
-
-// Critical sections used by core string/memory systems.
-static CriticalSection critSec1;
-static CriticalSection critSec2;
-static CriticalSection critSec3;
-static CriticalSection critSec4;
-static CriticalSection critSec5;
-
-static LONG WINAPI UnHandledExceptionFilter(struct _EXCEPTION_POINTERS *e_info)
+struct Property
 {
-	DumpExceptionInfo(e_info->ExceptionRecord->ExceptionCode, e_info);
-	return EXCEPTION_EXECUTE_HANDLER;
+    CString name;
+    CString value;
+};
+
+struct GameObject
+{
+    CString name;
+    std::vector<Property> properties;
+};
+
+struct Category
+{
+    CString name;
+    std::vector<GameObject> objects;
+};
+
+struct GameStateSnapshot
+{
+    std::vector<Category> categories;
+};
+
+static GameStateSnapshot CreateStubGameState()
+{
+    GameStateSnapshot state;
+
+    Category defenses;
+    defenses.name = _T("Defenses");
+    defenses.objects.push_back(GameObject{
+        _T("Patriot Missile"),
+        {
+            {_T("Health"), _T("1000")},
+            {_T("Ammo"), _T("12")},
+            {_T("Owner"), _T("USA")},
+        },
+    });
+    defenses.objects.push_back(GameObject{
+        _T("Gattling Cannon"),
+        {
+            {_T("Health"), _T("900")},
+            {_T("Ammo"), _T("Infinite")},
+            {_T("Owner"), _T("China")},
+        },
+    });
+
+    Category economy;
+    economy.name = _T("Economy");
+    economy.objects.push_back(GameObject{
+        _T("Supply Center"),
+        {
+            {_T("Health"), _T("1500")},
+            {_T("Collectors"), _T("2")},
+            {_T("Income/sec"), _T("120")},
+        },
+    });
+
+    state.categories.push_back(defenses);
+    state.categories.push_back(economy);
+    return state;
 }
 
-// Factory for the platform-specific GameEngine instance.
-GameEngine *CreateGameEngine(void)
+static void ApplySimulatedPipeUpdate(GameStateSnapshot &state)
 {
-	Win32GameEngine *engine = NEW Win32GameEngine;
-	engine->setIsActive(isWinMainActive);
-	return engine;
+    // Simulate receiving a named-pipe delta by tweaking one property and adding another.
+    if (!state.categories.empty() && !state.categories[0].objects.empty())
+    {
+        GameObject &obj = state.categories[0].objects[0];
+        if (!obj.properties.empty())
+        {
+            obj.properties[0].value = _T("950"); // pretend health reduced
+        }
+        obj.properties.push_back({_T("LastUpdated"), _T("PipeEvent#1")});
+    }
 }
 
-Int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpCmdLine*/, Int /*nCmdShow*/)
+class CGameStateToolFrame : public CFrameWnd
 {
-	ApplicationHInstance = hInstance;
-	Int exitcode = 1;
-	try
-	{
-		SetUnhandledExceptionFilter(UnHandledExceptionFilter);
+public:
+    CGameStateToolFrame()
+    {
+        Create(nullptr, _T("GameStateTool - Hello MFC"));
+        m_state = CreateStubGameState();
+    }
 
-		TheAsciiStringCriticalSection = &critSec1;
-		TheUnicodeStringCriticalSection = &critSec2;
-		TheDmaCriticalSection = &critSec3;
-		TheMemoryPoolCriticalSection = &critSec4;
-		TheDebugLogCriticalSection = &critSec5;
+protected:
+    afx_msg void OnPaint();
+    afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
+    afx_msg void OnSize(UINT nType, int cx, int cy);
+    afx_msg void OnSimulatePipeUpdate();
+    DECLARE_MESSAGE_MAP()
 
-		// Initialize the memory manager early.
-		initMemoryManager();
+private:
+    void RenderState();
 
-		// Set working directory to the directory of the executable.
-		Char buffer[_MAX_PATH];
-		GetModuleFileName(NULL, buffer, sizeof(buffer));
-		if (Char *pEnd = strrchr(buffer, '\\'))
-		{
-			*pEnd = 0;
-		}
-		SetCurrentDirectoryA(buffer);
+    static constexpr UINT kSimulateButtonId = 1001;
+    CButton m_simulateButton;
+    CTreeCtrl m_stateTree;
+    GameStateSnapshot m_state;
+};
 
-#ifdef RTS_DEBUG
-		// Turn on Memory heap tracking.
-		int tmpFlag = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
-		tmpFlag |= (_CRTDBG_LEAK_CHECK_DF | _CRTDBG_ALLOC_MEM_DF);
-		tmpFlag &= ~_CRTDBG_CHECK_CRT_DF;
-		_CrtSetDbgFlag(tmpFlag);
-#endif
+BEGIN_MESSAGE_MAP(CGameStateToolFrame, CFrameWnd)
+ON_WM_PAINT()
+ON_WM_CREATE()
+ON_WM_SIZE()
+ON_BN_CLICKED(kSimulateButtonId, OnSimulatePipeUpdate)
+END_MESSAGE_MAP()
 
-		// Parse common startup switches (-headless, -replay, -jobs, ...).
-		CommandLine::parseCommandLineForStartup();
-
-		// Force headless mode for this tool.
-		TheWritableGlobalData->m_headless = TRUE;
-		TheWritableGlobalData->m_playIntro = FALSE;
-		TheWritableGlobalData->m_afterIntro = TRUE;
-		TheWritableGlobalData->m_playSizzle = FALSE;
-
-		TheWritableGlobalData->m_simulateReplays = {"stephan.rep"};
-		// TheWritableGlobalData->m_simulateReplays = {R"(!Golden Replay #1.rep)"};
-
-		// Provide the instance handle for GameEngine / COM module.
-		ApplicationHInstance = GetModuleHandle(nullptr);
-
-		// Set up version info (used by networking / CRC helpers).
-		TheVersion = NEW Version;
-		TheVersion->setVersion(
-			VERSION_MAJOR,
-			VERSION_MINOR,
-			VERSION_BUILDNUM,
-			VERSION_LOCALBUILDNUM,
-			AsciiString(VERSION_BUILDUSER),
-			AsciiString(VERSION_BUILDLOC),
-			AsciiString(__TIME__),
-			AsciiString(__DATE__));
-
-		// Ensure we are the only Zero Hour instance for this profile.
-		if (!rts::ClientInstance::initialize())
-		{
-			delete TheVersion;
-			TheVersion = NULL;
-			shutdownMemoryManager();
-			return exitcode;
-		}
-
-		// Run the main game loop / replay simulation in headless modea.
-		printf("started.");
-		exitcode = GameMain();
-
-		delete TheVersion;
-		TheVersion = NULL;
-
-#ifdef MEMORYPOOL_DEBUG
-		TheMemoryPoolFactory->debugMemoryReport(REPORT_POOLINFO | REPORT_POOL_OVERFLOW | REPORT_SIMPLE_LEAKS, 0, 0);
-#endif
-#if defined(RTS_DEBUG)
-		TheMemoryPoolFactory->memoryPoolUsageReport("AAAMemStats");
-#endif
-
-		shutdownMemoryManager();
-	}
-	catch (...)
-	{
-		// Unhandled exceptions are reported via UnHandledExceptionFilter.
-	}
-	TheUnicodeStringCriticalSection = NULL;
-	TheDmaCriticalSection = NULL;
-	TheMemoryPoolCriticalSection = NULL;
-	return exitcode;
+void CGameStateToolFrame::OnPaint()
+{
+    CPaintDC dc(this);
+    CRect rect;
+    GetClientRect(&rect);
+    dc.DrawText(_T("GameStateTool (MFC) - Named pipe stub view"), -1, &rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 }
 
+int CGameStateToolFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
+{
+    if (CFrameWnd::OnCreate(lpCreateStruct) == -1)
+    {
+        return -1;
+    }
+
+    CRect client;
+    GetClientRect(&client);
+    const int buttonHeight = 28;
+    const int padding = 8;
+
+    m_simulateButton.Create(
+        _T("Simulate Pipe Update"),
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        CRect(padding, padding, client.Width() - padding, padding + buttonHeight),
+        this,
+        kSimulateButtonId);
+
+    m_stateTree.Create(
+        WS_CHILD | WS_VISIBLE | WS_BORDER | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_SHOWSELALWAYS,
+        CRect(
+            padding,
+            padding * 2 + buttonHeight,
+            client.Width() - padding,
+            client.Height() - padding),
+        this,
+        0);
+
+    RenderState();
+    return 0;
+}
+
+void CGameStateToolFrame::OnSize(UINT nType, int cx, int cy)
+{
+    CFrameWnd::OnSize(nType, cx, cy);
+    const int buttonHeight = 28;
+    const int padding = 8;
+    if (m_simulateButton.GetSafeHwnd())
+    {
+        m_simulateButton.MoveWindow(padding, padding, cx - padding * 2, buttonHeight);
+    }
+    if (m_stateTree.GetSafeHwnd())
+    {
+        m_stateTree.MoveWindow(
+            padding,
+            padding * 2 + buttonHeight,
+            cx - padding * 2,
+            cy - (padding * 3 + buttonHeight));
+    }
+}
+
+void CGameStateToolFrame::OnSimulatePipeUpdate()
+{
+    ApplySimulatedPipeUpdate(m_state);
+    RenderState();
+}
+
+void CGameStateToolFrame::RenderState()
+{
+    m_stateTree.DeleteAllItems();
+
+    for (const Category &category : m_state.categories)
+    {
+        HTREEITEM hCat = m_stateTree.InsertItem(category.name);
+        for (const GameObject &obj : category.objects)
+        {
+            CString objLine;
+            objLine.Format(_T("%s"), obj.name.GetString());
+            HTREEITEM hObj = m_stateTree.InsertItem(objLine, hCat);
+            for (const Property &prop : obj.properties)
+            {
+                CString propLine;
+                propLine.Format(_T("%s: %s"), prop.name.GetString(), prop.value.GetString());
+                m_stateTree.InsertItem(propLine, hObj);
+            }
+            m_stateTree.Expand(hObj, TVE_EXPAND);
+        }
+        m_stateTree.Expand(hCat, TVE_EXPAND);
+    }
+}
+
+class CGameStateToolApp : public CWinApp
+{
+public:
+    BOOL InitInstance() override
+    {
+        CWinApp::InitInstance();
+
+        INITCOMMONCONTROLSEX icc = {};
+        icc.dwSize = sizeof(INITCOMMONCONTROLSEX);
+        icc.dwICC = ICC_TREEVIEW_CLASSES;
+        InitCommonControlsEx(&icc);
+
+#ifdef _AFXDLL
+        Enable3dControls(); // Match WorldBuilder/wdump initialization style.
+#else
+        Enable3dControlsStatic();
+#endif
+
+        CGameStateToolFrame *frame = new CGameStateToolFrame();
+        m_pMainWnd = frame;
+        frame->ShowWindow(SW_SHOW);
+        frame->UpdateWindow();
+        return TRUE;
+    }
+};
+
+CGameStateToolApp theApp;
+
+#pragma warning(pop)
