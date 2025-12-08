@@ -1,14 +1,10 @@
-add_executable(z_headless_tool)
+add_executable(z_gamestate_tool WIN32)
 
-target_compile_definitions(z_headless_tool PRIVATE _CONSOLE)
+add_compile_definitions(z_gamestate_tool PRIVATE DEBUG_LOGGING=1)
 
-if("${CMAKE_SYSTEM}" MATCHES "Windows")
-    set_target_properties(z_headless_tool PROPERTIES OUTPUT_NAME z_gamestate_tool)
-else()
-    set_target_properties(z_headless_tool PROPERTIES OUTPUT_NAME z_gamestate_tool)
-endif()
+set_target_properties(z_gamestate_tool PROPERTIES OUTPUT_NAME z_gamestate_tool)
 
-target_link_libraries(z_headless_tool PRIVATE
+target_link_libraries(z_gamestate_tool PRIVATE
     binkstub
     comctl32
     core_debug
@@ -26,12 +22,12 @@ target_link_libraries(z_headless_tool PRIVATE
     zi_always
 )
 
-target_include_directories(z_headless_tool PRIVATE
+target_include_directories(z_gamestate_tool PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-target_sources(z_headless_tool PRIVATE
+target_sources(z_gamestate_tool PRIVATE
     ToolMain.cpp
 )
 

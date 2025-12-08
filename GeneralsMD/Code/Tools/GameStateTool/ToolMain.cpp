@@ -59,14 +59,10 @@ GameEngine *CreateGameEngine(void)
 	return engine;
 }
 
-int main(int /*argc*/, char ** /*argv*/)
+Int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpCmdLine*/, Int /*nCmdShow*/)
 {
+	ApplicationHInstance = hInstance;
 	Int exitcode = 1;
-
-#ifdef RTS_PROFILE
-	Profile::StartRange("init");
-#endif
-
 	try
 	{
 		SetUnhandledExceptionFilter(UnHandledExceptionFilter);
@@ -87,7 +83,7 @@ int main(int /*argc*/, char ** /*argv*/)
 		{
 			*pEnd = 0;
 		}
-		::SetCurrentDirectory(buffer);
+		SetCurrentDirectoryA(buffer);
 
 #ifdef RTS_DEBUG
 		// Turn on Memory heap tracking.
@@ -106,20 +102,23 @@ int main(int /*argc*/, char ** /*argv*/)
 		TheWritableGlobalData->m_afterIntro = TRUE;
 		TheWritableGlobalData->m_playSizzle = FALSE;
 
+		TheWritableGlobalData->m_simulateReplays = {"stephan.rep"};
+		// TheWritableGlobalData->m_simulateReplays = {R"(!Golden Replay #1.rep)"};
+
 		// Provide the instance handle for GameEngine / COM module.
-		ApplicationHInstance = GetModuleHandle(NULL);
+		ApplicationHInstance = GetModuleHandle(nullptr);
 
 		// Set up version info (used by networking / CRC helpers).
 		TheVersion = NEW Version;
 		TheVersion->setVersion(
-		    VERSION_MAJOR,
-		    VERSION_MINOR,
-		    VERSION_BUILDNUM,
-		    VERSION_LOCALBUILDNUM,
-		    AsciiString(VERSION_BUILDUSER),
-		    AsciiString(VERSION_BUILDLOC),
-		    AsciiString(__TIME__),
-		    AsciiString(__DATE__));
+			VERSION_MAJOR,
+			VERSION_MINOR,
+			VERSION_BUILDNUM,
+			VERSION_LOCALBUILDNUM,
+			AsciiString(VERSION_BUILDUSER),
+			AsciiString(VERSION_BUILDLOC),
+			AsciiString(__TIME__),
+			AsciiString(__DATE__));
 
 		// Ensure we are the only Zero Hour instance for this profile.
 		if (!rts::ClientInstance::initialize())
@@ -150,11 +149,9 @@ int main(int /*argc*/, char ** /*argv*/)
 	{
 		// Unhandled exceptions are reported via UnHandledExceptionFilter.
 	}
-
 	TheUnicodeStringCriticalSection = NULL;
 	TheDmaCriticalSection = NULL;
 	TheMemoryPoolCriticalSection = NULL;
-
 	return exitcode;
 }
 
