@@ -35,6 +35,27 @@ target_sources(z_gamestate_tool PRIVATE
     ToolMain.cpp
 )
 
+find_package(Python3 COMPONENTS Interpreter )
+#if(Python3_Interpreter_FOUND)
+    message("JMAMAMAMMAMAMMAMAMAMA")
+    set(SNAPSHOT_SCHEMA_OUT ${CMAKE_CURRENT_BINARY_DIR}/GeneratedSnapshotSchema.h)
+    add_custom_command(
+        OUTPUT ${SNAPSHOT_SCHEMA_OUT}
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/cpp/generate_snapshot_schema.py
+                --output ${SNAPSHOT_SCHEMA_OUT}
+                --source-root ${CMAKE_SOURCE_DIR}/GeneralsMD/Code
+                --source-root ${CMAKE_SOURCE_DIR}/Core/GameEngine
+                --compile-commands ${CMAKE_BINARY_DIR}/compile_commands.json
+        DEPENDS ${CMAKE_SOURCE_DIR}/scripts/cpp/generate_snapshot_schema.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Generating snapshot schema header for GameStateTool"
+        VERBATIM
+    )
+    add_custom_target(generate_snapshot_schema DEPENDS ${SNAPSHOT_SCHEMA_OUT})
+    add_dependencies(z_gamestate_tool generate_snapshot_schema)
+    target_include_directories(z_gamestate_tool PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+#endif()
+
 # Version headers for this tool (mirrors the main game target).
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/GeneratedVersion.h
 "#pragma once
