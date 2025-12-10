@@ -839,11 +839,11 @@ bool DX8Wrapper::Set_Any_Render_Device(void)
 {
 	// Then fullscreen
 	int dev_number = 0;
-	for (; dev_number < _RenderDeviceNameTable.Count(); dev_number++) {
-		if (Set_Render_Device(dev_number,-1,-1,-1,0,false)) {
-			return true;
-		}
-	}
+	// for (; dev_number < _RenderDeviceNameTable.Count(); dev_number++) {
+	// 	if (Set_Render_Device(dev_number,-1,-1,-1,0,false)) {
+	// 		return true;
+	// 	}
+	// }
 
 	// Try windowed first
 	for (dev_number = 0; dev_number < _RenderDeviceNameTable.Count(); dev_number++) {

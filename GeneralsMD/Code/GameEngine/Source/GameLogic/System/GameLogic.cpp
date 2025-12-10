@@ -3736,6 +3736,114 @@ void GameLogic::update( void )
 		messageList->appendMessage(msg);
 
 		DEBUG_LOG(("Appended %sCRC on frame %d: %8.8X", isPlayback ? "Playback " : "", m_frame, m_CRC));
+
+
+
+
+
+
+
+
+
+		// XferSave xferSave;
+		//
+		// AsciiString blockName;
+		// SnapshotBlock *blockInfo;
+		// SnapshotBlockListIterator it;
+		// for( it = m_objList[which].begin(); it != m_snapshotBlockList[which].end(); ++it )
+		// {
+		//
+		// 	// get list data
+		// 	blockInfo = &(*it);
+		//
+		// 	// get block name
+		// 	blockName = blockInfo->blockName;
+		//
+		// 	DEBUG_LOG(("Looking at block '%s'", blockName.str()));
+		//
+		// 	//
+		// 	// for mission save files, we only save the game state block and campaign manager
+		// 	// because anything else is not needed.
+		// 	//
+		// 	if( getSaveGameInfo()->saveFileType != SAVE_FILE_TYPE_MISSION ||
+		// 			(blockName.compareNoCase( GAME_STATE_BLOCK_STRING ) == 0 ||
+		// 			 blockName.compareNoCase( CAMPAIGN_BLOCK_STRING ) == 0) )
+		// 	{
+		//
+		// 		// xfer block name
+		// 		xfer->xferAsciiString( &blockName );
+		//
+		// 		// xfer this block
+		// 		try
+		// 		{
+		//
+		// 			// begin new data block
+		// 			xfer->beginBlock();
+		//
+		// 			// xfer block data
+		// 			xfer->xferSnapshot( blockInfo->snapshot );
+		//
+		// 			// end this block
+		// 			xfer->endBlock();
+		//
+		// 		}
+		// 		catch( ... )
+		// 		{
+		//
+		// 			DEBUG_CRASH(( "Error saving block '%s' in file '%s'",
+		// 										blockName.str(), xfer->getIdentifier().str() ));
+		// 			throw;
+		//
+		// 		}
+		//
+		// 	}
+
+		// }
+		//
+		// // write an end of file token
+		// AsciiString eofToken = SAVE_FILE_EOF;
+		// xfer->xferAsciiString( &eofToken );
+
+
+		HANDLE pipe = CreateNamedPipe(
+			LPCSTR(L"\\\\.\\pipe\\my_pipe"), // name of the pipe
+			PIPE_ACCESS_OUTBOUND, // 1-way pipe -- send only
+			PIPE_TYPE_BYTE, // send data as a byte stream
+			1, // only allow 1 instance of this pipe
+			0, // no outbound buffer
+			0, // no inbound buffer
+			0, // use default wait time
+			NULL // use default security attributes
+		);
+
+		if (pipe == NULL || pipe == INVALID_HANDLE_VALUE) {
+			// This call blocks until a client process connects to the pipe
+			BOOL result = ConnectNamedPipe(pipe, NULL);
+			if (!result) {
+				// look up error code here using GetLastError()
+				CloseHandle(pipe); // close the pipe
+			}
+
+			LPCSTR data = "*** Hello Pipe World ***";
+			DWORD numBytesWritten = 0;
+			result = WriteFile(
+				pipe, // handle to our outbound pipe
+				data, // data to send
+				strlen(data) * sizeof(LPCSTR), // length of data to send (bytes)
+				&numBytesWritten, // will store actual amount of data sent
+				NULL // not using overlapped IO
+			);
+
+			CloseHandle(pipe);
+		}
+
+
+
+
+
+
+
+
 	}
 
 	// collect stats

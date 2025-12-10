@@ -2,6 +2,7 @@
 #include <afxcmn.h>
 #include <tchar.h>
 #include <vector>
+#include <windows.h>
 
 #pragma warning(push)
 #pragma warning(disable : 4996) // Match legacy MFC init used elsewhere (Enable3dControls).
@@ -65,6 +66,25 @@ static GameStateSnapshot CreateStubGameState()
 
     state.categories.push_back(defenses);
     state.categories.push_back(economy);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     return state;
 }
 
@@ -79,6 +99,52 @@ static void ApplySimulatedPipeUpdate(GameStateSnapshot &state)
             obj.properties[0].value = _T("950"); // pretend health reduced
         }
         obj.properties.push_back({_T("LastUpdated"), _T("PipeEvent#1")});
+
+
+
+        // Open the named pipe
+        // Most of these parameters aren't very relevant for pipes.
+        HANDLE pipe = CreateFile(
+            LPCSTR(L"\\\\.\\pipe\\my_pipe"),
+            GENERIC_READ, // only need read access
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL
+            );
+
+        if (pipe == INVALID_HANDLE_VALUE) {
+            system("pause");
+        }
+
+        char buffer[128];
+        DWORD numBytesRead = 0;
+        BOOL result = ReadFile(
+            pipe,
+            buffer, // the data from the pipe will be put here
+            127 * sizeof(char), // number of bytes allocated
+            &numBytesRead, // this will store number of bytes actually read
+            NULL // not using overlapped IO
+            );
+
+        if (result) {
+            buffer[numBytesRead / sizeof(char)] = '\0'; // null terminate the string
+        }
+
+        // Close our pipe handle
+        CloseHandle(pipe);
+
+        Category accc;
+        accc.name = _T("acccc");
+        accc.objects.push_back(GameObject{
+            _T("Supply Center"),
+            {
+                {_T("Health"), _T(buffer)},
+            },
+        });
+
+        state.categories.push_back(accc);
     }
 }
 
