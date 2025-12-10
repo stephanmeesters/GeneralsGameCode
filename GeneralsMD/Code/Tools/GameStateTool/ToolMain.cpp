@@ -3,6 +3,14 @@
 #include <tchar.h>
 #include <vector>
 #include <windows.h>
+#include <mutex>
+#include <thread>
+#include <csignal>
+
+static BOOL WINAPI ConsoleCtrlHandler(DWORD ctrlType);
+static void SignalHandler(int sig);
+static void InstallSignalHandlers();
+static class CGameStateToolFrame *g_mainFrame = nullptr;
 
 #pragma warning(push)
 #pragma warning(disable : 4996) // Match legacy MFC init used elsewhere (Enable3dControls).
@@ -88,66 +96,6 @@ static GameStateSnapshot CreateStubGameState()
     return state;
 }
 
-static void ApplySimulatedPipeUpdate(GameStateSnapshot &state)
-{
-    // Simulate receiving a named-pipe delta by tweaking one property and adding another.
-    if (!state.categories.empty() && !state.categories[0].objects.empty())
-    {
-        GameObject &obj = state.categories[0].objects[0];
-        if (!obj.properties.empty())
-        {
-            obj.properties[0].value = _T("950"); // pretend health reduced
-        }
-        obj.properties.push_back({_T("LastUpdated"), _T("PipeEvent#1")});
-
-
-
-        // Open the named pipe
-        // Most of these parameters aren't very relevant for pipes.
-        HANDLE pipe = CreateFile(
-            LPCSTR(L"\\\\.\\pipe\\my_pipe"),
-            GENERIC_READ, // only need read access
-            FILE_SHARE_READ | FILE_SHARE_WRITE,
-            NULL,
-            OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL,
-            NULL
-            );
-
-        if (pipe == INVALID_HANDLE_VALUE) {
-            system("pause");
-        }
-
-        char buffer[128];
-        DWORD numBytesRead = 0;
-        BOOL result = ReadFile(
-            pipe,
-            buffer, // the data from the pipe will be put here
-            127 * sizeof(char), // number of bytes allocated
-            &numBytesRead, // this will store number of bytes actually read
-            NULL // not using overlapped IO
-            );
-
-        if (result) {
-            buffer[numBytesRead / sizeof(char)] = '\0'; // null terminate the string
-        }
-
-        // Close our pipe handle
-        CloseHandle(pipe);
-
-        Category accc;
-        accc.name = _T("acccc");
-        accc.objects.push_back(GameObject{
-            _T("Supply Center"),
-            {
-                {_T("Health"), _T(buffer)},
-            },
-        });
-
-        state.categories.push_back(accc);
-    }
-}
-
 class CGameStateToolFrame : public CFrameWnd
 {
 public:
@@ -155,22 +103,37 @@ public:
     {
         Create(nullptr, _T("GameStateTool - Hello MFC"));
         m_state = CreateStubGameState();
+        m_pipeStopEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+        m_pipeThread = std::thread(&CGameStateToolFrame::PipeThreadProc, this);
     }
+    ~CGameStateToolFrame() override = default;
+    void RequestShutdownFromSignal();
 
 protected:
     afx_msg void OnPaint();
     afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
     afx_msg void OnSize(UINT nType, int cx, int cy);
     afx_msg void OnSimulatePipeUpdate();
+    afx_msg void OnDestroy();
+    afx_msg LRESULT OnPipeMessage(WPARAM wParam, LPARAM lParam);
     DECLARE_MESSAGE_MAP()
 
 private:
     void RenderState();
+    void AppendPipeMessage(const CString &message);
+    void PostPipeMessageFromWorker(const char *message);
+    static void PipeThreadProc(CGameStateToolFrame *self);
+    void ShutdownPipeThread();
 
     static constexpr UINT kSimulateButtonId = 1001;
+    static constexpr UINT kPipeMessageId = WM_APP + 42;
     CButton m_simulateButton;
     CTreeCtrl m_stateTree;
     GameStateSnapshot m_state;
+    HANDLE m_pipeStopEvent = nullptr;
+    std::thread m_pipeThread;
+    std::mutex m_pipeMutex;
+    CString m_lastPipeMessage;
 };
 
 BEGIN_MESSAGE_MAP(CGameStateToolFrame, CFrameWnd)
@@ -178,6 +141,8 @@ ON_WM_PAINT()
 ON_WM_CREATE()
 ON_WM_SIZE()
 ON_BN_CLICKED(kSimulateButtonId, OnSimulatePipeUpdate)
+ON_WM_DESTROY()
+ON_MESSAGE(kPipeMessageId, OnPipeMessage)
 END_MESSAGE_MAP()
 
 void CGameStateToolFrame::OnPaint()
@@ -242,8 +207,7 @@ void CGameStateToolFrame::OnSize(UINT nType, int cx, int cy)
 
 void CGameStateToolFrame::OnSimulatePipeUpdate()
 {
-    ApplySimulatedPipeUpdate(m_state);
-    RenderState();
+    AppendPipeMessage(_T("Manual test trigger"));
 }
 
 void CGameStateToolFrame::RenderState()
@@ -270,6 +234,138 @@ void CGameStateToolFrame::RenderState()
     }
 }
 
+void CGameStateToolFrame::AppendPipeMessage(const CString &message)
+{
+    Category pipeCategory;
+    pipeCategory.name = _T("Pipe Message");
+    pipeCategory.objects.push_back(GameObject{
+        _T("Payload"),
+        {
+            {_T("Data"), message},
+        },
+    });
+
+    m_state.categories.push_back(pipeCategory);
+    RenderState();
+}
+
+void CGameStateToolFrame::PostPipeMessageFromWorker(const char *message)
+{
+    CString msg;
+    msg.Format(_T("%hs"), message);
+    {
+        std::lock_guard<std::mutex> lock(m_pipeMutex);
+        m_lastPipeMessage = msg;
+    }
+    PostMessage(kPipeMessageId);
+}
+
+void CGameStateToolFrame::PipeThreadProc(CGameStateToolFrame *self)
+{
+    constexpr wchar_t kPipeName[] = L"\\\\.\\pipe\\my_pipe";
+
+    while (WaitForSingleObject(self->m_pipeStopEvent, 0) == WAIT_TIMEOUT)
+    {
+        HANDLE pipe = CreateNamedPipeW(
+            kPipeName,
+            PIPE_ACCESS_INBOUND,
+            PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+            1,
+            512,
+            512,
+            0,
+            nullptr);
+
+        if (pipe == INVALID_HANDLE_VALUE)
+        {
+            Sleep(200);
+            continue;
+        }
+
+        BOOL connected = ConnectNamedPipe(pipe, nullptr);
+        if (!connected && GetLastError() != ERROR_PIPE_CONNECTED)
+        {
+            CloseHandle(pipe);
+            continue;
+        }
+
+        char buffer[256] = {};
+        DWORD bytesRead = 0;
+        BOOL readOk = ReadFile(pipe, buffer, sizeof(buffer) - 1, &bytesRead, nullptr);
+        if (readOk && bytesRead > 0)
+        {
+            buffer[bytesRead] = '\0';
+            self->PostPipeMessageFromWorker(buffer);
+        }
+
+        DisconnectNamedPipe(pipe);
+        CloseHandle(pipe);
+    }
+}
+
+void CGameStateToolFrame::ShutdownPipeThread()
+{
+    const bool wasRunning = m_pipeThread.joinable();
+    if (m_pipeStopEvent)
+    {
+        SetEvent(m_pipeStopEvent);
+    }
+
+    if (wasRunning)
+    {
+        // Nudge the listener out of ConnectNamedPipe so it can exit.
+        CreateFileA(
+            "\\\\.\\pipe\\my_pipe",
+            GENERIC_WRITE,
+            0,
+            nullptr,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            nullptr);
+        m_pipeThread.join();
+    }
+
+    if (m_pipeStopEvent)
+    {
+        CloseHandle(m_pipeStopEvent);
+        m_pipeStopEvent = nullptr;
+    }
+}
+
+void CGameStateToolFrame::RequestShutdownFromSignal()
+{
+    ShutdownPipeThread();
+    if (GetSafeHwnd())
+    {
+        PostMessage(WM_CLOSE);
+    }
+    else
+    {
+        PostQuitMessage(0);
+    }
+}
+
+LRESULT CGameStateToolFrame::OnPipeMessage(WPARAM, LPARAM)
+{
+    CString msg;
+    {
+        std::lock_guard<std::mutex> lock(m_pipeMutex);
+        msg = m_lastPipeMessage;
+    }
+    if (!msg.IsEmpty())
+    {
+        AppendPipeMessage(msg);
+    }
+    return 0;
+}
+
+void CGameStateToolFrame::OnDestroy()
+{
+    ShutdownPipeThread();
+    g_mainFrame = nullptr;
+    CFrameWnd::OnDestroy();
+}
+
 class CGameStateToolApp : public CWinApp
 {
 public:
@@ -289,6 +385,8 @@ public:
 #endif
 
         CGameStateToolFrame *frame = new CGameStateToolFrame();
+        g_mainFrame = frame;
+        InstallSignalHandlers();
         m_pMainWnd = frame;
         frame->ShowWindow(SW_SHOW);
         frame->UpdateWindow();
@@ -297,5 +395,44 @@ public:
 };
 
 CGameStateToolApp theApp;
+
+static BOOL WINAPI ConsoleCtrlHandler(DWORD ctrlType)
+{
+    switch (ctrlType)
+    {
+    case CTRL_C_EVENT:
+    case CTRL_BREAK_EVENT:
+    case CTRL_CLOSE_EVENT:
+    case CTRL_LOGOFF_EVENT:
+    case CTRL_SHUTDOWN_EVENT:
+        if (g_mainFrame)
+        {
+            g_mainFrame->RequestShutdownFromSignal();
+            return TRUE;
+        }
+        break;
+    default:
+        break;
+    }
+    return FALSE;
+}
+
+static void SignalHandler(int)
+{
+    if (g_mainFrame)
+    {
+        g_mainFrame->RequestShutdownFromSignal();
+    }
+}
+
+static void InstallSignalHandlers()
+{
+    SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
+    signal(SIGINT, SignalHandler);
+    signal(SIGABRT, SignalHandler);
+#ifdef SIGTERM
+    signal(SIGTERM, SignalHandler);
+#endif
+}
 
 #pragma warning(pop)

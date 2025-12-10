@@ -45,6 +45,7 @@ friend class GameState;
 friend class XferLoad;
 friend class XferSave;
 friend class XferCRC;
+friend class XferSaveBuffer;
 
 public:
 

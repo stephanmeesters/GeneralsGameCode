@@ -43,6 +43,7 @@
 #include "Common/WellKnownKeys.h"
 #include "Common/XferLoad.h"
 #include "Common/XferSave.h"
+#include "Common/XferSaveBuffer.h"
 #include "GameClient/CampaignManager.h"
 #include "GameClient/GadgetListBox.h"
 #include "GameClient/GameClient.h"
@@ -617,6 +618,43 @@ SaveCode GameState::saveGame( AsciiString filename, UnicodeString desc,
 	return SC_OK;
 
 }
+
+// std::vector<byte> GameState::saveGameBuffer( AsciiString filename, UnicodeString desc,
+// 															SaveFileType saveType, SnapshotType which )
+// {
+// 	// open the save file
+// 	XferSaveBuffer xferSave;
+// 	try {
+// 		xferSave.open("buffer");
+// 	} catch(...) {
+// 		return {};
+// 	}
+//
+// 	// // save our save file type
+// 	// SaveGameInfo *gameInfo = getSaveGameInfo();
+// 	// gameInfo->saveFileType = saveType;
+// 	//
+// 	// // save our mission map name if applicable
+// 	// if( saveType == SAVE_FILE_TYPE_MISSION )
+// 	// 	gameInfo->missionMapName = TheCampaignManager->getCurrentMap();
+// 	// else
+// 	// 	gameInfo->missionMapName.clear();
+// 	//
+//
+// 	try
+// 	{
+// 		xferSaveData( &xferSave, which );
+// 	}
+// 	catch( ... )
+// 	{
+// 		xferSave.close();
+// 		return {};
+// 	}
+//
+// 	xferSave.close();
+//
+// 	return {};
+// }
 
 // ------------------------------------------------------------------------------------------------
 /** A mission save */
