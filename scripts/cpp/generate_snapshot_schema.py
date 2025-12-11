@@ -29,6 +29,7 @@ from typing import Dict, Iterable, List, Optional, Tuple
 TYPE_MAP: Dict[str, Tuple[str, Optional[int]]] = {
     "xferByte": ("Byte", 1),
     "xferUnsignedByte": ("UnsignedByte", 1),
+    "xferVersion": ("UnsignedByte", 1),
     "xferBool": ("Bool", 1),
     "xferShort": ("Short", 2),
     "xferUnsignedShort": ("UnsignedShort", 2),
@@ -208,22 +209,17 @@ def gather_from_file(path: pathlib.Path) -> List[Dict]:
             continue
         offset_known = True
         offset = 0
-        for method, args, relpos in iter_xfer_calls(body, xfer_var):
+        for method, args, _ in iter_xfer_calls(body, xfer_var):
             mapped = TYPE_MAP.get(method, ("Unknown", None))
             size = mapped[1]
             field_name = normalize_field_name(args.split(",")[0])
-            abspos = body_start + relpos
-            line = stripped.count("\n", 0, abspos) + 1
             results.append(
                 {
                     "class": cls,
-                    "method": method,
                     "type": mapped[0],
                     "size": size,
                     "offset": offset if offset_known and size is not None else -1,
                     "field": field_name,
-                    "file": str(path),
-                    "line": line,
                 }
             )
             if offset_known and size is not None:
@@ -266,8 +262,6 @@ def write_header(output: pathlib.Path, records: List[Dict]) -> None:
         f.write("    const char* type;\n")
         f.write("    int64_t offset; // -1 when unknown/variable after this point\n")
         f.write("    int64_t size;   // -1 for variable length, 0 for endBlock\n")
-        f.write("    const char* method;\n")
-        f.write("    const char* source;\n")
         f.write("};\n\n")
         f.write("namespace SnapshotSchema {\n")
         for cls, fields in sorted(by_class.items()):
@@ -275,10 +269,7 @@ def write_header(output: pathlib.Path, records: List[Dict]) -> None:
             for field in fields:
                 off = field["offset"]
                 size = field["size"] if field["size"] is not None else -1
-                f.write(
-                    f'    {{"{field["field"]}", "{field["type"]}", {off}, {size}, '
-                    f'"{field["method"]}", "{field["file"]}:{field["line"]}"}},\n'
-                )
+                f.write(f'    {{"{field["field"]}", "{field["type"]}", {off}, {size}}},\n')
             f.write("};\n\n")
         f.write("} // namespace SnapshotSchema\n")
 
