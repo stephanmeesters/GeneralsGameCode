@@ -4,7 +4,9 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <algorithm>
 #include <sstream>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -31,10 +33,10 @@ extern "C" void DebugCrash(const char *format, ...) {
     va_end(args);
 }
 
-std::string serialize(XferLoadBuffer& xfer, SnapshotSchemaView schema) {
+std::string serialize(XferLoadBuffer &xfer, SnapshotSchemaView schema) {
     std::ostringstream out;
     bool first = true;
-    for (const SnapshotSchemaField& field : schema) {
+    for (const SnapshotSchemaField &field: schema) {
         if (!first) {
             out << "\n";
         }
@@ -102,7 +104,7 @@ std::string serialize(XferLoadBuffer& xfer, SnapshotSchemaView schema) {
 }
 
 int main() {
-    std::ifstream input("d:\\buffer.b", std::ios::binary);
+    std::ifstream input("D:/00000016.sav", std::ios::binary);
     if (!input) {
         std::cerr << "Failed to open buffer file" << std::endl;
         return 1;
@@ -143,6 +145,25 @@ int main() {
         }
     }
     xfer.close();
+
+    const std::string chunkTag = "CHUNK_";
+    std::vector<int> chunkOffsets;
+    for (size_t i = 0; i + chunkTag.size() <= bytes.size(); ++i) {
+        if (std::equal(chunkTag.begin(), chunkTag.end(), bytes.begin() + static_cast<long>(i))) {
+            chunkOffsets.push_back(static_cast<int>(i - 1));
+        }
+    }
+
+    for (auto offset: chunkOffsets) {
+        xfer.open("buffer", bytes);
+        xfer.skip(offset);
+
+        AsciiString value;
+        xfer.xferAsciiString(&value);
+        std::cout << value.str() << std::endl;
+
+        xfer.close();
+    }
 
     return 0;
 
