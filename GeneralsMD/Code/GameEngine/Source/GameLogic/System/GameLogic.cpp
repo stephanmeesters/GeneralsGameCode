@@ -3746,41 +3746,77 @@ void GameLogic::update( void )
 
 
 
-		// XferSaveBuffer* xferSaveBuffer = new XferSaveBuffer();
-		XferSave* xferSaveBuffer = new XferSave();
-		xferSaveBuffer->open("D://buffer.b");
-		TheGameState->friend_xferSaveDataForCRC(xferSaveBuffer, SNAPSHOT_SAVELOAD);
-		xferSaveBuffer->close();
-		// auto buf = xferSaveBuffer->takeBuffer();
-		delete xferSaveBuffer;
-		xferSaveBuffer = nullptr;
-
-
-
-		constexpr char kPipeName[] = R"(\\.\pipe\my_pipe)";
-		char buff[50];
-		int mlen = sprintf(buff, "Frame: %d -- CRC: %u", m_frame, m_CRC);
-
-		if (WaitNamedPipeA(kPipeName, 100)) {
-			HANDLE pipe = CreateFileA(
-				kPipeName,
-				GENERIC_WRITE,
-				0,
-				nullptr,
-				OPEN_EXISTING,
-				FILE_ATTRIBUTE_NORMAL,
-				nullptr);
-			if (pipe == INVALID_HANDLE_VALUE) {
-			}
-
-			DWORD bytesWritten = 0;
-			if (!WriteFile(pipe, buff, static_cast<DWORD>(mlen), &bytesWritten, nullptr)) {
-				CloseHandle(pipe);
-			}
-
-			FlushFileBuffers(pipe);
-			CloseHandle(pipe);
-		}
+		// const std::string bufferPath = "D://buffer.b";
+		// XferSave* xferSaveBuffer = new XferSave();
+		// xferSaveBuffer->open(bufferPath.c_str());
+		// TheGameState->friend_xferSaveDataForCRC(xferSaveBuffer, SNAPSHOT_SAVELOAD);
+		// xferSaveBuffer->close();
+		// delete xferSaveBuffer;
+		// xferSaveBuffer = nullptr;
+		//
+		// // Read the buffer back from disk so we can inspect or forward it.
+		// FILE* f = std::fopen(bufferPath.c_str(), "rb");
+		// if (!f) {
+		// 	throw std::runtime_error("Failed to open file: " + bufferPath);
+		// }
+		//
+		// if (std::fseek(f, 0, SEEK_END) != 0) {
+		// 	std::fclose(f);
+		// 	throw std::runtime_error("fseek failed");
+		// }
+		//
+		// long size = std::ftell(f);
+		// if (size < 0) {
+		// 	std::fclose(f);
+		// 	throw std::runtime_error("ftell failed");
+		// }
+		//
+		// if (std::fseek(f, 0, SEEK_SET) != 0) {
+		// 	std::fclose(f);
+		// 	throw std::runtime_error("fseek failed");
+		// }
+		//
+		// std::vector<std::uint8_t> buffer(static_cast<std::size_t>(size));
+		//
+		// if (size > 0) {
+		// 	std::size_t read = std::fread(buffer.data(), 1, buffer.size(), f);
+		// 	if (read != buffer.size()) {
+		// 		std::fclose(f);
+		// 		throw std::runtime_error("fread failed or short read");
+		// 	}
+		// }
+		//
+		// std::fclose(f);
+		// DEBUG_LOG(("Read buffer.b (%zu bytes)", buffer.size()));
+		//
+		//
+		// constexpr char kPipeName[] = R"(\\.\pipe\my_pipe)";
+		// char buff[50];
+		// int mlen = sprintf(buff, "Frame: %d -- CRC: %u", m_frame, m_CRC);
+		//
+		// if (WaitNamedPipeA(kPipeName, 100)) {
+		// 	HANDLE pipe = CreateFileA(
+		// 		kPipeName,
+		// 		GENERIC_WRITE,
+		// 		0,
+		// 		nullptr,
+		// 		OPEN_EXISTING,
+		// 		FILE_ATTRIBUTE_NORMAL,
+		// 		nullptr);
+		// 	if (pipe == INVALID_HANDLE_VALUE) {
+		// 	}
+		//
+		// 	DWORD bytesWritten = 0;
+		// 	if (!WriteFile(pipe, buff, static_cast<DWORD>(mlen), &bytesWritten, nullptr)) {
+		// 		CloseHandle(pipe);
+		// 	}
+		// 	if (!WriteFile(pipe, buffer, static_cast<DWORD>(mlen), &bytesWritten, nullptr)) {
+		// 		CloseHandle(pipe);
+		// 	}
+		//
+		// 	FlushFileBuffers(pipe);
+		// 	CloseHandle(pipe);
+		// }
 
 
 

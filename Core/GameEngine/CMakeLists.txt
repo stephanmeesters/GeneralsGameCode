@@ -679,6 +679,7 @@ set(GAMEENGINE_SRC
     Source/Common/System/Xfer.cpp
     Source/Common/System/XferCRC.cpp
     Source/Common/System/XferLoad.cpp
+    Source/Common/System/XferLoadBuffer.cpp
     Source/Common/System/XferSave.cpp
     Source/Common/System/XferSaveBuffer.cpp
 #    Source/Common/TerrainTypes.cpp
