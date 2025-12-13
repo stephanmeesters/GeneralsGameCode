@@ -28,9 +28,8 @@ extern "C" void DebugCrash(const char *format, ...) {
     va_end(args);
 }
 
-std::string serialize(const SnapshotSchemaField& field) {
-
-}
+// std::string serialize(const SnapshotSchemaField& field) {
+// }
 
 int main() {
     std::ifstream input("d:\\buffer.b", std::ios::binary);
@@ -55,8 +54,13 @@ int main() {
 
         // assume block
         int blockSize = xfer.beginBlock(); // size not used in load?
+        std::cout << "Block size: " << blockSize << std::endl;
 
-        // serialize
+        // serialize block
+        if (!SnapshotSchema::SCHEMAS.contains(token.str())) {
+            continue;
+        }
+        SnapshotSchemaView view = SnapshotSchema::SCHEMAS.at(token.str());
 
         if (token.compareNoCase(SAVE_FILE_EOF) == 0) {
             break;

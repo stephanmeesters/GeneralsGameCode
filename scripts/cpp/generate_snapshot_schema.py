@@ -53,6 +53,14 @@ TYPE_MAP: Dict[str, Tuple[str, Optional[int]]] = {
 }
 
 
+def resolve_type(method: str) -> Tuple[str, Optional[int]]:
+    if method in TYPE_MAP:
+        return TYPE_MAP[method]
+    if method.startswith("xfer") and len(method) > 4:
+        return method[4:], None
+    return method, None
+
+
 CALL_SIG_RE = re.compile(
     r"void\s+(?P<class>[A-Za-z_]\w*)\s*::\s*xfer\s*\(\s*Xfer\s*\*\s*(?P<xfervar>\w+)\s*\)",
     re.MULTILINE,
@@ -230,7 +238,7 @@ def gather_from_file(path: pathlib.Path, allowed_methods: Optional[Set[str]]) ->
         for method, args, _ in iter_xfer_calls(body, xfer_var):
             if allowed_methods is not None and method not in allowed_methods:
                 continue
-            mapped = TYPE_MAP.get(method, ("Unknown", None))
+            mapped = resolve_type(method)
             field_name = normalize_field_name(args.split(",")[0])
             results.append(
                 {
