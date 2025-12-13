@@ -23,6 +23,32 @@ import re
 import sys
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
+ENUM_RE = re.compile(
+    r"\benum\s+(?:class|struct)?\s*(?P<name>[A-Za-z_]\w*)\s*(?::\s*(?P<underlying>[A-Za-z_]\w*))?",
+    re.MULTILINE,
+)
+
+
+def normalize_underlying(typ: str) -> str:
+    t = typ.replace(" ", "").replace("\t", "")
+    t = t.replace("unsigned", "u").lower()
+    if t in ("char", "int8", "schar"):
+        return "Byte"
+    if t in ("uchar", "uint8"):
+        return "UnsignedByte"
+    if t in ("short", "int16"):
+        return "Short"
+    if t in ("ushort", "uint16"):
+        return "UnsignedShort"
+    if t in ("int", "long", "int32"):
+        return "Int"
+    if t in ("uint", "ulong", "uint32"):
+        return "UnsignedInt"
+    if t in ("longlong", "int64", "llong"):
+        return "Int64"
+    if t in ("ulonglong", "uint64"):
+        return "Int64"
+    return typ
 
 TYPE_MAP: Dict[str, Tuple[str, Optional[int]]] = {
     "xferByte": ("Byte", 1),
@@ -131,6 +157,12 @@ def parse_args() -> argparse.Namespace:
         "--gamestate",
         default="GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
         help="Path to GameState.cpp to infer snapshot block mapping.",
+    )
+    parser.add_argument(
+        "--enum-root",
+        action="append",
+        default=[],
+        help="Root directory to scan for enums to improve xferUser typing (repeatable).",
     )
     return parser.parse_args()
 
@@ -267,7 +299,7 @@ def load_allowed_methods(xfer_header: Optional[str]) -> Optional[Set[str]]:
     return methods or None
 
 
-def gather_from_file(path: pathlib.Path, allowed_methods: Optional[Set[str]]) -> List[Dict]:
+def gather_from_file(path: pathlib.Path, allowed_methods: Optional[Set[str]], enum_types: Dict[str, str]) -> List[Dict]:
     text = path.read_text(errors="ignore")
     stripped = strip_comments_and_strings(text)
     results: List[Dict] = []
@@ -277,11 +309,37 @@ def gather_from_file(path: pathlib.Path, allowed_methods: Optional[Set[str]]) ->
         body, body_start = find_function_body(stripped, sig.end())
         if not body:
             continue
+        seen: Set[Tuple[str, str]] = set()
         for method, args, _ in iter_xfer_calls(body, xfer_var):
             if allowed_methods is not None and method not in allowed_methods:
                 continue
             mapped = resolve_type(method)
             field_name = normalize_field_name(args.split(",")[0])
+            if method == "xferUser":
+                parts = [a.strip() for a in args.split(",")]
+                if len(parts) >= 2:
+                    size_expr = parts[1]
+                    size_expr = size_expr.replace(" ", "")
+                    m_sizeof = re.match(r"sizeof\((?P<type>[A-Za-z_]\w*)\)", size_expr)
+                    if m_sizeof:
+                        enum_name = m_sizeof.group("type")
+                        if enum_name in enum_types:
+                            mapped_type = normalize_underlying(enum_types[enum_name])
+                            mapped = (mapped_type, None)
+                    elif size_expr.isdigit():
+                        literal = int(size_expr)
+                        if literal == 1:
+                            mapped = ("Byte", 1)
+                        elif literal == 2:
+                            mapped = ("Short", 2)
+                        elif literal == 4:
+                            mapped = ("Int", 4)
+                        elif literal == 8:
+                            mapped = ("Int64", 8)
+            key = (field_name, mapped[0])
+            if key in seen:
+                continue
+            seen.add(key)
             results.append(
                 {
                     "class": cls,
@@ -353,6 +411,36 @@ def parse_snapshot_blocks(game_state_path: str, known_classes: Set[str]) -> List
     return list(block_calls.items())
 
 
+def discover_enums(roots: List[str], compile_commands: Optional[str]) -> Dict[str, str]:
+    enum_types: Dict[str, str] = {}
+    files: List[pathlib.Path] = []
+    seen = set()
+    # reuse compile_commands to seed enum scan if provided
+    if compile_commands and pathlib.Path(compile_commands).exists():
+        for f in load_compile_commands(compile_commands):
+            if f.suffix in (".cpp", ".cc", ".h", ".hpp", ".inl") and f not in seen:
+                seen.add(f)
+                files.append(f)
+    for root in roots or ["."]:
+        for dirpath, _, filenames in os.walk(root):
+            for fn in filenames:
+                if fn.endswith((".h", ".hpp", ".inl", ".cpp", ".cc")):
+                    p = pathlib.Path(dirpath) / fn
+                    if p not in seen:
+                        seen.add(p)
+                        files.append(p)
+    for path in files:
+        try:
+            text = pathlib.Path(path).read_text(errors="ignore")
+        except Exception:
+            continue
+        for m in ENUM_RE.finditer(text):
+            name = m.group("name")
+            underlying = m.group("underlying") or "Int"
+            enum_types.setdefault(name, underlying)
+    return enum_types
+
+
 def write_header(output: pathlib.Path, records: List[Dict], block_mappings: List[Tuple[str, str]]) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     by_class: Dict[str, List[Dict]] = {}
@@ -394,13 +482,14 @@ def write_header(output: pathlib.Path, records: List[Dict], block_mappings: List
 def main() -> int:
     args = parse_args()
     allowed_methods = load_allowed_methods(args.xfer_header)
+    enum_types = discover_enums(args.enum_root, args.compile_commands)
     sources = discover_sources(args.source_root, args.compile_commands)
     all_records: List[Dict] = []
     for path in sources:
         if not path.exists():
             continue
         try:
-            recs = gather_from_file(path, allowed_methods)
+            recs = gather_from_file(path, allowed_methods, enum_types)
         except Exception:
             continue
         all_records.extend(recs)

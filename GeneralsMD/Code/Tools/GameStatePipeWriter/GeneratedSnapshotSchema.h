@@ -143,7 +143,6 @@ static constexpr SnapshotSchemaField AIFollowWaypointPathState[] = {
     {"m_angle", "Real"},
     {"m_framesSleeping", "Int"},
     {"id", "UnsignedInt"},
-    {"id", "UnsignedInt"},
     {"m_appendGoalPosition", "Bool"},
 };
 
@@ -278,10 +277,8 @@ static constexpr SnapshotSchemaField AIPlayer[] = {
     {"version", "UnsignedByte"},
     {"teamBuildQueueCount", "UnsignedShort"},
     {"teamInQueue", "Snapshot"},
-    {"teamInQueue", "Snapshot"},
     {"teamReadyQueueCount", "UnsignedShort"},
     {"teamReadyQueue", "Snapshot"},
-    {"teamInQueue", "Snapshot"},
     {"playerIndex", "UserData"},
     {"m_readyToBuildTeam", "Bool"},
     {"m_readyToBuildStructure", "Bool"},
@@ -292,12 +289,12 @@ static constexpr SnapshotSchemaField AIPlayer[] = {
     {"m_teamSeconds", "Int"},
     {"m_curWarehouseID", "ObjectID"},
     {"m_frameLastBuildingBuilt", "Int"},
-    {"m_difficulty", "UserData"},
+    {"m_difficulty", "Int"},
     {"m_skillsetSelector", "Int"},
     {"m_baseCenter", "Coord3D"},
     {"m_baseCenterSet", "Bool"},
     {"m_baseRadius", "Real"},
-    {"m_structuresToRepair", "UserData"},
+    {"m_structuresToRepair", "Int"},
     {"m_repairDozer", "ObjectID"},
     {"m_structuresInQueue", "Int"},
     {"m_dozerQueuedForRepair", "Bool"},
@@ -411,7 +408,6 @@ static constexpr SnapshotSchemaField AIUpdateInterface[] = {
     {"m_isApproachPath", "Bool"},
     {"m_isSafePath", "Bool"},
     {"m_movementComplete", "Bool"},
-    {"m_isSafePath", "Bool"},
     {"m_upgradedLocomotors", "Bool"},
     {"m_canPathThroughUnits", "Bool"},
     {"m_randomlyOffsetMoodCheck", "Bool"},
@@ -434,7 +430,6 @@ static constexpr SnapshotSchemaField AIUpdateInterface[] = {
     {"m_surrenderedPlayerIndex", "Int"},
     {"surrenderedFramesLeft", "UnsignedInt"},
     {"surrenderedPlayerIndex", "Int"},
-    {"m_demoralizedFramesLeft", "UnsignedInt"},
     {"tmp0", "UnsignedInt"},
     {"m_crateCreated", "ObjectID"},
     {"repulsorCountdown", "Int"},
@@ -507,9 +502,9 @@ static constexpr SnapshotSchemaField ActiveBody[] = {
     {"m_prevHealth", "Real"},
     {"m_maxHealth", "Real"},
     {"m_initialHealth", "Real"},
-    {"m_curDamageState", "UserData"},
+    {"m_curDamageState", "Int"},
     {"m_nextDamageFXTime", "UnsignedInt"},
-    {"m_lastDamageFXDone", "UserData"},
+    {"m_lastDamageFXDone", "Int"},
     {"m_lastDamageInfo", "Snapshot"},
     {"m_lastDamageTimestamp", "UnsignedInt"},
     {"m_lastHealingTimestamp", "UnsignedInt"},
@@ -518,8 +513,8 @@ static constexpr SnapshotSchemaField ActiveBody[] = {
     {"m_lastDamageCleared", "Bool"},
     {"m_indestructible", "Bool"},
     {"particleSystemCount", "UnsignedShort"},
-    {"system.m_particleSystemID", "UserData"},
-    {"particleSystemID", "UserData"},
+    {"system.m_particleSystemID", "Int"},
+    {"particleSystemID", "Int"},
 };
 
 static constexpr SnapshotSchemaField ActiveShroudUpgrade[] = {
@@ -573,8 +568,6 @@ static constexpr SnapshotSchemaField AttackPriorityInfo[] = {
     {"priorityMapCount", "UnsignedShort"},
     {"thingTemplateName", "AsciiString"},
     {"priority", "Int"},
-    {"thingTemplateName", "AsciiString"},
-    {"priority", "Int"},
 };
 
 static constexpr SnapshotSchemaField AttackStateMachine[] = {
@@ -595,7 +588,7 @@ static constexpr SnapshotSchemaField AutoFindHealingUpdate[] = {
 
 static constexpr SnapshotSchemaField AutoHealBehavior[] = {
     {"version", "UnsignedByte"},
-    {"m_radiusParticleSystemID", "UserData"},
+    {"m_radiusParticleSystemID", "Int"},
     {"m_soonestHealFrame", "UnsignedInt"},
     {"m_stopped", "Bool"},
 };
@@ -624,10 +617,10 @@ static constexpr SnapshotSchemaField BattleBusSlowDeathBehavior[] = {
 
 static constexpr SnapshotSchemaField BattlePlanUpdate[] = {
     {"version", "UnsignedByte"},
-    {"m_currentPlan", "UserData"},
-    {"m_desiredPlan", "UserData"},
-    {"m_planAffectingArmy", "UserData"},
-    {"m_status", "UserData"},
+    {"m_currentPlan", "Int"},
+    {"m_desiredPlan", "Int"},
+    {"m_planAffectingArmy", "Int"},
+    {"m_status", "Int"},
     {"m_nextReadyFrame", "UnsignedInt"},
     {"m_invalidSettings", "Bool"},
     {"m_centeringTurret", "Bool"},
@@ -641,7 +634,7 @@ static constexpr SnapshotSchemaField BattlePlanUpdate[] = {
 
 static constexpr SnapshotSchemaField BeaconClientUpdate[] = {
     {"version", "UnsignedByte"},
-    {"m_particleSystemID", "UserData"},
+    {"m_particleSystemID", "Int"},
     {"m_lastRadarPulse", "UnsignedInt"},
 };
 
@@ -661,15 +654,14 @@ static constexpr SnapshotSchemaField BoneFXDamage[] = {
 static constexpr SnapshotSchemaField BoneFXUpdate[] = {
     {"version", "UnsignedByte"},
     {"particleSystemCount", "UnsignedShort"},
-    {"systemID", "UserData"},
-    {"systemID", "UserData"},
+    {"systemID", "Int"},
     {"m_nextFXFrame", "UserData"},
     {"m_nextOCLFrame", "UserData"},
     {"m_nextParticleSystemFrame", "UserData"},
     {"m_FXBonePositions", "UserData"},
     {"m_OCLBonePositions", "UserData"},
     {"m_PSBonePositions", "UserData"},
-    {"m_curBodyState", "UserData"},
+    {"m_curBodyState", "Int"},
     {"m_bonesResolved", "UserData"},
     {"m_active", "Bool"},
 };
@@ -680,13 +672,12 @@ static constexpr SnapshotSchemaField BridgeBehavior[] = {
     {"m_scaffoldPresent", "Bool"},
     {"scaffoldObjectCount", "UnsignedShort"},
     {"scaffoldObjectID", "ObjectID"},
-    {"scaffoldObjectID", "ObjectID"},
     {"m_deathFrame", "UnsignedInt"},
 };
 
 static constexpr SnapshotSchemaField BridgeScaffoldBehavior[] = {
     {"version", "UnsignedByte"},
-    {"m_targetMotion", "UserData"},
+    {"m_targetMotion", "Int"},
     {"m_createPos", "Coord3D"},
     {"m_riseToPos", "Coord3D"},
     {"m_buildPos", "Coord3D"},
@@ -698,7 +689,7 @@ static constexpr SnapshotSchemaField BridgeScaffoldBehavior[] = {
 static constexpr SnapshotSchemaField BridgeTowerBehavior[] = {
     {"version", "UnsignedByte"},
     {"m_bridgeID", "ObjectID"},
-    {"m_type", "UserData"},
+    {"m_type", "Int"},
 };
 
 static constexpr SnapshotSchemaField BuildListInfo[] = {
@@ -719,7 +710,7 @@ static constexpr SnapshotSchemaField BuildListInfo[] = {
     {"m_objectID", "ObjectID"},
     {"m_objectTimestamp", "UnsignedInt"},
     {"m_underConstruction", "Bool"},
-    {"m_resourceGatherers", "UserData"},
+    {"m_resourceGatherers", "Int"},
     {"m_isSupplyBuilding", "Bool"},
     {"m_desiredGatherers", "Int"},
     {"m_priorityBuild", "Bool"},
@@ -759,7 +750,6 @@ static constexpr SnapshotSchemaField CaveContain[] = {
 static constexpr SnapshotSchemaField CaveSystem[] = {
     {"version", "UnsignedByte"},
     {"count", "UnsignedShort"},
-    {"tracker", "Snapshot"},
     {"tracker", "Snapshot"},
 };
 
@@ -869,9 +859,9 @@ static constexpr SnapshotSchemaField DamageInfoInput[] = {
     {"version", "UnsignedByte"},
     {"m_sourceID", "ObjectID"},
     {"m_sourcePlayerMask", "UserData"},
-    {"m_damageType", "UserData"},
-    {"m_damageFXOverride", "UserData"},
-    {"m_deathType", "UserData"},
+    {"m_damageType", "Int"},
+    {"m_damageFXOverride", "Int"},
+    {"m_deathType", "Int"},
     {"m_amount", "Real"},
     {"m_kill", "Bool"},
     {"m_damageStatusType", "UserData"},
@@ -969,15 +959,8 @@ static constexpr SnapshotSchemaField DeployStyleAIUpdate[] = {
     {"m_frameToWaitForDeploy", "UnsignedInt"},
     {"obsoleteBool", "Bool"},
     {"obsoleteUnsignedInt", "UnsignedInt"},
-    {"m_state", "UserData"},
-    {"obsoleteObjectID", "ObjectID"},
     {"obsoleteObjectID", "ObjectID"},
     {"obsoleteCoord3D", "Coord3D"},
-    {"obsoleteBool", "Bool"},
-    {"obsoleteBool", "Bool"},
-    {"obsoleteBool", "Bool"},
-    {"obsoleteBool", "Bool"},
-    {"obsoleteBool", "Bool"},
 };
 
 static constexpr SnapshotSchemaField DestroyDie[] = {
@@ -1001,9 +984,7 @@ static constexpr SnapshotSchemaField DockUpdate[] = {
     {"m_positionsLoaded", "Bool"},
     {"vectorSize", "Int"},
     {"m_approachPositions[vectorIndex]", "Coord3D"},
-    {"vectorSize", "Int"},
     {"m_approachPositionOwners[vectorIndex]", "ObjectID"},
-    {"vectorSize", "Int"},
     {"unpack", "Bool"},
     {"m_activeDocker", "ObjectID"},
     {"m_dockerInside", "Bool"},
@@ -1077,7 +1058,7 @@ static constexpr SnapshotSchemaField Drawable[] = {
     {"m_selectionFlashEnvelope", "Snapshot"},
     {"colFlash", "Bool"},
     {"m_colorTintEnvelope", "Snapshot"},
-    {"decal", "UserData"},
+    {"decal", "Int"},
     {"m_explicitOpacity", "Real"},
     {"m_stealthOpacity", "Real"},
     {"m_effectiveStealthOpacity", "Real"},
@@ -1088,7 +1069,7 @@ static constexpr SnapshotSchemaField Drawable[] = {
     {"m_status", "UnsignedInt"},
     {"m_tintStatus", "UnsignedInt"},
     {"m_prevTintStatus", "UnsignedInt"},
-    {"m_fadeMode", "UserData"},
+    {"m_fadeMode", "Int"},
     {"m_timeElapsedFade", "UnsignedInt"},
     {"m_timeToFade", "UnsignedInt"},
     {"hasLocoInfo", "Bool"},
@@ -1111,7 +1092,7 @@ static constexpr SnapshotSchemaField Drawable[] = {
     {"m_locoInfo.m_wheelInfo.m_wheelAngle", "Real"},
     {"m_locoInfo.m_wheelInfo.m_framesAirborneCounter", "Int"},
     {"m_locoInfo.m_wheelInfo.m_framesAirborne", "Int"},
-    {"m_stealthLook", "UserData"},
+    {"m_stealthLook", "Int"},
     {"m_flashCount", "Int"},
     {"m_flashColor", "Color"},
     {"m_hidden", "Bool"},
@@ -1127,15 +1108,11 @@ static constexpr SnapshotSchemaField Drawable[] = {
     {"iconKeepFrame", "UnsignedInt"},
     {"iconTemplateName", "AsciiString"},
     {"getIconInfo().m_icon[ i ]", "Snapshot"},
-    {"iconIndexName", "AsciiString"},
-    {"iconKeepFrame", "UnsignedInt"},
-    {"iconTemplateName", "AsciiString"},
     {"getIconInfo().m_icon[ iconIndex ]", "Snapshot"},
     {"m_ambientSoundEnabled", "Bool"},
     {"m_ambientSoundEnabledFromScript", "Bool"},
     {"customized", "Bool"},
     {"customizedToSilence", "Bool"},
-    {"baseInfoName", "AsciiString"},
     {"baseInfoName", "AsciiString"},
 };
 
@@ -1162,7 +1139,7 @@ static constexpr SnapshotSchemaField DynamicGeometryInfoUpdate[] = {
     {"m_started", "Bool"},
     {"m_finished", "Bool"},
     {"m_reverseAtTransitionTime", "Bool"},
-    {"m_direction", "UserData"},
+    {"m_direction", "Int"},
     {"m_switchedDirections", "Bool"},
     {"m_initialHeight", "Real"},
     {"m_initialMajorRadius", "Real"},
@@ -1215,7 +1192,7 @@ static constexpr SnapshotSchemaField ExperienceScalarUpgrade[] = {
 
 static constexpr SnapshotSchemaField ExperienceTracker[] = {
     {"version", "UnsignedByte"},
-    {"m_currentLevel", "UserData"},
+    {"m_currentLevel", "Int"},
     {"m_currentExperience", "Int"},
     {"m_experienceSink", "ObjectID"},
     {"m_experienceScalar", "Real"},
@@ -1257,19 +1234,12 @@ static constexpr SnapshotSchemaField FireWeaponWhenDamagedBehavior[] = {
     {"version", "UnsignedByte"},
     {"weaponPresent", "Bool"},
     {"m_reactionWeaponPristine", "Snapshot"},
-    {"weaponPresent", "Bool"},
     {"m_reactionWeaponDamaged", "Snapshot"},
-    {"weaponPresent", "Bool"},
     {"m_reactionWeaponReallyDamaged", "Snapshot"},
-    {"weaponPresent", "Bool"},
     {"m_reactionWeaponRubble", "Snapshot"},
-    {"weaponPresent", "Bool"},
     {"m_continuousWeaponPristine", "Snapshot"},
-    {"weaponPresent", "Bool"},
     {"m_continuousWeaponDamaged", "Snapshot"},
-    {"weaponPresent", "Bool"},
     {"m_continuousWeaponReallyDamaged", "Snapshot"},
-    {"weaponPresent", "Bool"},
     {"m_continuousWeaponRubble", "Snapshot"},
 };
 
@@ -1279,7 +1249,7 @@ static constexpr SnapshotSchemaField FireWeaponWhenDeadBehavior[] = {
 
 static constexpr SnapshotSchemaField FirestormDynamicGeometryInfoUpdate[] = {
     {"version", "UnsignedByte"},
-    {"m_myParticleSystemID", "UserData"},
+    {"m_myParticleSystemID", "Int"},
     {"m_effectsFired", "Bool"},
     {"m_scorchPlaced", "Bool"},
     {"m_lastDamageFrame", "UnsignedInt"},
@@ -1294,7 +1264,7 @@ static constexpr SnapshotSchemaField FiringTracker[] = {
 
 static constexpr SnapshotSchemaField FlammableUpdate[] = {
     {"version", "UnsignedByte"},
-    {"m_status", "UserData"},
+    {"m_status", "Int"},
     {"m_aflameEndFrame", "UnsignedInt"},
     {"m_burnedEndFrame", "UnsignedInt"},
     {"m_damageEndFrame", "UnsignedInt"},
@@ -1332,9 +1302,6 @@ static constexpr SnapshotSchemaField FlightDeckBehavior[] = {
     {"m_lowerRampFrame[ i ]", "UnsignedInt"},
     {"m_rampUp[ MAX_RUNWAYS ]", "Bool"},
     {"dummyInt", "UnsignedInt"},
-    {"dummyInt", "UnsignedInt"},
-    {"dummyInt", "UnsignedInt"},
-    {"dummyInt", "UnsignedInt"},
     {"dummyBool", "Bool"},
 };
 
@@ -1353,12 +1320,6 @@ static constexpr SnapshotSchemaField GameClient[] = {
     {"draw", "Snapshot"},
     {"unnamed", "EndBlock"},
     {"tocID", "UnsignedShort"},
-    {"unnamed", "BlockSize"},
-    {"objectID", "ObjectID"},
-    {"draw", "Snapshot"},
-    {"unnamed", "EndBlock"},
-    {"numEntries", "Int"},
-    {"tempStr", "AsciiString"},
     {"numEntries", "Int"},
     {"tempStr", "AsciiString"},
 };
@@ -1372,31 +1333,20 @@ static constexpr SnapshotSchemaField GameLogic[] = {
     {"obj", "Snapshot"},
     {"unnamed", "EndBlock"},
     {"tocID", "UnsignedShort"},
-    {"unnamed", "BlockSize"},
-    {"obj", "Snapshot"},
-    {"unnamed", "EndBlock"},
     {"TheCampaignManager", "Snapshot"},
     {"TheCaveSystem", "Snapshot"},
     {"m_isScoringEnabled", "Bool"},
     {"triggerCount", "UnsignedInt"},
     {"triggerID", "Int"},
     {"poly", "Snapshot"},
-    {"triggerID", "Int"},
-    {"poly", "Snapshot"},
     {"m_rankLevelLimit", "Int"},
     {"name", "AsciiString"},
     {"bs", "UserData"},
     {"empty", "AsciiString"},
-    {"name", "AsciiString"},
-    {"bs", "UserData"},
     {"m_showBehindBuildingMarkers", "Bool"},
     {"m_drawIconUI", "Bool"},
     {"m_showDynamicLOD", "Bool"},
     {"m_scriptHulkMaxLifetimeOverride", "Int"},
-    {"name", "AsciiString"},
-    {"value", "AsciiString"},
-    {"empty", "AsciiString"},
-    {"name", "AsciiString"},
     {"value", "AsciiString"},
     {"m_rankPointsToAddAtGameStart", "Int"},
     {"m_superweaponRestriction", "UnsignedShort"},
@@ -1418,18 +1368,13 @@ static constexpr SnapshotSchemaField GameState[] = {
     {"saveGameInfo.mapLabel", "AsciiString"},
     {"saveGameInfo.campaignSide", "AsciiString"},
     {"saveGameInfo.missionNumber", "Int"},
-    {"saveGameInfo.campaignSide", "AsciiString"},
-    {"saveGameInfo.missionNumber", "Int"},
 };
 
 static constexpr SnapshotSchemaField GameStateMap[] = {
     {"version", "UnsignedByte"},
     {"tmp", "AsciiString"},
-    {"tmp", "AsciiString"},
     {"gameMode", "Int"},
-    {"tmp", "AsciiString"},
     {"saveGameInfo.pristineMapName", "AsciiString"},
-    {"gameMode", "Int"},
     {"highObjectID", "ObjectID"},
     {"highDrawableID", "DrawableID"},
     {"TheSkirmishGameInfo", "Snapshot"},
@@ -1445,11 +1390,9 @@ static constexpr SnapshotSchemaField GarrisonContain[] = {
     {"m_garrisonPointData[ i ].placeFrame", "UnsignedInt"},
     {"m_garrisonPointData[ i ].lastEffectFrame", "UnsignedInt"},
     {"drawableID", "DrawableID"},
-    {"objectID", "ObjectID"},
     {"targetID", "ObjectID"},
     {"placeFrame", "UnsignedInt"},
     {"lastEffectFrame", "UnsignedInt"},
-    {"drawableID", "DrawableID"},
     {"m_garrisonPointsInUse", "Int"},
     {"m_garrisonPoint", "UserData"},
     {"m_garrisonPointsInitialized", "Bool"},
@@ -1470,7 +1413,7 @@ static constexpr SnapshotSchemaField GenerateMinefieldBehavior[] = {
 
 static constexpr SnapshotSchemaField GeometryInfo[] = {
     {"version", "UnsignedByte"},
-    {"m_type", "UserData"},
+    {"m_type", "Int"},
     {"m_isSmall", "Bool"},
     {"m_height", "Real"},
     {"m_majorRadius", "Real"},
@@ -1482,7 +1425,7 @@ static constexpr SnapshotSchemaField GeometryInfo[] = {
 static constexpr SnapshotSchemaField GhostObject[] = {
     {"version", "UnsignedByte"},
     {"parentObjectID", "ObjectID"},
-    {"m_parentGeometryType", "UserData"},
+    {"m_parentGeometryType", "Int"},
     {"m_parentGeometryIsSmall", "Bool"},
     {"m_parentGeometryMajorRadius", "Real"},
     {"m_parentGeometryminorRadius", "Real"},
@@ -1501,7 +1444,7 @@ static constexpr SnapshotSchemaField GrantScienceUpgrade[] = {
 
 static constexpr SnapshotSchemaField GrantStealthBehavior[] = {
     {"version", "UnsignedByte"},
-    {"m_radiusParticleSystemID", "UserData"},
+    {"m_radiusParticleSystemID", "Int"},
     {"m_currentScanRadius", "Real"},
 };
 
@@ -1588,7 +1531,6 @@ static constexpr SnapshotSchemaField InGameUI[] = {
     {"timerIter.second.m_timerName", "AsciiString"},
     {"timerIter.second.timerText", "UnicodeString"},
     {"timerIter.second.isCountdown", "Bool"},
-    {"timerCount", "Int"},
     {"timerName", "AsciiString"},
     {"timerText", "UnicodeString"},
     {"isCountdown", "Bool"},
@@ -1603,9 +1545,6 @@ static constexpr SnapshotSchemaField InGameUI[] = {
     {"swInfo.m_ready", "Bool"},
     {"swInfo.m_evaReadyPlayed", "Bool"},
     {"noMorePlayers", "Int"},
-    {"playerIndex", "Int"},
-    {"templateName", "AsciiString"},
-    {"powerName", "AsciiString"},
     {"id", "ObjectID"},
     {"timestamp", "UnsignedInt"},
     {"hiddenByScript", "Bool"},
@@ -1665,8 +1604,8 @@ static constexpr SnapshotSchemaField LaserUpdate[] = {
     {"m_startPos", "Coord3D"},
     {"m_endPos", "Coord3D"},
     {"m_dirty", "Bool"},
-    {"m_particleSystemID", "UserData"},
-    {"m_targetParticleSystemID", "UserData"},
+    {"m_particleSystemID", "Int"},
+    {"m_targetParticleSystemID", "Int"},
     {"m_parentID", "DrawableID"},
     {"m_targetID", "DrawableID"},
     {"m_parentBoneName", "AsciiString"},
@@ -1707,8 +1646,6 @@ static constexpr SnapshotSchemaField Locomotor[] = {
 static constexpr SnapshotSchemaField LocomotorSet[] = {
     {"version", "UnsignedByte"},
     {"count", "UnsignedShort"},
-    {"name", "AsciiString"},
-    {"loco", "Snapshot"},
     {"name", "AsciiString"},
     {"loco", "Snapshot"},
     {"m_validLocomotorSurfaces", "Int"},
@@ -1763,8 +1700,8 @@ static constexpr SnapshotSchemaField MissileAIUpdate[] = {
 
 static constexpr SnapshotSchemaField MissileLauncherBuildingUpdate[] = {
     {"version", "UnsignedByte"},
-    {"m_doorState", "UserData"},
-    {"m_timeoutState", "UserData"},
+    {"m_doorState", "Int"},
+    {"m_timeoutState", "Int"},
     {"m_timeoutFrame", "UnsignedInt"},
 };
 
@@ -1780,7 +1717,7 @@ static constexpr SnapshotSchemaField MobMemberSlavedUpdate[] = {
     {"version", "UnsignedByte"},
     {"m_slaver", "ObjectID"},
     {"m_framesToWait", "Int"},
-    {"m_mobState", "UserData"},
+    {"m_mobState", "Int"},
     {"m_personalColor", "RGBColor"},
     {"m_primaryVictimID", "ObjectID"},
     {"m_squirrellinessRatio", "Real"},
@@ -1831,11 +1768,11 @@ static constexpr SnapshotSchemaField NeutronMissileSlowDeathBehavior[] = {
 
 static constexpr SnapshotSchemaField NeutronMissileUpdate[] = {
     {"version", "UnsignedByte"},
-    {"m_state", "UserData"},
+    {"m_state", "Int"},
     {"m_targetPos", "Coord3D"},
     {"m_intermedPos", "Coord3D"},
     {"m_launcherID", "ObjectID"},
-    {"m_attach_wslot", "UserData"},
+    {"m_attach_wslot", "Int"},
     {"m_attach_specificBarrelToUse", "Int"},
     {"m_accel", "Coord3D"},
     {"m_vel", "Coord3D"},
@@ -1912,10 +1849,6 @@ static constexpr SnapshotSchemaField Object[] = {
     {"unnamed", "BlockSize"},
     {"module", "Snapshot"},
     {"unnamed", "EndBlock"},
-    {"moduleIdentifier", "AsciiString"},
-    {"unnamed", "BlockSize"},
-    {"module", "Snapshot"},
-    {"unnamed", "EndBlock"},
     {"m_soleHealingBenefactorID", "ObjectID"},
     {"m_soleHealingBenefactorExpirationFrame", "UnsignedInt"},
     {"m_weaponBonusCondition", "UnsignedInt"},
@@ -1970,7 +1903,6 @@ static constexpr SnapshotSchemaField OpenContain[] = {
     {"version", "UnsignedByte"},
     {"objectID", "ObjectID"},
     {"m_containListSize", "UnsignedInt"},
-    {"objectID", "ObjectID"},
     {"m_playerEnteredMask", "UserData"},
     {"m_lastUnloadSoundFrame", "UnsignedInt"},
     {"m_lastLoadSoundFrame", "UnsignedInt"},
@@ -1984,10 +1916,7 @@ static constexpr SnapshotSchemaField OpenContain[] = {
     {"m_rallyPoint", "Coord3D"},
     {"m_rallyPointExists", "Bool"},
     {"enterExitCount", "UnsignedShort"},
-    {"objectID", "ObjectID"},
-    {"enterExitType", "UserData"},
-    {"objectID", "ObjectID"},
-    {"enterExitType", "UserData"},
+    {"enterExitType", "Int"},
     {"m_whichExitPath", "Int"},
     {"m_passengerAllowedToFire", "Bool"},
 };
@@ -2081,7 +2010,7 @@ static constexpr SnapshotSchemaField Particle[] = {
     {"m_colorRate", "RGBColor"},
     {"m_colorTargetKey", "Int"},
     {"drawableID", "DrawableID"},
-    {"systemUnderControlID", "UserData"},
+    {"systemUnderControlID", "Int"},
 };
 
 static constexpr SnapshotSchemaField ParticleInfo[] = {
@@ -2091,10 +2020,7 @@ static constexpr SnapshotSchemaField ParticleInfo[] = {
     {"m_emitterPos", "Coord3D"},
     {"m_velDamping", "Real"},
     {"tempAngle", "Real"},
-    {"tempAngle", "Real"},
     {"m_angleZ", "Real"},
-    {"tempAngle", "Real"},
-    {"tempAngle", "Real"},
     {"m_angularRateZ", "Real"},
     {"m_lifetime", "UnsignedInt"},
     {"m_size", "Real"},
@@ -2111,7 +2037,7 @@ static constexpr SnapshotSchemaField ParticleInfo[] = {
 
 static constexpr SnapshotSchemaField ParticleSystem[] = {
     {"version", "UnsignedByte"},
-    {"m_systemID", "UserData"},
+    {"m_systemID", "Int"},
     {"m_attachedToDrawableID", "DrawableID"},
     {"m_attachedToObjectID", "ObjectID"},
     {"m_isLocalIdentity", "Bool"},
@@ -2133,24 +2059,20 @@ static constexpr SnapshotSchemaField ParticleSystem[] = {
     {"m_pos", "Coord3D"},
     {"m_lastPos", "Coord3D"},
     {"m_isFirstPos", "Bool"},
-    {"m_slaveSystemID", "UserData"},
-    {"m_masterSystemID", "UserData"},
+    {"m_slaveSystemID", "Int"},
+    {"m_masterSystemID", "Int"},
     {"particleCount", "UnsignedInt"},
-    {"particle", "Snapshot"},
     {"particle", "Snapshot"},
 };
 
 static constexpr SnapshotSchemaField ParticleSystemInfo[] = {
     {"version", "UnsignedByte"},
     {"m_isOneShot", "Bool"},
-    {"m_shaderType", "UserData"},
-    {"m_particleType", "UserData"},
+    {"m_shaderType", "Int"},
+    {"m_particleType", "Int"},
     {"m_particleTypeName", "AsciiString"},
     {"tempRandom", "UserData"},
-    {"tempRandom", "UserData"},
     {"m_angleZ", "UserData"},
-    {"tempRandom", "UserData"},
-    {"tempRandom", "UserData"},
     {"m_angularRateZ", "UserData"},
     {"m_angularDamping", "UserData"},
     {"m_velDamping", "UserData"},
@@ -2173,8 +2095,8 @@ static constexpr SnapshotSchemaField ParticleSystemInfo[] = {
     {"m_slaveSystemName", "AsciiString"},
     {"m_slavePosOffset", "Coord3D"},
     {"m_attachedSystemName", "AsciiString"},
-    {"m_emissionVelocityType", "UserData"},
-    {"m_priority", "UserData"},
+    {"m_emissionVelocityType", "Int"},
+    {"m_priority", "Int"},
     {"m_emissionVelocity.ortho.x", "UserData"},
     {"m_emissionVelocity.ortho.y", "UserData"},
     {"m_emissionVelocity.ortho.z", "UserData"},
@@ -2184,7 +2106,7 @@ static constexpr SnapshotSchemaField ParticleSystemInfo[] = {
     {"m_emissionVelocity.cylindrical.normal", "UserData"},
     {"m_emissionVelocity.outward.speed", "UserData"},
     {"m_emissionVelocity.outward.otherSpeed", "UserData"},
-    {"m_emissionVolumeType", "UserData"},
+    {"m_emissionVolumeType", "Int"},
     {"m_emissionVolume.line.start", "Coord3D"},
     {"m_emissionVolume.line.end", "Coord3D"},
     {"m_emissionVolume.box.halfSize", "Coord3D"},
@@ -2195,7 +2117,7 @@ static constexpr SnapshotSchemaField ParticleSystemInfo[] = {
     {"m_isGroundAligned", "Bool"},
     {"m_isEmitAboveGroundOnly", "Bool"},
     {"m_isParticleUpTowardsEmitter", "Bool"},
-    {"m_windMotion", "UserData"},
+    {"m_windMotion", "Int"},
     {"m_windAngle", "Real"},
     {"m_windAngleChange", "Real"},
     {"m_windAngleChangeMin", "Real"},
@@ -2211,26 +2133,24 @@ static constexpr SnapshotSchemaField ParticleSystemInfo[] = {
 
 static constexpr SnapshotSchemaField ParticleSystemManager[] = {
     {"version", "UnsignedByte"},
-    {"m_uniqueSystemID", "UserData"},
+    {"m_uniqueSystemID", "Int"},
     {"systemCount", "UnsignedInt"},
     {"mtString", "AsciiString"},
-    {"systemName", "AsciiString"},
-    {"system", "Snapshot"},
     {"systemName", "AsciiString"},
     {"system", "Snapshot"},
 };
 
 static constexpr SnapshotSchemaField ParticleUplinkCannonUpdate[] = {
     {"version", "UnsignedByte"},
-    {"m_status", "UserData"},
-    {"m_laserStatus", "UserData"},
+    {"m_status", "Int"},
+    {"m_laserStatus", "Int"},
     {"m_frames", "UnsignedInt"},
-    {"m_outerSystemIDs", "UserData"},
-    {"m_laserBeamIDs", "UserData"},
+    {"m_outerSystemIDs", "Int"},
+    {"m_laserBeamIDs", "Int"},
     {"m_groundToOrbitBeamID", "DrawableID"},
     {"m_orbitToTargetBeamID", "DrawableID"},
-    {"m_connectorSystemID", "UserData"},
-    {"m_laserBaseSystemID", "UserData"},
+    {"m_connectorSystemID", "Int"},
+    {"m_laserBaseSystemID", "Int"},
     {"m_outerNodePositions", "UserData"},
     {"m_outerNodeOrientations", "UserData"},
     {"m_connectorNodePosition", "Coord3D"},
@@ -2276,15 +2196,11 @@ static constexpr SnapshotSchemaField PassengersFireUpgrade[] = {
 static constexpr SnapshotSchemaField Path[] = {
     {"version", "UnsignedByte"},
     {"count", "Int"},
-    {"count", "Int"},
     {"pos", "Coord3D"},
     {"layer", "UserData"},
     {"canOpt", "Bool"},
     {"id", "Int"},
     {"nodeId", "Int"},
-    {"pos", "Coord3D"},
-    {"layer", "UserData"},
-    {"canOpt", "Bool"},
     {"optID", "Int"},
     {"m_isOptimized", "Bool"},
     {"obsolete1", "Int"},
@@ -2305,7 +2221,7 @@ static constexpr SnapshotSchemaField PhysicsBehavior[] = {
     {"m_prevAccel", "Coord3D"},
     {"m_vel", "Coord3D"},
     {"tmp", "Coord3D"},
-    {"m_turning", "UserData"},
+    {"m_turning", "Int"},
     {"m_ignoreCollisionsWith", "ObjectID"},
     {"m_flags", "Int"},
     {"m_mass", "Real"},
@@ -2331,8 +2247,6 @@ static constexpr SnapshotSchemaField Player[] = {
     {"m_sciencesHidden", "ScienceVec"},
     {"upgradeName", "AsciiString"},
     {"upgrade", "Snapshot"},
-    {"upgradeName", "AsciiString"},
-    {"upgrade", "Snapshot"},
     {"m_radarCount", "Int"},
     {"m_isPlayerDead", "Bool"},
     {"m_disableProofRadarCount", "Int"},
@@ -2342,9 +2256,7 @@ static constexpr SnapshotSchemaField Player[] = {
     {"m_energy", "Snapshot"},
     {"prototypeCount", "UnsignedShort"},
     {"prototypeID", "UserData"},
-    {"prototypeID", "UserData"},
     {"buildListInfoCount", "UnsignedShort"},
-    {"buildListInfo", "Snapshot"},
     {"buildListInfo", "Snapshot"},
     {"aiPlayerPresent", "Bool"},
     {"m_ai", "Snapshot"},
@@ -2355,8 +2267,7 @@ static constexpr SnapshotSchemaField Player[] = {
     {"teamID", "UserData"},
     {"m_sciences", "ScienceVec"},
     {"scienceCount", "UnsignedShort"},
-    {"science", "UserData"},
-    {"science", "UserData"},
+    {"science", "Int"},
     {"m_rankLevel", "Int"},
     {"m_skillPoints", "Int"},
     {"m_sciencePurchasePoints", "Int"},
@@ -2376,11 +2287,7 @@ static constexpr SnapshotSchemaField Player[] = {
     {"percentProductionChangeCount", "UnsignedShort"},
     {"entry.m_percent", "Real"},
     {"entry.m_ref", "UnsignedInt"},
-    {"entry.m_percent", "Real"},
-    {"entry.m_ref", "UnsignedInt"},
     {"timerListSize", "UnsignedShort"},
-    {"timer.m_templateID", "UnsignedInt"},
-    {"timer.m_readyFrame", "UnsignedInt"},
     {"timer.m_templateID", "UnsignedInt"},
     {"timer.m_readyFrame", "UnsignedInt"},
     {"squadCount", "UnsignedShort"},
@@ -2408,8 +2315,6 @@ static constexpr SnapshotSchemaField PlayerList[] = {
 static constexpr SnapshotSchemaField PlayerRelationMap[] = {
     {"version", "UnsignedByte"},
     {"playerRelationCount", "UnsignedShort"},
-    {"playerIndex", "Int"},
-    {"r", "UserData"},
     {"playerIndex", "Int"},
     {"r", "UserData"},
 };
@@ -2458,8 +2363,6 @@ static constexpr SnapshotSchemaField PrisonBehavior[] = {
     {"visualCount", "UnsignedShort"},
     {"visual.m_objectID", "ObjectID"},
     {"visual.m_drawableID", "DrawableID"},
-    {"visual.m_objectID", "ObjectID"},
-    {"visual.m_drawableID", "DrawableID"},
 };
 
 static constexpr SnapshotSchemaField PrisonDockUpdate[] = {
@@ -2469,23 +2372,15 @@ static constexpr SnapshotSchemaField PrisonDockUpdate[] = {
 static constexpr SnapshotSchemaField ProductionUpdate[] = {
     {"version", "UnsignedByte"},
     {"productionCount", "UnsignedShort"},
-    {"production.m_type", "UserData"},
+    {"production.m_type", "Int"},
     {"name", "AsciiString"},
-    {"production.m_productionID", "UserData"},
+    {"production.m_productionID", "Int"},
     {"production.m_percentComplete", "Real"},
     {"production.m_framesUnderConstruction", "Int"},
     {"production.m_productionQuantityTotal", "Int"},
     {"production.m_productionQuantityProduced", "Int"},
     {"Int*)&production.m_exitDoor", "Int"},
-    {"production.m_type", "UserData"},
-    {"name", "AsciiString"},
-    {"production.m_productionID", "UserData"},
-    {"production.m_percentComplete", "Real"},
-    {"production.m_framesUnderConstruction", "Int"},
-    {"production.m_productionQuantityTotal", "Int"},
-    {"production.m_productionQuantityProduced", "Int"},
-    {"Int*)&production.m_exitDoor", "Int"},
-    {"m_uniqueID", "UserData"},
+    {"m_uniqueID", "Int"},
     {"m_productionCount", "UnsignedInt"},
     {"m_constructionCompleteFrame", "UnsignedInt"},
     {"m_doors", "UserData"},
@@ -2494,7 +2389,7 @@ static constexpr SnapshotSchemaField ProductionUpdate[] = {
 
 static constexpr SnapshotSchemaField ProjectileStreamUpdate[] = {
     {"version", "UnsignedByte"},
-    {"m_projectileIDs", "UserData"},
+    {"m_projectileIDs", "Int"},
     {"m_nextFreeIndex", "Int"},
     {"m_firstValidIndex", "Int"},
     {"m_owningObject", "ObjectID"},
@@ -2519,7 +2414,6 @@ static constexpr SnapshotSchemaField PropagandaTowerBehavior[] = {
     {"m_lastScanFrame", "UnsignedInt"},
     {"insideCount", "UnsignedShort"},
     {"trackerEntry.objectID", "ObjectID"},
-    {"trackerEntry.objectID", "ObjectID"},
 };
 
 static constexpr SnapshotSchemaField QueueProductionExitUpdate[] = {
@@ -2533,7 +2427,6 @@ static constexpr SnapshotSchemaField QueueProductionExitUpdate[] = {
 
 static constexpr SnapshotSchemaField Radar[] = {
     {"version", "UnsignedByte"},
-    {"value", "Bool"},
     {"value", "Bool"},
     {"m_radarHidden", "UserData"},
     {"m_radarForceOn", "UserData"},
@@ -2599,7 +2492,7 @@ static constexpr SnapshotSchemaField RailedTransportDockUpdate[] = {
 
 static constexpr SnapshotSchemaField RailroadBehavior[] = {
     {"version", "UnsignedByte"},
-    {"m_nextStationTask", "UserData"},
+    {"m_nextStationTask", "Int"},
     {"m_trailerID", "ObjectID"},
     {"m_currentPointHandle", "Int"},
     {"m_waitAtStationTimer", "Int"},
@@ -2612,8 +2505,8 @@ static constexpr SnapshotSchemaField RailroadBehavior[] = {
     {"m_wantsToBeLeadCarraige", "Int"},
     {"m_disembark", "Bool"},
     {"m_inTunnel", "Bool"},
-    {"m_conductorState", "UserData"},
-    {"m_anchorWaypointID", "UserData"},
+    {"m_conductorState", "Int"},
+    {"m_anchorWaypointID", "Int"},
     {"m_held", "Bool"},
 };
 
@@ -2721,7 +2614,6 @@ static constexpr SnapshotSchemaField ScriptEngine[] = {
     {"version", "UnsignedByte"},
     {"sequentialScriptCount", "UnsignedShort"},
     {"sequentialScript", "Snapshot"},
-    {"sequentialScript", "Snapshot"},
     {"countersSize", "UnsignedShort"},
     {"m_counters[ i ].value", "Int"},
     {"m_counters[ i ].name", "AsciiString"},
@@ -2739,10 +2631,8 @@ static constexpr SnapshotSchemaField ScriptEngine[] = {
     {"namedObjectsCount", "UnsignedShort"},
     {"namedObjectName", "AsciiString"},
     {"objectID", "ObjectID"},
-    {"namedObjectName", "AsciiString"},
-    {"objectID", "ObjectID"},
     {"m_firstUpdate", "Bool"},
-    {"m_fade", "UserData"},
+    {"m_fade", "Int"},
     {"m_minFade", "Real"},
     {"m_maxFade", "Real"},
     {"m_curFadeValue", "Real"},
@@ -2764,7 +2654,7 @@ static constexpr SnapshotSchemaField ScriptEngine[] = {
     {"m_breezeInfo.m_randomness", "Real"},
     {"m_breezeInfo.m_breezePeriod", "Short"},
     {"m_breezeInfo.m_breezeVersion", "Short"},
-    {"m_gameDifficulty", "UserData"},
+    {"m_gameDifficulty", "Int"},
     {"m_freezeByScript", "Bool"},
     {"namedRevealCount", "UnsignedShort"},
     {"it.m_revealName", "AsciiString"},
@@ -2776,7 +2666,6 @@ static constexpr SnapshotSchemaField ScriptEngine[] = {
     {"reveal.m_radiusToReveal", "Real"},
     {"reveal.m_playerName", "AsciiString"},
     {"allObjectTypesCount", "UnsignedShort"},
-    {"objectTypes", "Snapshot"},
     {"objectTypes", "Snapshot"},
     {"m_objectsShouldReceiveDifficultyBonus", "Bool"},
     {"m_currentTrackName", "AsciiString"},
@@ -2805,7 +2694,6 @@ static constexpr SnapshotSchemaField SequentialScript[] = {
     {"version", "UnsignedByte"},
     {"teamID", "UserData"},
     {"m_objectID", "ObjectID"},
-    {"scriptName", "AsciiString"},
     {"scriptName", "AsciiString"},
     {"m_currentInstruction", "Int"},
     {"m_timesToLoop", "Int"},
@@ -2875,7 +2763,7 @@ static constexpr SnapshotSchemaField SlavedUpdate[] = {
     {"m_slaver", "ObjectID"},
     {"m_guardPointOffset", "Coord3D"},
     {"m_framesToWait", "Int"},
-    {"m_repairState", "UserData"},
+    {"m_repairState", "Int"},
     {"m_repairing", "Bool"},
 };
 
@@ -2909,7 +2797,7 @@ static constexpr SnapshotSchemaField SpawnBehavior[] = {
 
 static constexpr SnapshotSchemaField SpawnPointProductionExitUpdate[] = {
     {"version", "UnsignedByte"},
-    {"m_spawnPointOccupier", "UserData"},
+    {"m_spawnPointOccupier", "Int"},
 };
 
 static constexpr SnapshotSchemaField SpecialAbility[] = {
@@ -2927,7 +2815,7 @@ static constexpr SnapshotSchemaField SpecialAbilityUpdate[] = {
     {"m_specialObjectIDList", "STLObjectIDList"},
     {"m_specialObjectEntries", "UnsignedInt"},
     {"m_noTargetCommand", "Bool"},
-    {"m_packingState", "UserData"},
+    {"m_packingState", "Int"},
     {"m_facingInitiated", "Bool"},
     {"m_facingComplete", "Bool"},
     {"m_withinStartAbilityRange", "Bool"},
@@ -2967,7 +2855,7 @@ static constexpr SnapshotSchemaField SpectreGunshipUpdate[] = {
     {"m_initialTargetPosition", "Coord3D"},
     {"m_overrideTargetDestination", "Coord3D"},
     {"m_satellitePosition", "Coord3D"},
-    {"m_status", "UserData"},
+    {"m_status", "Int"},
     {"m_orbitEscapeFrame", "UnsignedInt"},
     {"m_attackAreaDecal", "UserData"},
     {"m_targetingReticleDecal", "UserData"},
@@ -2994,7 +2882,6 @@ static constexpr SnapshotSchemaField Squad[] = {
     {"version", "UnsignedByte"},
     {"objectCount", "UnsignedShort"},
     {"objectID", "ObjectID"},
-    {"objectID", "ObjectID"},
 };
 
 static constexpr SnapshotSchemaField SquishCollide[] = {
@@ -3008,7 +2895,6 @@ static constexpr SnapshotSchemaField StateMachine[] = {
     {"curStateID", "UnsignedInt"},
     {"snapshotAllStates", "Bool"},
     {"saveCount", "Int"},
-    {"id", "UnsignedInt"},
     {"id", "UnsignedInt"},
     {"state", "Snapshot"},
     {"m_currentState", "Snapshot"},
@@ -3069,7 +2955,7 @@ static constexpr SnapshotSchemaField StructureCollapseUpdate[] = {
     {"version", "UnsignedByte"},
     {"m_collapseFrame", "UnsignedInt"},
     {"m_burstFrame", "UnsignedInt"},
-    {"m_collapseState", "UserData"},
+    {"m_collapseState", "Int"},
     {"m_collapseVelocity", "Real"},
     {"m_currentHeight", "Real"},
 };
@@ -3078,7 +2964,7 @@ static constexpr SnapshotSchemaField StructureToppleUpdate[] = {
     {"version", "UnsignedByte"},
     {"m_toppleFrame", "UnsignedInt"},
     {"m_toppleDirection", "Coord2D"},
-    {"m_toppleState", "UserData"},
+    {"m_toppleState", "Int"},
     {"m_toppleVelocity", "Real"},
     {"m_accumulatedAngle", "Real"},
     {"m_structuralIntegrity", "Real"},
@@ -3157,7 +3043,6 @@ static constexpr SnapshotSchemaField Team[] = {
     {"teamID", "UserData"},
     {"memberCount", "UnsignedShort"},
     {"memberID", "ObjectID"},
-    {"memberID", "ObjectID"},
     {"m_state", "AsciiString"},
     {"m_enteredOrExited", "Bool"},
     {"m_active", "Bool"},
@@ -3184,14 +3069,11 @@ static constexpr SnapshotSchemaField TeamFactory[] = {
     {"prototypeCount", "UnsignedShort"},
     {"teamPrototypeID", "UserData"},
     {"teamPrototype", "Snapshot"},
-    {"teamPrototypeID", "UserData"},
-    {"teamPrototype", "Snapshot"},
 };
 
 static constexpr SnapshotSchemaField TeamInQueue[] = {
     {"version", "UnsignedByte"},
     {"workOrderCount", "UnsignedShort"},
-    {"workOrder", "Snapshot"},
     {"workOrder", "Snapshot"},
     {"m_priorityBuild", "Bool"},
     {"teamID", "UserData"},
@@ -3211,15 +3093,11 @@ static constexpr SnapshotSchemaField TeamPrototype[] = {
     {"teamInstanceCount", "UnsignedShort"},
     {"teamID", "UserData"},
     {"teamInstance", "Snapshot"},
-    {"teamID", "UserData"},
-    {"teamInstance", "Snapshot"},
 };
 
 static constexpr SnapshotSchemaField TeamRelationMap[] = {
     {"version", "UnsignedByte"},
     {"teamRelationCount", "UnsignedShort"},
-    {"teamID", "UserData"},
-    {"r", "UserData"},
     {"teamID", "UserData"},
     {"r", "UserData"},
 };
@@ -3235,7 +3113,7 @@ static constexpr SnapshotSchemaField TechBuildingBehavior[] = {
 
 static constexpr SnapshotSchemaField TempWeaponBonusHelper[] = {
     {"version", "UnsignedByte"},
-    {"m_currentBonus", "UserData"},
+    {"m_currentBonus", "Int"},
     {"m_frameToRemove", "UnsignedInt"},
 };
 
@@ -3248,7 +3126,6 @@ static constexpr SnapshotSchemaField TerrainLogic[] = {
     {"version", "UnsignedByte"},
     {"activeBoundary", "Int"},
     {"m_numWaterToUpdate", "Int"},
-    {"triggerID", "Int"},
     {"triggerID", "Int"},
     {"m_waterToUpdate[ i ].changePerFrame", "Real"},
     {"m_waterToUpdate[ i ].targetHeight", "Real"},
@@ -3288,7 +3165,7 @@ static constexpr SnapshotSchemaField ToppleUpdate[] = {
 
 static constexpr SnapshotSchemaField TransitionDamageFX[] = {
     {"version", "UnsignedByte"},
-    {"m_particleSystemID", "UserData"},
+    {"m_particleSystemID", "Int"},
 };
 
 static constexpr SnapshotSchemaField TransportAIUpdate[] = {
@@ -3312,7 +3189,6 @@ static constexpr SnapshotSchemaField TunnelTracker[] = {
     {"version", "UnsignedByte"},
     {"m_tunnelIDs", "STLObjectIDList"},
     {"m_containListSize", "Int"},
-    {"objectID", "ObjectID"},
     {"objectID", "ObjectID"},
     {"m_tunnelCount", "UnsignedInt"},
 };
@@ -3373,7 +3249,7 @@ static constexpr SnapshotSchemaField UpdateModule[] = {
 
 static constexpr SnapshotSchemaField Upgrade[] = {
     {"version", "UnsignedByte"},
-    {"m_status", "UserData"},
+    {"m_status", "Int"},
 };
 
 static constexpr SnapshotSchemaField UpgradeDie[] = {
@@ -3431,15 +3307,9 @@ static constexpr SnapshotSchemaField W3DGhostObject[] = {
     {"scale", "Real"},
     {"color", "UnsignedInt"},
     {"objectSnapshot", "Snapshot"},
-    {"name", "AsciiString"},
-    {"scale", "Real"},
-    {"color", "UnsignedInt"},
-    {"objectSnapshot", "Snapshot"},
     {"shroudednessCount", "UnsignedByte"},
     {"playerIndex", "UnsignedByte"},
-    {"status", "UserData"},
-    {"playerIndex", "UnsignedByte"},
-    {"status", "UserData"},
+    {"status", "Int"},
 };
 
 static constexpr SnapshotSchemaField W3DGhostObjectManager[] = {
@@ -3447,7 +3317,6 @@ static constexpr SnapshotSchemaField W3DGhostObjectManager[] = {
     {"count", "UnsignedShort"},
     {"objectID", "ObjectID"},
     {"w3dGhostObject", "Snapshot"},
-    {"objectID", "ObjectID"},
     {"ghostObject", "Snapshot"},
 };
 
@@ -3461,18 +3330,9 @@ static constexpr SnapshotSchemaField W3DModelDraw[] = {
     {"weaponRecoilInfo.m_state", "UserData"},
     {"weaponRecoilInfo.m_shift", "Real"},
     {"weaponRecoilInfo.m_recoilRate", "Real"},
-    {"weaponRecoilInfo.m_state", "UserData"},
-    {"weaponRecoilInfo.m_shift", "Real"},
-    {"weaponRecoilInfo.m_recoilRate", "Real"},
     {"subObjectCount", "UnsignedByte"},
     {"hideShowSubObjInfo.subObjName", "AsciiString"},
     {"hideShowSubObjInfo.hide", "Bool"},
-    {"hideShowSubObjInfo.subObjName", "AsciiString"},
-    {"hideShowSubObjInfo.hide", "Bool"},
-    {"present", "Bool"},
-    {"mode", "Int"},
-    {"percent", "Real"},
-    {"present", "Bool"},
     {"present", "Bool"},
     {"mode", "Int"},
     {"percent", "Real"},
@@ -3522,9 +3382,7 @@ static constexpr SnapshotSchemaField W3DRenderObjectSnapshot[] = {
     {"transform", "UserData"},
     {"subObjectCount", "Int"},
     {"subObjectName", "AsciiString"},
-    {"subObjectName", "AsciiString"},
     {"visible", "Bool"},
-    {"transform", "UserData"},
 };
 
 static constexpr SnapshotSchemaField W3DRopeDraw[] = {
@@ -3628,7 +3486,7 @@ static constexpr SnapshotSchemaField WaveGuideUpdate[] = {
     {"m_initialized", "Bool"},
     {"m_shapePoints", "UserData"},
     {"m_transformedShapePoints", "UserData"},
-    {"m_shapeEffects", "UserData"},
+    {"m_shapeEffects", "Int"},
     {"m_shapePointCount", "Int"},
     {"m_splashSoundFrame", "UnsignedInt"},
     {"m_finalDestination", "Coord3D"},
@@ -3637,8 +3495,8 @@ static constexpr SnapshotSchemaField WaveGuideUpdate[] = {
 static constexpr SnapshotSchemaField Weapon[] = {
     {"version", "UnsignedByte"},
     {"tmplName", "AsciiString"},
-    {"m_wslot", "UserData"},
-    {"m_status", "UserData"},
+    {"m_wslot", "Int"},
+    {"m_status", "Int"},
     {"m_ammoInClip", "UnsignedInt"},
     {"m_whenWeCanFireAgain", "UnsignedInt"},
     {"m_whenPreAttackFinished", "UnsignedInt"},
@@ -3651,7 +3509,6 @@ static constexpr SnapshotSchemaField Weapon[] = {
     {"m_curBarrel", "Int"},
     {"m_numShotsForCurBarrel", "Int"},
     {"scatterCount", "UnsignedShort"},
-    {"intData", "Int"},
     {"intData", "Int"},
     {"m_pitchLimited", "Bool"},
     {"m_leechWeaponRangeActive", "Bool"},
@@ -3668,14 +3525,12 @@ static constexpr SnapshotSchemaField WeaponBonusUpgrade[] = {
 static constexpr SnapshotSchemaField WeaponSet[] = {
     {"version", "UnsignedByte"},
     {"ttName", "AsciiString"},
-    {"ttName", "AsciiString"},
     {"hasWeaponInSlot", "Bool"},
     {"m_weapons[i]", "Snapshot"},
     {"m_curWeapon", "UserData"},
     {"m_curWeaponLockedStatus", "UserData"},
     {"m_filledWeaponSlotMask", "UnsignedInt"},
     {"m_totalAntiMask", "Int"},
-    {"m_hasDamageWeapon", "Bool"},
     {"m_hasDamageWeapon", "Bool"},
 };
 
