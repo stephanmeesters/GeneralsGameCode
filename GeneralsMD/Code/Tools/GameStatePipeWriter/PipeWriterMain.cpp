@@ -116,35 +116,8 @@ int main() {
     input.close();
 
     static const Char *SAVE_FILE_EOF = "SG_EOF";
-
     XferLoadBuffer xfer;
-    xfer.open("buffer", bytes);
-    while (true) {
-        AsciiString token;
-        xfer.xferAsciiString(&token);
-        std::cout << token.str() << std::endl;
 
-        // assume block
-        int blockSize = xfer.beginBlock(); // size not used in load?
-        std::cout << "Block size: " << blockSize << std::endl;
-
-        // serialize block
-        if (!SnapshotSchema::SNAPSHOT_BLOCK_SCHEMAS.contains(token.str())) {
-            //BAD
-            break;
-        }
-        SnapshotSchemaView view = SnapshotSchema::SNAPSHOT_BLOCK_SCHEMAS.at(token.str());
-        std::string serialized = serialize(xfer, view);
-        std::cout << serialized << std::endl;
-        xfer.endBlock();
-
-        break;
-
-        if (token.compareNoCase(SAVE_FILE_EOF) == 0) {
-            break;
-        }
-    }
-    xfer.close();
 
     const std::string chunkTag = "CHUNK_";
     std::vector<int> chunkOffsets;
@@ -164,6 +137,37 @@ int main() {
 
         xfer.close();
     }
+
+
+    for (auto offset: chunkOffsets) {
+        std::cout << "-----------------------------------" << std::endl;
+
+        xfer.open("buffer", bytes);
+        xfer.skip(offset);
+
+        AsciiString token;
+        xfer.xferAsciiString(&token);
+        std::cout << token.str() << std::endl;
+
+        // assume block
+        int blockSize = xfer.beginBlock(); // size not used in load?
+        std::cout << "Block size: " << blockSize << std::endl;
+
+        // serialize block
+        if (!SnapshotSchema::SNAPSHOT_BLOCK_SCHEMAS.contains(token.str())) {
+            //BAD
+            std::cout << "BLOCK NOT FOUND: " << token.str() << std::endl;
+            // return 1;
+            xfer.close();
+            continue;
+        }
+        SnapshotSchemaView view = SnapshotSchema::SNAPSHOT_BLOCK_SCHEMAS.at(token.str());
+        std::string serialized = serialize(xfer, view);
+        std::cout << serialized << std::endl;
+        // xfer.endBlock();
+        xfer.close();
+    }
+
 
     return 0;
 
