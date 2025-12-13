@@ -4,10 +4,13 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <sstream>
+#include <string_view>
 #include <vector>
 
 #include "Lib/BaseType.h"
 #include "Common/AsciiString.h"
+#include "Common/UnicodeString.h"
 #include "Common/XferLoadBuffer.h"
 
 #include "GeneratedSnapshotSchema.h"
@@ -28,16 +31,74 @@ extern "C" void DebugCrash(const char *format, ...) {
     va_end(args);
 }
 
-std::string serialize(XferLoadBuffer xfer, SnapshotSchemaView field) {
-    for (const SnapshotSchemaField &field : field) {
-       switch (field.type) {
-           case "UnsignedByte":
-               UnsignedByte byte;
-               xfer.xferUnsignedByte(&byte);
-               break;
-           default: ;
-       }
+std::string serialize(XferLoadBuffer& xfer, SnapshotSchemaView schema) {
+    std::ostringstream out;
+    bool first = true;
+    for (const SnapshotSchemaField& field : schema) {
+        if (!first) {
+            out << "\n";
+        }
+        first = false;
+
+        out << field.name << ": ";
+        std::string_view type(field.type);
+        if (type == "UnsignedByte") {
+            UnsignedByte value{};
+            xfer.xferUnsignedByte(&value);
+            out << static_cast<unsigned>(value);
+        } else if (type == "Byte") {
+            Byte value{};
+            xfer.xferByte(&value);
+            out << static_cast<int>(value);
+        } else if (type == "Bool") {
+            Bool value{};
+            xfer.xferBool(&value);
+            out << (value ? "true" : "false");
+        } else if (type == "Short") {
+            Short value{};
+            xfer.xferShort(&value);
+            out << value;
+        } else if (type == "UnsignedShort") {
+            UnsignedShort value{};
+            xfer.xferUnsignedShort(&value);
+            out << value;
+        } else if (type == "Int") {
+            Int value{};
+            xfer.xferInt(&value);
+            out << value;
+        } else if (type == "UnsignedInt") {
+            UnsignedInt value{};
+            xfer.xferUnsignedInt(&value);
+            out << value;
+        } else if (type == "Int64") {
+            Int64 value{};
+            xfer.xferInt64(&value);
+            out << static_cast<long long>(value);
+        } else if (type == "Real") {
+            Real value{};
+            xfer.xferReal(&value);
+            out << value;
+        } else if (type == "AsciiString") {
+            AsciiString value;
+            xfer.xferAsciiString(&value);
+            out << value.str();
+        } else if (type == "UnicodeString") {
+            UnicodeString unicodeValue;
+            xfer.xferUnicodeString(&unicodeValue);
+            AsciiString asciiValue;
+            asciiValue.translate(unicodeValue);
+            out << asciiValue.str();
+        } else if (type == "BlockSize") {
+            Int blockSize = xfer.beginBlock();
+            out << blockSize;
+        } else if (type == "EndBlock") {
+            xfer.endBlock();
+            out << "<end-block>";
+        } else {
+            out << "<unknown>";
+        }
     }
+    return out.str();
 }
 
 int main() {
@@ -71,7 +132,11 @@ int main() {
             break;
         }
         SnapshotSchemaView view = SnapshotSchema::SNAPSHOT_BLOCK_SCHEMAS.at(token.str());
-        serialize(xfer, view);
+        std::string serialized = serialize(xfer, view);
+        std::cout << serialized << std::endl;
+        xfer.endBlock();
+
+        break;
 
         if (token.compareNoCase(SAVE_FILE_EOF) == 0) {
             break;

@@ -1404,7 +1404,7 @@ static constexpr SnapshotSchemaField GameLogic[] = {
 
 static constexpr SnapshotSchemaField GameState[] = {
     {"version", "UnsignedByte"},
-    {"saveGameInfo.saveFileType", "UserData"},
+    {"saveGameInfo.saveFileType", "Int"},
     {"saveGameInfo.missionMapName", "AsciiString"},
     {"saveGameInfo.date.year", "UnsignedShort"},
     {"saveGameInfo.date.month", "UnsignedShort"},
