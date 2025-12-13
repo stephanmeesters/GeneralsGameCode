@@ -61,6 +61,43 @@ def resolve_type(method: str) -> Tuple[str, Optional[int]]:
     return method, None
 
 
+def strip_comments(src: str) -> str:
+    out = []
+    i = 0
+    n = len(src)
+    state = "code"
+    while i < n:
+        ch = src[i]
+        nxt = src[i + 1] if i + 1 < n else ""
+        if state == "code":
+            if ch == "/" and nxt == "/":
+                state = "line_comment"
+                out.append("  ")
+                i += 2
+                continue
+            if ch == "/" and nxt == "*":
+                state = "block_comment"
+                out.append("  ")
+                i += 2
+                continue
+            out.append(ch)
+            i += 1
+        elif state == "line_comment":
+            if ch == "\n":
+                state = "code"
+            out.append(" ")
+            i += 1
+        elif state == "block_comment":
+            if ch == "*" and nxt == "/":
+                state = "code"
+                out.append("  ")
+                i += 2
+                continue
+            out.append(" ")
+            i += 1
+    return "".join(out)
+
+
 CALL_SIG_RE = re.compile(
     r"void\s+(?P<class>[A-Za-z_]\w*)\s*::\s*xfer\s*\(\s*Xfer\s*\*\s*(?P<xfervar>\w+)\s*\)",
     re.MULTILINE,
@@ -89,6 +126,11 @@ def parse_args() -> argparse.Namespace:
         "--xfer-header",
         default="Core/GameEngine/Include/Common/Xfer.h",
         help="Path to Xfer.h to limit parsing to xfer methods.",
+    )
+    parser.add_argument(
+        "--gamestate",
+        default="GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+        help="Path to GameState.cpp to infer snapshot block mapping.",
     )
     return parser.parse_args()
 
@@ -269,7 +311,49 @@ def discover_sources(roots: List[str], compile_commands: Optional[str]) -> List[
     return files
 
 
-def write_header(output: pathlib.Path, records: List[Dict]) -> None:
+def normalize_snapshot_name(expr: str, known_classes: Set[str]) -> Optional[str]:
+    name = expr.strip()
+    name = name.lstrip("&*")
+    # discard any member access
+    name = re.split(r"[.\-+>]", name)[0]
+    if name.startswith("The") and len(name) > 3:
+        candidate = name[3:]
+        if candidate in known_classes:
+            return candidate
+        name = candidate
+    if name in known_classes:
+        return name
+    return name if name else None
+
+
+def parse_snapshot_blocks(game_state_path: str, known_classes: Set[str]) -> List[Tuple[str, str]]:
+    path = pathlib.Path(game_state_path)
+    if not path.exists():
+        return []
+    text = path.read_text(errors="ignore")
+    defines = {m.group("name"): m.group("value") for m in re.finditer(r'#define\s+(?P<name>\w+)\s+"(?P<value>[^"]*)"', text)}
+    stripped_comments = strip_comments(text)
+    sig = re.search(r"void\s+GameState\s*::\s*init\s*\([^)]*\)", stripped_comments)
+    if not sig:
+        return []
+    body, _ = find_function_body(stripped_comments, sig.end())
+    block_calls: Dict[str, str] = {}
+    call_re = re.compile(
+        r"addSnapshotBlock\s*\(\s*(?P<block>[^,]+?)\s*,\s*(?P<snapshot>[^,]+?)\s*,",
+        re.S,
+    )
+    for m in call_re.finditer(body):
+        block_expr = m.group("block").strip()
+        snapshot_expr = m.group("snapshot").strip()
+        block = block_expr.strip('"')
+        block = defines.get(block, block)
+        snap_name = normalize_snapshot_name(snapshot_expr, known_classes)
+        if snap_name in known_classes:
+            block_calls.setdefault(block, snap_name)
+    return list(block_calls.items())
+
+
+def write_header(output: pathlib.Path, records: List[Dict], block_mappings: List[Tuple[str, str]]) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     by_class: Dict[str, List[Dict]] = {}
     for rec in records:
@@ -298,6 +382,12 @@ def write_header(output: pathlib.Path, records: List[Dict]) -> None:
         for cls, fields in classes:
             f.write('    {"%s", SnapshotSchemaView{%s}},\n' % (cls, cls))
         f.write("};\n\n")
+        if block_mappings:
+            f.write("// Lookup: block name -> schema view (from GameState::init)\n")
+            f.write("static const inline std::unordered_map<std::string_view, SnapshotSchemaView> SNAPSHOT_BLOCK_SCHEMAS = {\n")
+            for block, cls in block_mappings:
+                f.write('    {"%s", SnapshotSchemaView{%s}},\n' % (block, cls))
+            f.write("};\n\n")
         f.write("} // namespace SnapshotSchema\n")
 
 
@@ -314,9 +404,11 @@ def main() -> int:
         except Exception:
             continue
         all_records.extend(recs)
+    known_classes = {rec["class"] for rec in all_records}
+    block_mappings = parse_snapshot_blocks(args.gamestate, known_classes)
     if not all_records:
         sys.stderr.write("No Snapshot::xfer implementations found; nothing generated.\n")
-    write_header(pathlib.Path(args.output), all_records)
+    write_header(pathlib.Path(args.output), all_records, block_mappings)
     return 0
 
 

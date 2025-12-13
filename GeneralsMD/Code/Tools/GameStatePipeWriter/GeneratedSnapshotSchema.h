@@ -4130,4 +4130,24 @@ static const inline std::unordered_map<std::string_view, SnapshotSchemaView> SCH
     {"WorkerStateMachine", SnapshotSchemaView{WorkerStateMachine}},
 };
 
+// Lookup: block name -> schema view (from GameState::init)
+static const inline std::unordered_map<std::string_view, SnapshotSchemaView> SNAPSHOT_BLOCK_SCHEMAS = {
+    {"CHUNK_GameState", SnapshotSchemaView{GameState}},
+    {"CHUNK_Campaign", SnapshotSchemaView{CampaignManager}},
+    {"CHUNK_GameStateMap", SnapshotSchemaView{GameStateMap}},
+    {"CHUNK_TerrainLogic", SnapshotSchemaView{TerrainLogic}},
+    {"CHUNK_TeamFactory", SnapshotSchemaView{TeamFactory}},
+    {"CHUNK_Players", SnapshotSchemaView{PlayerList}},
+    {"CHUNK_GameLogic", SnapshotSchemaView{GameLogic}},
+    {"CHUNK_Radar", SnapshotSchemaView{Radar}},
+    {"CHUNK_ScriptEngine", SnapshotSchemaView{ScriptEngine}},
+    {"CHUNK_SidesList", SnapshotSchemaView{SidesList}},
+    {"CHUNK_GameClient", SnapshotSchemaView{GameClient}},
+    {"CHUNK_InGameUI", SnapshotSchemaView{InGameUI}},
+    {"CHUNK_Partition", SnapshotSchemaView{PartitionManager}},
+    {"CHUNK_ParticleSystem", SnapshotSchemaView{ParticleSystemManager}},
+    {"CHUNK_TerrainVisual", SnapshotSchemaView{TerrainVisual}},
+    {"CHUNK_GhostObject", SnapshotSchemaView{GhostObjectManager}},
+};
+
 } // namespace SnapshotSchema

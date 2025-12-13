@@ -28,8 +28,17 @@ extern "C" void DebugCrash(const char *format, ...) {
     va_end(args);
 }
 
-// std::string serialize(const SnapshotSchemaField& field) {
-// }
+std::string serialize(XferLoadBuffer xfer, SnapshotSchemaView field) {
+    for (const SnapshotSchemaField &field : field) {
+       switch (field.type) {
+           case "UnsignedByte":
+               UnsignedByte byte;
+               xfer.xferUnsignedByte(&byte);
+               break;
+           default: ;
+       }
+    }
+}
 
 int main() {
     std::ifstream input("d:\\buffer.b", std::ios::binary);
@@ -57,10 +66,12 @@ int main() {
         std::cout << "Block size: " << blockSize << std::endl;
 
         // serialize block
-        if (!SnapshotSchema::SCHEMAS.contains(token.str())) {
-            continue;
+        if (!SnapshotSchema::SNAPSHOT_BLOCK_SCHEMAS.contains(token.str())) {
+            //BAD
+            break;
         }
-        SnapshotSchemaView view = SnapshotSchema::SCHEMAS.at(token.str());
+        SnapshotSchemaView view = SnapshotSchema::SNAPSHOT_BLOCK_SCHEMAS.at(token.str());
+        serialize(xfer, view);
 
         if (token.compareNoCase(SAVE_FILE_EOF) == 0) {
             break;
