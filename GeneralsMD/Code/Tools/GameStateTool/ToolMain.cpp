@@ -3,9 +3,14 @@
 #include <tchar.h>
 #include <vector>
 #include <windows.h>
-#include <mutex>
-#include <thread>
 #include <csignal>
+#include <fstream>
+#include <iterator>
+#include <sstream>
+#include <string>
+#include <string_view>
+#include <algorithm>
+#include <afxdlgs.h>
 
 static BOOL WINAPI ConsoleCtrlHandler(DWORD ctrlType);
 static void SignalHandler(int sig);
@@ -14,6 +19,27 @@ static class CGameStateToolFrame *g_mainFrame = nullptr;
 
 #pragma warning(push)
 #pragma warning(disable : 4996) // Match legacy MFC init used elsewhere (Enable3dControls).
+
+#include "Lib/BaseType.h"
+#include "Common/AsciiString.h"
+#include "Common/UnicodeString.h"
+#include "Common/XferLoadBuffer.h"
+#include "GeneratedSnapshotSchema.h"
+
+// Globals expected by linked engine code
+HINSTANCE ApplicationHInstance = nullptr;
+HWND ApplicationHWnd = nullptr;
+const Char *g_strFile = "data\\Generals.str";
+const Char *g_csfFile = "data\\%s\\Generals.csf";
+extern "C" char *TheCurrentIgnoreCrashPtr = nullptr;
+extern "C" void DebugCrash(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    fputc('\n', stderr);
+    va_end(args);
+}
 
 struct Property
 {
@@ -35,76 +61,23 @@ struct Category
 
 struct GameStateSnapshot
 {
-    std::vector<Category> categories;
+    std::vector<GameObject> objects;
 };
 
 static GameStateSnapshot CreateStubGameState()
 {
-    GameStateSnapshot state;
-
-    Category defenses;
-    defenses.name = _T("Defenses");
-    defenses.objects.push_back(GameObject{
-        _T("Patriot Missile"),
-        {
-            {_T("Health"), _T("1000")},
-            {_T("Ammo"), _T("12")},
-            {_T("Owner"), _T("USA")},
-        },
-    });
-    defenses.objects.push_back(GameObject{
-        _T("Gattling Cannon"),
-        {
-            {_T("Health"), _T("900")},
-            {_T("Ammo"), _T("Infinite")},
-            {_T("Owner"), _T("China")},
-        },
-    });
-
-    Category economy;
-    economy.name = _T("Economy");
-    economy.objects.push_back(GameObject{
-        _T("Supply Center"),
-        {
-            {_T("Health"), _T("1500")},
-            {_T("Collectors"), _T("2")},
-            {_T("Income/sec"), _T("120")},
-        },
-    });
-
-    state.categories.push_back(defenses);
-    state.categories.push_back(economy);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    return state;
+    return GameStateSnapshot();
 }
+
 
 class CGameStateToolFrame : public CFrameWnd
 {
 public:
     CGameStateToolFrame()
     {
-        Create(nullptr, _T("GameStateTool - Hello MFC"));
+        Create(nullptr, _T("GameStateTool"));
         m_state = CreateStubGameState();
-        m_pipeStopEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
-        m_pipeThread = std::thread(&CGameStateToolFrame::PipeThreadProc, this);
+        BuildMenu();
     }
     ~CGameStateToolFrame() override = default;
     void RequestShutdownFromSignal();
@@ -113,36 +86,33 @@ protected:
     afx_msg void OnPaint();
     afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
     afx_msg void OnSize(UINT nType, int cx, int cy);
-    afx_msg void OnSimulatePipeUpdate();
     afx_msg void OnDestroy();
-    afx_msg LRESULT OnPipeMessage(WPARAM wParam, LPARAM lParam);
+    afx_msg void OnFileOpen();
+    afx_msg void OnFileExit();
     DECLARE_MESSAGE_MAP()
 
 private:
+    void BuildMenu();
+    void LoadSnapshotFromFile(const CString &path);
+    std::string SerializeSnapshot(XferLoadBuffer &xfer, SnapshotSchemaView schema);
+    void BuildStateFromSerialized(GameStateSnapshot &target, const CString &blockName, const std::string &serialized);
     void RenderState();
-    void AppendPipeMessage(const CString &message);
-    void PostPipeMessageFromWorker(const char *message);
-    static void PipeThreadProc(CGameStateToolFrame *self);
-    void ShutdownPipeThread();
 
-    static constexpr UINT kSimulateButtonId = 1001;
-    static constexpr UINT kPipeMessageId = WM_APP + 42;
-    CButton m_simulateButton;
+    static constexpr UINT kCmdFileOpen = 2001;
+    static constexpr UINT kCmdFileExit = 2002;
+    CMenu m_menuBar;
+    CMenu m_fileMenu;
     CTreeCtrl m_stateTree;
     GameStateSnapshot m_state;
-    HANDLE m_pipeStopEvent = nullptr;
-    std::thread m_pipeThread;
-    std::mutex m_pipeMutex;
-    CString m_lastPipeMessage;
 };
 
 BEGIN_MESSAGE_MAP(CGameStateToolFrame, CFrameWnd)
 ON_WM_PAINT()
 ON_WM_CREATE()
 ON_WM_SIZE()
-ON_BN_CLICKED(kSimulateButtonId, OnSimulatePipeUpdate)
 ON_WM_DESTROY()
-ON_MESSAGE(kPipeMessageId, OnPipeMessage)
+ON_COMMAND(kCmdFileOpen, OnFileOpen)
+ON_COMMAND(kCmdFileExit, OnFileExit)
 END_MESSAGE_MAP()
 
 void CGameStateToolFrame::OnPaint()
@@ -150,7 +120,7 @@ void CGameStateToolFrame::OnPaint()
     CPaintDC dc(this);
     CRect rect;
     GetClientRect(&rect);
-    dc.DrawText(_T("GameStateTool (MFC) - Named pipe stub view"), -1, &rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    dc.DrawText(_T("Use File -> Open Save... to load a snapshot"), -1, &rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 }
 
 int CGameStateToolFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
@@ -162,21 +132,13 @@ int CGameStateToolFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
     CRect client;
     GetClientRect(&client);
-    const int buttonHeight = 28;
     const int padding = 8;
-
-    m_simulateButton.Create(
-        _T("Simulate Pipe Update"),
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        CRect(padding, padding, client.Width() - padding, padding + buttonHeight),
-        this,
-        kSimulateButtonId);
 
     m_stateTree.Create(
         WS_CHILD | WS_VISIBLE | WS_BORDER | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_SHOWSELALWAYS,
         CRect(
             padding,
-            padding * 2 + buttonHeight,
+            padding,
             client.Width() - padding,
             client.Height() - padding),
         this,
@@ -189,152 +151,257 @@ int CGameStateToolFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 void CGameStateToolFrame::OnSize(UINT nType, int cx, int cy)
 {
     CFrameWnd::OnSize(nType, cx, cy);
-    const int buttonHeight = 28;
     const int padding = 8;
-    if (m_simulateButton.GetSafeHwnd())
-    {
-        m_simulateButton.MoveWindow(padding, padding, cx - padding * 2, buttonHeight);
-    }
     if (m_stateTree.GetSafeHwnd())
     {
         m_stateTree.MoveWindow(
             padding,
-            padding * 2 + buttonHeight,
+            padding,
             cx - padding * 2,
-            cy - (padding * 3 + buttonHeight));
+            cy - padding * 2);
     }
-}
-
-void CGameStateToolFrame::OnSimulatePipeUpdate()
-{
-    AppendPipeMessage(_T("Manual test trigger"));
 }
 
 void CGameStateToolFrame::RenderState()
 {
     m_stateTree.DeleteAllItems();
 
-    for (const Category &category : m_state.categories)
+    for (const GameObject &obj : m_state.objects)
     {
-        HTREEITEM hCat = m_stateTree.InsertItem(category.name);
-        for (const GameObject &obj : category.objects)
+        CString objLine;
+        objLine.Format(_T("%s"), obj.name.GetString());
+        HTREEITEM hObj = m_stateTree.InsertItem(objLine);
+        for (const Property &prop : obj.properties)
         {
-            CString objLine;
-            objLine.Format(_T("%s"), obj.name.GetString());
-            HTREEITEM hObj = m_stateTree.InsertItem(objLine, hCat);
-            for (const Property &prop : obj.properties)
-            {
-                CString propLine;
-                propLine.Format(_T("%s: %s"), prop.name.GetString(), prop.value.GetString());
-                m_stateTree.InsertItem(propLine, hObj);
-            }
-            m_stateTree.Expand(hObj, TVE_EXPAND);
+            CString propLine;
+            propLine.Format(_T("%s: %s"), prop.name.GetString(), prop.value.GetString());
+            m_stateTree.InsertItem(propLine, hObj);
         }
-        m_stateTree.Expand(hCat, TVE_EXPAND);
+        m_stateTree.Expand(hObj, TVE_EXPAND);
     }
 }
 
-void CGameStateToolFrame::AppendPipeMessage(const CString &message)
+void CGameStateToolFrame::BuildMenu()
 {
-    Category pipeCategory;
-    pipeCategory.name = _T("Pipe Message");
-    pipeCategory.objects.push_back(GameObject{
-        _T("Payload"),
-        {
-            {_T("Data"), message},
-        },
-    });
+    m_menuBar.CreateMenu();
+    m_fileMenu.CreatePopupMenu();
+    m_fileMenu.AppendMenu(MF_STRING, kCmdFileOpen, _T("Open Save..."));
+    m_fileMenu.AppendMenu(MF_SEPARATOR);
+    m_fileMenu.AppendMenu(MF_STRING, kCmdFileExit, _T("Exit"));
+    m_menuBar.AppendMenu(MF_POPUP, (UINT_PTR)m_fileMenu.m_hMenu, _T("File"));
+    SetMenu(&m_menuBar);
+}
 
-    m_state.categories.push_back(pipeCategory);
+std::string CGameStateToolFrame::SerializeSnapshot(XferLoadBuffer &xfer, SnapshotSchemaView schema)
+{
+    std::ostringstream out;
+    bool first = true;
+    for (const SnapshotSchemaField &field : schema)
+    {
+        if (!first)
+        {
+            out << "\n";
+        }
+        first = false;
+
+        out << field.name << ": ";
+        std::string_view type(field.type);
+        if (type == "UnsignedByte")
+        {
+            UnsignedByte value{};
+            xfer.xferUnsignedByte(&value);
+            out << static_cast<unsigned>(value);
+        }
+        else if (type == "Byte")
+        {
+            Byte value{};
+            xfer.xferByte(&value);
+            out << static_cast<int>(value);
+        }
+        else if (type == "Bool")
+        {
+            Bool value{};
+            xfer.xferBool(&value);
+            out << (value ? "true" : "false");
+        }
+        else if (type == "Short")
+        {
+            Short value{};
+            xfer.xferShort(&value);
+            out << value;
+        }
+        else if (type == "UnsignedShort")
+        {
+            UnsignedShort value{};
+            xfer.xferUnsignedShort(&value);
+            out << value;
+        }
+        else if (type == "Int")
+        {
+            Int value{};
+            xfer.xferInt(&value);
+            out << value;
+        }
+        else if (type == "UnsignedInt")
+        {
+            UnsignedInt value{};
+            xfer.xferUnsignedInt(&value);
+            out << value;
+        }
+        else if (type == "Int64")
+        {
+            Int64 value{};
+            xfer.xferInt64(&value);
+            out << static_cast<long long>(value);
+        }
+        else if (type == "Real")
+        {
+            Real value{};
+            xfer.xferReal(&value);
+            out << value;
+        }
+        else if (type == "AsciiString")
+        {
+            AsciiString value;
+            xfer.xferAsciiString(&value);
+            out << value.str();
+        }
+        else if (type == "UnicodeString")
+        {
+            UnicodeString unicodeValue;
+            xfer.xferUnicodeString(&unicodeValue);
+            AsciiString asciiValue;
+            asciiValue.translate(unicodeValue);
+            out << asciiValue.str();
+        }
+        else if (type == "BlockSize")
+        {
+            Int blockSize = xfer.beginBlock();
+            out << blockSize;
+        }
+        else if (type == "EndBlock")
+        {
+            xfer.endBlock();
+            out << "<end-block>";
+        }
+        else
+        {
+            out << "<unknown>";
+        }
+    }
+    return out.str();
+}
+
+void CGameStateToolFrame::BuildStateFromSerialized(GameStateSnapshot &target, const CString &blockName, const std::string &serialized)
+{
+    GameObject object;
+    object.name = blockName;
+
+    std::istringstream lines(serialized);
+    std::string line;
+    while (std::getline(lines, line))
+    {
+        CStringA lineA(line.c_str());
+        int colon = lineA.Find(':');
+        if (colon == -1)
+        {
+            continue;
+        }
+        CString name = CString(lineA.Left(colon)).Trim();
+        CString value = CString(lineA.Mid(colon + 1)).Trim();
+        object.properties.push_back(Property{name, value});
+    }
+
+    target.objects.push_back(object);
+}
+
+void CGameStateToolFrame::LoadSnapshotFromFile(const CString &path)
+{
+    CStringA pathA(path);
+    std::ifstream input(pathA.GetString(), std::ios::binary);
+    if (!input)
+    {
+        AfxMessageBox(_T("Failed to open file."));
+        return;
+    }
+
+    std::vector<Byte> bytes((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+    input.close();
+    if (bytes.empty())
+    {
+        AfxMessageBox(_T("File is empty."));
+        return;
+    }
+
+    static const Char *SAVE_FILE_EOF = "SG_EOF";
+    const std::string chunkTag = "CHUNK_";
+    std::vector<size_t> chunkOffsets;
+    for (size_t i = 0; i + chunkTag.size() <= bytes.size(); ++i)
+    {
+        if (std::equal(chunkTag.begin(), chunkTag.end(), bytes.begin() + static_cast<long>(i)))
+        {
+            chunkOffsets.push_back(i > 0 ? i - 1 : i);
+        }
+    }
+
+    GameStateSnapshot loaded;
+    for (size_t offset : chunkOffsets)
+    {
+        XferLoadBuffer xfer;
+        xfer.open(_T("save"), bytes);
+        xfer.skip(static_cast<Int>(offset));
+
+        AsciiString token;
+        xfer.xferAsciiString(&token);
+        if (token.isEmpty())
+        {
+            xfer.close();
+            continue;
+        }
+
+        int blockSize = xfer.beginBlock();
+
+        CString blockName = token.str();
+        auto it = SnapshotSchema::SNAPSHOT_BLOCK_SCHEMAS.find(token.str());
+        if (it != SnapshotSchema::SNAPSHOT_BLOCK_SCHEMAS.end())
+        {
+            std::string serialized = SerializeSnapshot(xfer, it->second);
+            BuildStateFromSerialized(loaded, CString(it->first.data()), serialized);
+        }
+        else
+        {
+            xfer.skip(blockSize);
+        }
+        // xfer.endBlock(); // not needed for this targeted parse
+        xfer.close();
+
+        if (token.compareNoCase(SAVE_FILE_EOF) == 0)
+        {
+            break;
+        }
+    }
+
+    m_state = loaded;
     RenderState();
 }
 
-void CGameStateToolFrame::PostPipeMessageFromWorker(const char *message)
+void CGameStateToolFrame::OnFileOpen()
 {
-    CString msg;
-    msg.Format(_T("%hs"), message);
+    CFileDialog dlg(TRUE, _T("sav"), nullptr, OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST, _T("Save Files (*.sav)|*.sav|All Files (*.*)|*.*||"));
+    if (dlg.DoModal() == IDOK)
     {
-        std::lock_guard<std::mutex> lock(m_pipeMutex);
-        m_lastPipeMessage = msg;
-    }
-    PostMessage(kPipeMessageId);
-}
-
-void CGameStateToolFrame::PipeThreadProc(CGameStateToolFrame *self)
-{
-    constexpr wchar_t kPipeName[] = L"\\\\.\\pipe\\my_pipe";
-
-    while (WaitForSingleObject(self->m_pipeStopEvent, 0) == WAIT_TIMEOUT)
-    {
-        HANDLE pipe = CreateNamedPipeW(
-            kPipeName,
-            PIPE_ACCESS_INBOUND,
-            PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
-            1,
-            512,
-            512,
-            0,
-            nullptr);
-
-        if (pipe == INVALID_HANDLE_VALUE)
-        {
-            Sleep(200);
-            continue;
-        }
-
-        BOOL connected = ConnectNamedPipe(pipe, nullptr);
-        if (!connected && GetLastError() != ERROR_PIPE_CONNECTED)
-        {
-            CloseHandle(pipe);
-            continue;
-        }
-
-        char buffer[256] = {};
-        DWORD bytesRead = 0;
-        BOOL readOk = ReadFile(pipe, buffer, sizeof(buffer) - 1, &bytesRead, nullptr);
-        if (readOk && bytesRead > 0)
-        {
-            buffer[bytesRead] = '\0';
-            self->PostPipeMessageFromWorker(buffer);
-        }
-
-        DisconnectNamedPipe(pipe);
-        CloseHandle(pipe);
+        m_state.objects.clear();
+        LoadSnapshotFromFile(dlg.GetPathName());
     }
 }
 
-void CGameStateToolFrame::ShutdownPipeThread()
+void CGameStateToolFrame::OnFileExit()
 {
-    const bool wasRunning = m_pipeThread.joinable();
-    if (m_pipeStopEvent)
-    {
-        SetEvent(m_pipeStopEvent);
-    }
-
-    if (wasRunning)
-    {
-        // Nudge the listener out of ConnectNamedPipe so it can exit.
-        CreateFileA(
-            "\\\\.\\pipe\\my_pipe",
-            GENERIC_WRITE,
-            0,
-            nullptr,
-            OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL,
-            nullptr);
-        m_pipeThread.join();
-    }
-
-    if (m_pipeStopEvent)
-    {
-        CloseHandle(m_pipeStopEvent);
-        m_pipeStopEvent = nullptr;
-    }
+    PostMessage(WM_CLOSE);
 }
 
 void CGameStateToolFrame::RequestShutdownFromSignal()
 {
-    ShutdownPipeThread();
     if (GetSafeHwnd())
     {
         PostMessage(WM_CLOSE);
@@ -345,23 +412,8 @@ void CGameStateToolFrame::RequestShutdownFromSignal()
     }
 }
 
-LRESULT CGameStateToolFrame::OnPipeMessage(WPARAM, LPARAM)
-{
-    CString msg;
-    {
-        std::lock_guard<std::mutex> lock(m_pipeMutex);
-        msg = m_lastPipeMessage;
-    }
-    if (!msg.IsEmpty())
-    {
-        AppendPipeMessage(msg);
-    }
-    return 0;
-}
-
 void CGameStateToolFrame::OnDestroy()
 {
-    ShutdownPipeThread();
     g_mainFrame = nullptr;
     CFrameWnd::OnDestroy();
 }
