@@ -3,7 +3,9 @@
 # Build useful tool binaries.
 if(RTS_BUILD_CORE_TOOLS)
     add_subdirectory(DebugWindow)
-    add_subdirectory(SnapshotTool) # optimistic
+    if(RTS_BUILD_ZEROHOUR)
+        add_subdirectory(SnapshotTool)
+    endif()
 endif()
 
 # Build less useful tool/test binaries.
