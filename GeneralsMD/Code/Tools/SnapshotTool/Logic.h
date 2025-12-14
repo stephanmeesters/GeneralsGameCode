@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "Common/XferLoadBuffer.h"
-#include "GeneratedSnapshotSchema.h"
+#include "Schemas/GeneralsMDSchema.h"
 #include "Lib/BaseType.h"
 
 struct Property

@@ -30,9 +30,9 @@ extern "C" void DebugCrash(const char *format, ...)
     va_end(args);
 }
 
-CGameStateToolUI *g_mainFrame = nullptr;
+CSnapshotToolUI *g_mainFrame = nullptr;
 
-class CGameStateToolApp : public CWinApp
+class CSnapshotToolApp : public CWinApp
 {
 public:
     BOOL InitInstance() override
@@ -50,7 +50,7 @@ public:
         Enable3dControlsStatic();
 #endif
 
-        CGameStateToolUI *frame = new CGameStateToolUI(m_logic);
+        CSnapshotToolUI *frame = new CSnapshotToolUI(m_logic);
         g_mainFrame = frame;
         InstallSignalHandlers();
         m_pMainWnd = frame;
@@ -63,7 +63,7 @@ private:
     GameStateLogic m_logic;
 };
 
-CGameStateToolApp theApp;
+CSnapshotToolApp theApp;
 
 static BOOL WINAPI ConsoleCtrlHandler(DWORD ctrlType)
 {

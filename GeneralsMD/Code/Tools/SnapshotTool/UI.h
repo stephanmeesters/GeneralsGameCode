@@ -5,11 +5,11 @@
 
 #include "Logic.h"
 
-class CGameStateToolUI : public CFrameWnd
+class CSnapshotToolUI : public CFrameWnd
 {
 public:
-    explicit CGameStateToolUI(GameStateLogic &logic);
-    ~CGameStateToolUI() override = default;
+    explicit CSnapshotToolUI(GameStateLogic &logic);
+    ~CSnapshotToolUI() override = default;
 
     void RequestShutdownFromSignal();
 

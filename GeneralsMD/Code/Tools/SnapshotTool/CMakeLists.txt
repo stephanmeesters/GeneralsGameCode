@@ -1,10 +1,10 @@
-add_executable(z_gamestate_tool WIN32)
+add_executable(z_snapshot_tool WIN32)
 
-add_compile_definitions(z_gamestate_tool PRIVATE DEBUG_LOGGING=1)
+add_compile_definitions(z_snapshot_tool PRIVATE DEBUG_LOGGING=1)
 
-set_target_properties(z_gamestate_tool PROPERTIES OUTPUT_NAME z_gamestate_tool)
+set_target_properties(z_snapshot_tool PROPERTIES OUTPUT_NAME z_snapshot_tool)
 
-target_link_libraries(z_gamestate_tool PRIVATE
+target_link_libraries(z_snapshot_tool PRIVATE
     binkstub
     comctl32
     core_debug
@@ -23,15 +23,15 @@ target_link_libraries(z_gamestate_tool PRIVATE
 )
 
 if(WIN32 OR "${CMAKE_SYSTEM}" MATCHES "Windows")
-    target_compile_definitions(z_gamestate_tool PRIVATE _AFXDLL)
+    target_compile_definitions(z_snapshot_tool PRIVATE _AFXDLL)
 endif()
 
-target_include_directories(z_gamestate_tool PRIVATE
+target_include_directories(z_snapshot_tool PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-target_sources(z_gamestate_tool PRIVATE
+target_sources(z_snapshot_tool PRIVATE
     Logic.cpp
     UI.cpp
     Main.cpp
@@ -50,12 +50,12 @@ find_package(Python3 COMPONENTS Interpreter )
                 --compile-commands ${CMAKE_BINARY_DIR}/compile_commands.json
         DEPENDS ${CMAKE_SOURCE_DIR}/scripts/cpp/generate_snapshot_schema.py
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        COMMENT "Generating snapshot schema header for GameStateTool"
+        COMMENT "Generating snapshot schema header for SnapshotTool"
         VERBATIM
     )
     add_custom_target(generate_snapshot_schema DEPENDS ${SNAPSHOT_SCHEMA_OUT})
-    add_dependencies(z_gamestate_tool generate_snapshot_schema)
-    target_include_directories(z_gamestate_tool PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    add_dependencies(z_snapshot_tool generate_snapshot_schema)
+    target_include_directories(z_snapshot_tool PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 #endif()
 
 # Version headers for this tool (mirrors the main game target).

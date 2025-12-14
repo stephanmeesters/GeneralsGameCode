@@ -4,25 +4,25 @@
 #include <tchar.h>
 
 // Shared pointer used by signal handlers in Main.cpp to request shutdown.
-extern CGameStateToolUI *g_mainFrame;
+extern CSnapshotToolUI *g_mainFrame;
 
-BEGIN_MESSAGE_MAP(CGameStateToolUI, CFrameWnd)
+BEGIN_MESSAGE_MAP(CSnapshotToolUI, CFrameWnd)
 ON_WM_PAINT()
 ON_WM_CREATE()
 ON_WM_SIZE()
 ON_WM_DESTROY()
-ON_COMMAND(CGameStateToolUI::kCmdFileOpen, OnFileOpen)
-ON_COMMAND(CGameStateToolUI::kCmdFileExit, OnFileExit)
+ON_COMMAND(CSnapshotToolUI::kCmdFileOpen, OnFileOpen)
+ON_COMMAND(CSnapshotToolUI::kCmdFileExit, OnFileExit)
 END_MESSAGE_MAP()
 
-CGameStateToolUI::CGameStateToolUI(GameStateLogic &logic)
+CSnapshotToolUI::CSnapshotToolUI(GameStateLogic &logic)
     : m_logic(logic)
 {
-    Create(nullptr, _T("GameStateTool"));
+    Create(nullptr, _T("SnapshotTool"));
     BuildMenu();
 }
 
-void CGameStateToolUI::OnPaint()
+void CSnapshotToolUI::OnPaint()
 {
     CPaintDC dc(this);
     CRect rect;
@@ -30,7 +30,7 @@ void CGameStateToolUI::OnPaint()
     dc.DrawText(_T("Use File -> Open Save... to load a snapshot"), -1, &rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 }
 
-int CGameStateToolUI::OnCreate(LPCREATESTRUCT lpCreateStruct)
+int CSnapshotToolUI::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
     if (CFrameWnd::OnCreate(lpCreateStruct) == -1)
     {
@@ -55,7 +55,7 @@ int CGameStateToolUI::OnCreate(LPCREATESTRUCT lpCreateStruct)
     return 0;
 }
 
-void CGameStateToolUI::OnSize(UINT nType, int cx, int cy)
+void CSnapshotToolUI::OnSize(UINT nType, int cx, int cy)
 {
     CFrameWnd::OnSize(nType, cx, cy);
     const int padding = 8;
@@ -69,7 +69,7 @@ void CGameStateToolUI::OnSize(UINT nType, int cx, int cy)
     }
 }
 
-void CGameStateToolUI::RenderState()
+void CSnapshotToolUI::RenderState()
 {
     m_stateTree.DeleteAllItems();
 
@@ -86,7 +86,7 @@ void CGameStateToolUI::RenderState()
     }
 }
 
-void CGameStateToolUI::BuildMenu()
+void CSnapshotToolUI::BuildMenu()
 {
     m_menuBar.CreateMenu();
     m_fileMenu.CreatePopupMenu();
@@ -97,7 +97,7 @@ void CGameStateToolUI::BuildMenu()
     SetMenu(&m_menuBar);
 }
 
-void CGameStateToolUI::OnFileOpen()
+void CSnapshotToolUI::OnFileOpen()
 {
     CFileDialog dlg(TRUE, _T("sav"), nullptr, OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST, _T("Save Files (*.sav)|*.sav|All Files (*.*)|*.*||"));
     if (dlg.DoModal() == IDOK)
@@ -114,12 +114,12 @@ void CGameStateToolUI::OnFileOpen()
     }
 }
 
-void CGameStateToolUI::OnFileExit()
+void CSnapshotToolUI::OnFileExit()
 {
     PostMessage(WM_CLOSE);
 }
 
-void CGameStateToolUI::RequestShutdownFromSignal()
+void CSnapshotToolUI::RequestShutdownFromSignal()
 {
     if (GetSafeHwnd())
     {
@@ -131,13 +131,13 @@ void CGameStateToolUI::RequestShutdownFromSignal()
     }
 }
 
-void CGameStateToolUI::OnDestroy()
+void CSnapshotToolUI::OnDestroy()
 {
     g_mainFrame = nullptr;
     CFrameWnd::OnDestroy();
 }
 
-void CGameStateToolUI::ShowErrorMessage(const CString &message)
+void CSnapshotToolUI::ShowErrorMessage(const CString &message)
 {
     AfxMessageBox(message);
 }
