@@ -32,7 +32,9 @@ target_include_directories(z_gamestate_tool PRIVATE
 )
 
 target_sources(z_gamestate_tool PRIVATE
-    ToolMain.cpp
+    Logic.cpp
+    UI.cpp
+    Main.cpp
 )
 
 find_package(Python3 COMPONENTS Interpreter )
