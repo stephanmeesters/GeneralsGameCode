@@ -6,9 +6,11 @@
 #include <sstream>
 #include <string_view>
 #include <tchar.h>
+#include <zconf.h>
 
 #include "Common/AsciiString.h"
 #include "Common/UnicodeString.h"
+#include "Lib/BaseTypeCore.h"
 
 bool GameStateLogic::LoadSnapshotFromFile(const CString &path, CString &errorMessage)
 {

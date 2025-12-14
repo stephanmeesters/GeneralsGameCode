@@ -6,7 +6,7 @@
 
 #include "Common/XferLoadBuffer.h"
 #include "Schemas/GeneralsMDSchema.h"
-#include "Lib/BaseType.h"
+#include "Lib/BaseTypeCore.h"
 
 struct Property
 {

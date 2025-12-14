@@ -37,5 +37,4 @@ if (RTS_BUILD_ZEROHOUR_TOOLS OR RTS_BUILD_ZEROHOUR_EXTRAS)
     add_subdirectory(Tools)
 endif()
 
-add_subdirectory(Tools/SnapshotTool)
 add_subdirectory(Tools/GameStatePipeWriter)
