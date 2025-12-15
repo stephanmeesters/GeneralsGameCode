@@ -631,9 +631,9 @@ GlobalData::GlobalData()
 	m_framesPerSecondLimit = 0;
 	m_chipSetType = 0;
 	m_headless = FALSE;
-	m_windowed = 0;
-	m_xResolution = DEFAULT_DISPLAY_WIDTH;
-	m_yResolution = DEFAULT_DISPLAY_HEIGHT;
+	m_windowed = TRUE;
+	m_xResolution = 1920;
+	m_yResolution = 1200;
 	m_maxShellScreens = 0;
 	m_useCloudMap = FALSE;
 	m_use3WayTerrainBlends = 1;

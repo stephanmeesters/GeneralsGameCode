@@ -61,6 +61,8 @@
 #include "Common/Xfer.h"
 #include "Common/XferCRC.h"
 #include "Common/XferDeepCRC.h"
+#include "Common/XferSave.h"
+// #include "Common/XferSaveBuffer.h"
 #include "Common/GameSpyMiscPreferences.h"
 
 #include "GameClient/ControlBar.h"
@@ -3736,6 +3738,86 @@ void GameLogic::update( void )
 		messageList->appendMessage(msg);
 
 		DEBUG_LOG(("Appended %sCRC on frame %d: %8.8X", isPlayback ? "Playback " : "", m_frame, m_CRC));
+
+
+
+
+
+
+
+
+		const std::string bufferPath = "D://buffer.b";
+		XferSave* xferSaveBuffer = new XferSave();
+		xferSaveBuffer->open(bufferPath.c_str());
+		TheGameState->friend_xferSaveDataForCRC(xferSaveBuffer, SNAPSHOT_DEEPCRC_LOGICONLY);
+		xferSaveBuffer->close();
+		delete xferSaveBuffer;
+		xferSaveBuffer = nullptr;
+
+		// Read the buffer back from disk so we can inspect or forward it.
+		FILE* f = std::fopen(bufferPath.c_str(), "rb");
+		if (!f) {
+			throw std::runtime_error("Failed to open file: " + bufferPath);
+		}
+
+		if (std::fseek(f, 0, SEEK_END) != 0) {
+			std::fclose(f);
+			throw std::runtime_error("fseek failed");
+		}
+
+		long size = std::ftell(f);
+		if (size < 0) {
+			std::fclose(f);
+			throw std::runtime_error("ftell failed");
+		}
+
+		if (std::fseek(f, 0, SEEK_SET) != 0) {
+			std::fclose(f);
+			throw std::runtime_error("fseek failed");
+		}
+
+		std::vector<std::uint8_t> buffer(static_cast<std::size_t>(size));
+
+		if (size > 0) {
+			std::size_t read = std::fread(buffer.data(), 1, buffer.size(), f);
+			if (read != buffer.size()) {
+				std::fclose(f);
+				throw std::runtime_error("fread failed or short read");
+			}
+		}
+
+		std::fclose(f);
+		DEBUG_LOG(("Read buffer.b (%zu bytes)", buffer.size()));
+
+
+		constexpr char kPipeName[] = R"(\\.\pipe\SnapshotToolPipe)";
+		if (WaitNamedPipeA(kPipeName, 100)) {
+			HANDLE pipe = CreateFileA(
+				kPipeName,
+				GENERIC_WRITE,
+				0,
+				nullptr,
+				OPEN_EXISTING,
+				FILE_ATTRIBUTE_NORMAL,
+				nullptr);
+			if (pipe != INVALID_HANDLE_VALUE) {
+				DWORD bytesWritten = 0;
+				const DWORD payloadSize = static_cast<DWORD>(buffer.size());
+				if (!WriteFile(pipe, buffer.data(), payloadSize, &bytesWritten, nullptr)) {
+					// best-effort; just close on failure
+				}
+				FlushFileBuffers(pipe);
+				CloseHandle(pipe);
+			}
+		}
+
+
+
+
+
+
+
+
 	}
 
 	// collect stats
