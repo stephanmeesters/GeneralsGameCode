@@ -1,0 +1,8 @@
+std::_Container_base12::_Orphan_all_unlocked_v3() xmemory:1388
+SnapshotTool::`anonymous namespace'::SerializeSnapshotInternal(XferLoadBuffer &, span<…>, std::vector<…> &, std::vector<…> &, const std::string &, std::unordered_map<…> &, std::vector<…> &) Logic.cpp:396
+SnapshotTool::GameStateLogic::SerializeSnapshot(XferLoadBuffer &, span<…>, std::vector<…> &, std::vector<…> &, const std::string &) Logic.cpp:406
+SnapshotTool::GameStateLogic::ParseSnapshot(const std::vector<…> &, SnapshotTool::GameStateSnapshot &, ATL::CStringT<…> &) Logic.cpp:433
+SnapshotTool::GameStateLogic::WorkerLoop() Logic.cpp:508
+`SnapshotTool::GameStateLogic::Start'::`2'::<lambda_1>::operator()() Logic.cpp:33
+
+Exception 0xc0000005 encountered at address 0xce294b: Access violation writing location 0x0000fdfd

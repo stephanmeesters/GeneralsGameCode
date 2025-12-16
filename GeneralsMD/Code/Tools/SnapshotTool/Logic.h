@@ -58,7 +58,8 @@ namespace SnapshotTool {
         void EnqueueSnapshot(const std::vector<Byte> &bytes);
 
         static void SerializeSnapshot(XferLoadBuffer &xfer, SnapshotSchemaView schema,
-                                      std::vector<Property> &properties, std::vector<std::string> &warnings);
+                                      std::vector<Property> &properties, std::vector<std::string> &warnings,
+                                      const std::string &prefix = std::string());
 
         std::string SerializeStateToText() const;
 

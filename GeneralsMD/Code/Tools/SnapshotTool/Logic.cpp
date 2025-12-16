@@ -7,7 +7,10 @@
 #include <iterator>
 #include <mutex>
 #include <sstream>
+#include <vector>
 #include <string_view>
+#include <string>
+#include <unordered_map>
 #include <windows.h>
 #include <tchar.h>
 #include <thread>
@@ -189,77 +192,219 @@ namespace SnapshotTool {
         return chunkOffsets;
     }
 
+    namespace {
+        struct LoopFrame {
+            size_t bodyStart;
+            size_t endIndex;
+            long long remaining;
+            long long total;
+            std::string counterName;
+            long long currentIndex;
+        };
+
+        size_t findLoopEnd(SnapshotSchemaView schema, size_t startIndex) {
+            size_t depth = 0;
+            for (size_t i = startIndex + 1; i < schema.size(); ++i) {
+                std::string_view loopType(schema[i].type);
+                if (loopType == "LoopStart") {
+                    ++depth;
+                } else if (loopType == "LoopEnd") {
+                    if (depth == 0) {
+                        return i;
+                    }
+                    --depth;
+                }
+            }
+            return schema.size();
+        }
+
+        std::string buildPropertyName(const std::string &prefix, const std::vector<LoopFrame> &loopStack,
+                                      const std::string &fieldName) {
+            std::ostringstream oss;
+            for (const LoopFrame &frame: loopStack) {
+                oss << frame.counterName << "[" << frame.currentIndex << "].";
+            }
+            if (!prefix.empty()) {
+                oss << prefix;
+                if (prefix.back() != '.') {
+                    oss << ".";
+                }
+            }
+            oss << fieldName;
+            return oss.str();
+        }
+
+        void SerializeSnapshotInternal(XferLoadBuffer &xfer, SnapshotSchemaView schema,
+                                       std::vector<Property> &properties,
+                                       std::vector<std::string> &warnings,
+                                       const std::string &prefix,
+                                       std::unordered_map<std::string, long long> &numericValues,
+                                       std::vector<LoopFrame> &loopStack) {
+            size_t index = 0;
+            while (index < schema.size()) {
+                const SnapshotSchemaField &field = schema[index];
+                const std::string_view type(field.type);
+                const std::string fieldName = field.name ? field.name : "";
+
+                if (type == "LoopStart") {
+                    const size_t endIndex = findLoopEnd(schema, index);
+                    if (endIndex == schema.size()) {
+                        std::ostringstream warn;
+                        warn << "Unmatched LoopStart for '" << fieldName << "'";
+                        warnings.push_back(warn.str());
+                        break;
+                    }
+
+                    long long count = 0;
+                    const auto foundCount = numericValues.find(fieldName);
+                    if (foundCount != numericValues.end()) {
+                        count = foundCount->second;
+                    } else {
+                        std::ostringstream warn;
+                        warn << "LoopStart for '" << fieldName << "' has no recorded count value";
+                        warnings.push_back(warn.str());
+                    }
+
+                    if (count <= 0) {
+                        index = endIndex + 1;
+                        continue;
+                    }
+
+                    loopStack.push_back({index + 1, endIndex, count, count, fieldName, 0});
+                    index = index + 1;
+                    continue;
+                }
+
+                if (type == "LoopEnd") {
+                    if (loopStack.empty()) {
+                        warnings.push_back("Encountered LoopEnd without matching LoopStart");
+                        ++index;
+                        continue;
+                    }
+
+                    LoopFrame &frame = loopStack.back();
+                    frame.remaining -= 1;
+                    if (frame.remaining > 0) {
+                        frame.currentIndex += 1;
+                        index = frame.bodyStart;
+                    } else {
+                        loopStack.pop_back();
+                        ++index;
+                    }
+                    continue;
+                }
+
+                const std::string propertyName = buildPropertyName(prefix, loopStack, fieldName);
+                std::ostringstream valueStream;
+                bool handled = true;
+
+                auto recordNumeric = [&](long long value) {
+                    if (!fieldName.empty()) {
+                        numericValues[fieldName] = value;
+                    }
+                };
+
+                const auto nestedSchema = SnapshotSchema::SCHEMAS.find(std::string(type));
+                if (nestedSchema != SnapshotSchema::SCHEMAS.end()) {
+                    std::vector<Property> nestedProps;
+                    std::string nestedPrefix = prefix.empty() ? fieldName : prefix + "." + fieldName;
+                    std::unordered_map<std::string, long long> nestedNumericValues;
+                    SerializeSnapshotInternal(xfer, nestedSchema->second, nestedProps, warnings, nestedPrefix,
+                                              nestedNumericValues, loopStack);
+                    properties.insert(properties.end(),
+                                      std::make_move_iterator(nestedProps.begin()),
+                                      std::make_move_iterator(nestedProps.end()));
+                    handled = false;
+                } else if (type == "UnsignedByte") {
+                    UnsignedByte v{};
+                    xfer.xferUnsignedByte(&v);
+                    valueStream << static_cast<unsigned>(v);
+                    recordNumeric(static_cast<long long>(v));
+                } else if (type == "Byte") {
+                    Byte v{};
+                    xfer.xferByte(&v);
+                    valueStream << static_cast<int>(v);
+                    recordNumeric(static_cast<long long>(v));
+                } else if (type == "Bool") {
+                    Bool v{};
+                    xfer.xferBool(&v);
+                    valueStream << (v ? "true" : "false");
+                    recordNumeric(v ? 1 : 0);
+                } else if (type == "Short") {
+                    Short v{};
+                    xfer.xferShort(&v);
+                    valueStream << v;
+                    recordNumeric(static_cast<long long>(v));
+                } else if (type == "UnsignedShort") {
+                    UnsignedShort v{};
+                    xfer.xferUnsignedShort(&v);
+                    valueStream << v;
+                    recordNumeric(static_cast<long long>(v));
+                } else if (type == "Int") {
+                    Int v{};
+                    xfer.xferInt(&v);
+                    valueStream << v;
+                    recordNumeric(static_cast<long long>(v));
+                } else if (type == "UnsignedInt") {
+                    UnsignedInt v{};
+                    xfer.xferUnsignedInt(&v);
+                    valueStream << v;
+                    recordNumeric(static_cast<long long>(v));
+                } else if (type == "Int64") {
+                    Int64 v{};
+                    xfer.xferInt64(&v);
+                    valueStream << static_cast<long long>(v);
+                    recordNumeric(static_cast<long long>(v));
+                } else if (type == "Real") {
+                    Real v{};
+                    xfer.xferReal(&v);
+                    valueStream << v;
+                } else if (type == "AsciiString") {
+                    AsciiString v;
+                    xfer.xferAsciiString(&v);
+                    valueStream << v.str();
+                } else if (type == "UnicodeString") {
+                    UnicodeString unicodeValue;
+                    xfer.xferUnicodeString(&unicodeValue);
+                    AsciiString asciiValue;
+                    asciiValue.translate(unicodeValue);
+                    valueStream << asciiValue.str();
+                } else if (type == "BlockSize") {
+                    Int blockSize = xfer.beginBlock();
+                    valueStream << blockSize;
+                    recordNumeric(static_cast<long long>(blockSize));
+                } else if (type == "EndBlock") {
+                    xfer.endBlock();
+                    valueStream << "<end-block>";
+                } else {
+                    valueStream << "<unknown>";
+                    std::ostringstream warning;
+                    warning << "Unknown field type '" << type << "' for field '" << fieldName << "'";
+                    warnings.push_back(warning.str());
+                    handled = false;
+                }
+
+                if (handled) {
+                    Property prop;
+                    prop.name = CString(propertyName.c_str());
+                    prop.type = CString(field.type);
+                    CStringA valueA(valueStream.str().c_str());
+                    prop.value = CString(valueA);
+                    properties.push_back(prop);
+                }
+
+                ++index;
+            }
+        }
+    } // namespace
+
     void GameStateLogic::SerializeSnapshot(XferLoadBuffer &xfer, SnapshotSchemaView schema,
                                            std::vector<Property> &properties,
-                                           std::vector<std::string> &warnings) {
-        for (const SnapshotSchemaField &field: schema) {
-            std::ostringstream valueStream;
-            std::string_view type(field.type);
-            if (type == "UnsignedByte") {
-                UnsignedByte v{};
-                xfer.xferUnsignedByte(&v);
-                valueStream << static_cast<unsigned>(v);
-            } else if (type == "Byte") {
-                Byte v{};
-                xfer.xferByte(&v);
-                valueStream << static_cast<int>(v);
-            } else if (type == "Bool") {
-                Bool v{};
-                xfer.xferBool(&v);
-                valueStream << (v ? "true" : "false");
-            } else if (type == "Short") {
-                Short v{};
-                xfer.xferShort(&v);
-                valueStream << v;
-            } else if (type == "UnsignedShort") {
-                UnsignedShort v{};
-                xfer.xferUnsignedShort(&v);
-                valueStream << v;
-            } else if (type == "Int") {
-                Int v{};
-                xfer.xferInt(&v);
-                valueStream << v;
-            } else if (type == "UnsignedInt") {
-                UnsignedInt v{};
-                xfer.xferUnsignedInt(&v);
-                valueStream << v;
-            } else if (type == "Int64") {
-                Int64 v{};
-                xfer.xferInt64(&v);
-                valueStream << static_cast<long long>(v);
-            } else if (type == "Real") {
-                Real v{};
-                xfer.xferReal(&v);
-                valueStream << v;
-            } else if (type == "AsciiString") {
-                AsciiString v;
-                xfer.xferAsciiString(&v);
-                valueStream << v.str();
-            } else if (type == "UnicodeString") {
-                UnicodeString unicodeValue;
-                xfer.xferUnicodeString(&unicodeValue);
-                AsciiString asciiValue;
-                asciiValue.translate(unicodeValue);
-                valueStream << asciiValue.str();
-            } else if (type == "BlockSize") {
-                Int blockSize = xfer.beginBlock();
-                valueStream << blockSize;
-            } else if (type == "EndBlock") {
-                xfer.endBlock();
-                valueStream << "<end-block>";
-            } else {
-                valueStream << "<unknown>";
-                std::ostringstream warning;
-                warning << "Unknown field type '" << type << "' for field '" << field.name << "'";
-                warnings.push_back(warning.str());
-            }
-            Property prop;
-            prop.name = CString(field.name);
-            prop.type = CString(field.type);
-            CStringA valueA(valueStream.str().c_str());
-            prop.value = CString(valueA);
-            properties.push_back(std::move(prop));
-        }
+                                           std::vector<std::string> &warnings,
+                                           const std::string &prefix) {
+        std::unordered_map<std::string, long long> numericValues;
+        std::vector<LoopFrame> loopStack;
+        SerializeSnapshotInternal(xfer, schema, properties, warnings, prefix, numericValues, loopStack);
     }
 
     bool GameStateLogic::ParseSnapshot(const std::vector<Byte> &bytes, GameStateSnapshot &outState,
@@ -294,7 +439,7 @@ namespace SnapshotTool {
                 if (expectedBytes != consumedBytes) {
                     std::ostringstream mismatch;
                     mismatch << "Block size mismatch: expected " << expectedBytes << " bytes, parsed "
-                             << consumedBytes;
+                            << consumedBytes;
                     warnings.push_back(mismatch.str());
                 }
 

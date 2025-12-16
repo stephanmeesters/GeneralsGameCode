@@ -78,6 +78,12 @@ TYPE_MAP: Dict[str, Tuple[str, Optional[int]]] = {
     "endBlock": ("EndBlock", 0),
 }
 
+SNAPSHOT_TYPE_OVERRIDES: Dict[str, Dict[str, str]] = {
+    "PlayerList": {
+        "m_players[ i ]": "Player",
+    },
+}
+
 
 def resolve_type(method: str) -> Tuple[str, Optional[int]]:
     if method in TYPE_MAP:
@@ -282,6 +288,115 @@ def iter_xfer_calls(body: str, xfer_var: str) -> Iterable[Tuple[str, str, int]]:
         yield m.group("method"), m.group("args").strip(), m.start()
 
 
+def find_matching_delim(text: str, start_idx: int, open_char: str, close_char: str) -> int:
+    depth = 0
+    for i in range(start_idx, len(text)):
+        ch = text[i]
+        if ch == open_char:
+            depth += 1
+        elif ch == close_char:
+            depth -= 1
+            if depth == 0:
+                return i
+    return -1
+
+
+def skip_whitespace(text: str, idx: int, end: Optional[int] = None) -> int:
+    end = len(text) if end is None else end
+    while idx < end and text[idx].isspace():
+        idx += 1
+    return idx
+
+
+def extract_loop_counter(header: str) -> Optional[str]:
+    parts = [p.strip() for p in header.split(";")]
+    if len(parts) < 2:
+        return None
+    condition = parts[1]
+    for pattern in (r"<\s*(?P<count>\w+)", r"<=\s*(?P<count>\w+)", r"!=\s*(?P<count>\w+)"):
+        m = re.search(pattern, condition)
+        if m:
+            return m.group("count")
+    return None
+
+
+def parse_xfer_structure(body: str, xfer_var: str, allowed_methods: Optional[Set[str]]):
+    call_re = re.compile(
+        rf"\b{xfer_var}\b\s*->\s*(?P<method>\w+)\s*\((?P<args>[^;]*?)\)\s*;",
+        re.S,
+    )
+    for_re = re.compile(r"\bfor\s*\(")
+    items = []
+    pos = 0
+    while pos < len(body):
+        next_for = for_re.search(body, pos)
+        next_call = call_re.search(body, pos)
+        if next_for is None and next_call is None:
+            break
+        if next_call is not None and (next_for is None or next_call.start() < next_for.start()):
+            method = next_call.group("method")
+            if allowed_methods is None or method in allowed_methods:
+                items.append(
+                    {
+                        "kind": "call",
+                        "method": method,
+                        "args": next_call.group("args").strip(),
+                    }
+                )
+            pos = next_call.end()
+            continue
+        if next_for is not None:
+            paren_start = body.find("(", next_for.start())
+            paren_end = find_matching_delim(body, paren_start, "(", ")")
+            if paren_end == -1:
+                pos = next_for.end()
+                continue
+            header = body[paren_start + 1 : paren_end]
+            count_var = extract_loop_counter(header)
+            body_start = skip_whitespace(body, paren_end + 1)
+            if body_start >= len(body):
+                pos = paren_end + 1
+                continue
+            if body[body_start] == "{":
+                body_end = find_matching_delim(body, body_start, "{", "}")
+                if body_end == -1:
+                    pos = body_start + 1
+                    continue
+                inner = body[body_start + 1 : body_end]
+                inner_items = parse_xfer_structure(inner, xfer_var, allowed_methods)
+                if count_var:
+                    items.append(
+                        {
+                            "kind": "loop",
+                            "count": count_var,
+                            "body": inner_items,
+                        }
+                    )
+                else:
+                    items.extend(inner_items)
+                pos = body_end + 1
+            else:
+                stmt_end = body.find(";", body_start)
+                if stmt_end == -1:
+                    break
+                inner = body[body_start : stmt_end + 1]
+                inner_items = parse_xfer_structure(inner, xfer_var, allowed_methods)
+                if count_var:
+                    items.append(
+                        {
+                            "kind": "loop",
+                            "count": count_var,
+                            "body": inner_items,
+                        }
+                    )
+                else:
+                    items.extend(inner_items)
+                pos = stmt_end + 1
+            continue
+        pos += 1
+    return items
+
+
 def load_allowed_methods(xfer_header: Optional[str]) -> Optional[Set[str]]:
     if not xfer_header:
         return None
@@ -309,44 +424,57 @@ def gather_from_file(path: pathlib.Path, allowed_methods: Optional[Set[str]], en
         body, body_start = find_function_body(stripped, sig.end())
         if not body:
             continue
-        seen: Set[Tuple[str, str]] = set()
-        for method, args, _ in iter_xfer_calls(body, xfer_var):
-            if allowed_methods is not None and method not in allowed_methods:
-                continue
-            mapped = resolve_type(method)
-            field_name = normalize_field_name(args.split(",")[0])
-            if method == "xferUser":
-                parts = [a.strip() for a in args.split(",")]
-                if len(parts) >= 2:
-                    size_expr = parts[1]
-                    size_expr = size_expr.replace(" ", "")
-                    m_sizeof = re.match(r"sizeof\((?P<type>[A-Za-z_]\w*)\)", size_expr)
-                    if m_sizeof:
-                        enum_name = m_sizeof.group("type")
-                        if enum_name in enum_types:
-                            mapped_type = normalize_underlying(enum_types[enum_name])
-                            mapped = (mapped_type, None)
-                    elif size_expr.isdigit():
-                        literal = int(size_expr)
-                        if literal == 1:
-                            mapped = ("Byte", 1)
-                        elif literal == 2:
-                            mapped = ("Short", 2)
-                        elif literal == 4:
-                            mapped = ("Int", 4)
-                        elif literal == 8:
-                            mapped = ("Int64", 8)
-            key = (field_name, mapped[0])
-            if key in seen:
-                continue
-            seen.add(key)
-            results.append(
-                {
-                    "class": cls,
-                    "type": mapped[0],
-                    "field": field_name,
-                }
-            )
+        items = parse_xfer_structure(body, xfer_var, allowed_methods)
+
+        def append_items(nodes: List[Dict]):
+            for node in nodes:
+                if node["kind"] == "call":
+                    method = node["method"]
+                    args = node["args"]
+                    field_name = normalize_field_name(args.split(",")[0])
+                    if method == "xferSnapshot":
+                        target_type = SNAPSHOT_TYPE_OVERRIDES.get(cls, {}).get(field_name)
+                        mapped = (target_type or "Snapshot", None)
+                    else:
+                        mapped = resolve_type(method)
+                    if method == "xferUser":
+                        parts = [a.strip() for a in args.split(",")]
+                        if len(parts) >= 2:
+                            size_expr = parts[1]
+                            size_expr = size_expr.replace(" ", "")
+                            m_sizeof = re.match(r"sizeof\((?P<type>[A-Za-z_]\w*)\)", size_expr)
+                            if m_sizeof:
+                                enum_name = m_sizeof.group("type")
+                                if enum_name in enum_types:
+                                    mapped_type = normalize_underlying(enum_types[enum_name])
+                                    mapped = (mapped_type, None)
+                            elif size_expr.isdigit():
+                                literal = int(size_expr)
+                                if literal == 1:
+                                    mapped = ("Byte", 1)
+                                elif literal == 2:
+                                    mapped = ("Short", 2)
+                                elif literal == 4:
+                                    mapped = ("Int", 4)
+                                elif literal == 8:
+                                    mapped = ("Int64", 8)
+                    results.append(
+                        {
+                            "class": cls,
+                            "type": mapped[0],
+                            "field": field_name,
+                        }
+                    )
+                elif node["kind"] == "loop":
+                    count_field = node.get("count")
+                    body_nodes = node.get("body") or []
+                    if count_field:
+                        results.append({"class": cls, "type": "LoopStart", "field": count_field})
+                    append_items(body_nodes)
+                    if count_field:
+                        results.append({"class": cls, "type": "LoopEnd", "field": count_field})
+
+        append_items(items)
     return results
 
 
