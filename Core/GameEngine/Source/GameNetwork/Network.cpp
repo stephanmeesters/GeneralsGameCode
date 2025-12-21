@@ -702,6 +702,13 @@ void Network::update( void )
 	GetCommandsFromCommandList(); // Remove commands from TheCommandList and send them to the connection manager.
 	if (m_conMgr != NULL) {
 		if (m_localStatus == NETLOCALSTATUS_INGAME) {
+#if defined(GENERALS_ONLINE_RUN_FAST)
+			m_frameRate = 60;
+#elif defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
+			m_frameRate = GENERALS_ONLINE_HIGH_FPS_LIMIT;
+#else
+			m_frameRate = 30;
+#endif
 			m_conMgr->updateRunAhead(m_runAhead, m_frameRate, m_didSelfSlug, getExecutionFrame());
 			m_didSelfSlug = FALSE;
 		}
@@ -792,7 +799,7 @@ Bool Network::timeForNewFrame() {
 //		DEBUG_LOG(("Allowing a new frame, frameDelay = %I64d, curTime - m_nextFrameTime = %I64d", frameDelay, curTime - m_nextFrameTime));
 
 //		if (m_nextFrameTime + frameDelay < curTime) {
-		if ((m_nextFrameTime + (2 * frameDelay)) < curTime) {
+		if ((m_nextFrameTime + ((GENERALS_ONLINE_HIGH_FPS_FRAME_MULTIPLIER * 2) * frameDelay)) < curTime) {
 			// If we get too far behind on our framerate we need to reset the nextFrameTime thing.
 			m_nextFrameTime = curTime;
 //			DEBUG_LOG(("Initializing m_nextFrameTime to %I64d", m_nextFrameTime));

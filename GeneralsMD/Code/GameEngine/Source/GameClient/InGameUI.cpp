@@ -1771,7 +1771,11 @@ void InGameUI::update( void )
 	// frame
 	//
 	UnsignedInt currLogicFrame = TheGameLogic->getFrame();
+#if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
+	const int messageTimeout = (m_messageDelayMS / LOGICFRAMES_PER_SECOND / 1000) * GENERALS_ONLINE_HIGH_FPS_FRAME_MULTIPLIER;
+#else
 	const int messageTimeout = m_messageDelayMS / LOGICFRAMES_PER_SECOND / 1000;
+#endif
 	UnsignedByte r, g, b, a;
 	Int amount;
 	for( i = MAX_UI_MESSAGES - 1; i >= 0; i-- )
@@ -3978,7 +3982,11 @@ void InGameUI::postDraw( void )
 				UnsignedInt readyFrame = TheGameLogic->getFrame();
 				if (framesLeft > 0)
 					readyFrame += framesLeft;
+#if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
+				Int readySecs = (Int)((Real)(readyFrame - TheGameLogic->getFrame()) / (Real)BaseFps);
+#else
 				Int readySecs = (Int)(SECONDS_PER_LOGICFRAME_REAL * (readyFrame - TheGameLogic->getFrame()));
+#endif
 				if ( (info->isCountdown && readySecs != info->timestamp) || (!info->isCountdown && framesLeft != info->timestamp) )
 				{
 					if (!readySecs && info->isCountdown)

@@ -5516,6 +5516,11 @@ void ScriptEngine::update( void )
 */
 #endif
 #endif
+#if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
+	if (!m_firstUpdate && !TheGameLogic->HasLegacyFrameAdvanced()) {
+		return;
+	}
+#endif
 	if (m_firstUpdate) {
 		createNamedCache();
 		particleEditorUpdate();
@@ -6743,7 +6748,12 @@ void ScriptEngine::setTimer( ScriptAction *pAction, Bool millisecondTimer, Bool 
 			Real randomValue = pAction->getParameter(2)->getReal();
 			value = GameLogicRandomValue(value, randomValue);
 		}
+#if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
+		const int LEGACY_FPS_INT = BaseFps;
+		m_counters[counterNdx].value = REAL_TO_INT_CEIL(value * (Real)LEGACY_FPS_INT);
+#else
 		m_counters[counterNdx].value = REAL_TO_INT_CEIL(ConvertDurationFromMsecsToFrames(value*1000));
+#endif
 	} else {
 		Int value = pAction->getParameter(1)->getInt();
 		if (random) {

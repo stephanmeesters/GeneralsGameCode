@@ -23,6 +23,19 @@
 #include "stringex.h"
 #include <Utility/stdio_adapter.h>
 
+#if 1
+#define GENERALS_ONLINE_HIGH_FPS_SERVER 1
+#define GENERALS_ONLINE_HIGH_FPS_LIMIT 60
+#define GENERALS_ONLINE_HIGH_FPS_FRAME_MULTIPLIER (GENERALS_ONLINE_HIGH_FPS_LIMIT / 30)
+#define GENERALS_ONLINE_HIGH_FPS_RENDER 1
+#endif
+
+// #if 1
+// #define GENERALS_ONLINE_HIGH_FPS_SERVER 1
+// #define GENERALS_ONLINE_HIGH_FPS_LIMIT 60
+// #define GENERALS_ONLINE_HIGH_FPS_FRAME_MULTIPLIER (GENERALS_ONLINE_HIGH_FPS_LIMIT / 30)
+// #define GENERALS_ONLINE_HIGH_FPS_RENDER 0
+// #endif
 
 // This macro serves as a general way to determine the number of elements within an array.
 #ifndef ARRAY_SIZE
@@ -38,7 +51,11 @@ enum
 {
 	// TheSuperHackers @info The original WWSync was 33 ms, ~30 fps, integer.
 	// Changing this will require tweaking all Drawable code that concerns the ww3d time step, including locomotion physics.
+#if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
+	WWSyncPerSecond = GENERALS_ONLINE_HIGH_FPS_LIMIT,
+#else
 	WWSyncPerSecond = 30,
+#endif
 	WWSyncMilliseconds = 1000 / WWSyncPerSecond,
 };
 

@@ -140,6 +140,11 @@ public:
 
 	void setObjectIDCounter( ObjectID nextObjID ) { m_nextObjID = nextObjID; }
 	ObjectID getObjectIDCounter( void ) { return m_nextObjID; }
+#if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
+	UnsignedInt getFrameLegacy(void);
+	UnsignedInt getFrameLegacyLast(void);
+	bool HasLegacyFrameAdvanced(void);
+#endif
 
 	//-----------------------------------------------------------------------------------------------
 	void setBuildableStatusOverride(const ThingTemplate* tt, BuildableStatus bs);
@@ -306,6 +311,10 @@ private:
 
 	Real m_width, m_height;																	///< Dimensions of the world
 	UnsignedInt m_frame;																		///< Simulation frame number
+#if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
+	UnsignedInt m_frameLegacy;
+	UnsignedInt m_frameLegacyLast;
+#endif
 
 	// CRC cache system -----------------------------------------------------------------------------
 	UnsignedInt	m_CRC;																			///< Cache of previous CRC value
@@ -414,6 +423,11 @@ inline Real GameLogic::getWidth( void ) { return m_width; }
 inline void GameLogic::setHeight( Real height ) { m_height = height; }
 inline Real GameLogic::getHeight( void ) { return m_height; }
 inline UnsignedInt GameLogic::getFrame( void ) { return m_frame; }
+#if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
+inline UnsignedInt GameLogic::getFrameLegacy(void) { return m_frameLegacy; }
+inline UnsignedInt GameLogic::getFrameLegacyLast(void) { return m_frameLegacyLast; }
+inline bool GameLogic::HasLegacyFrameAdvanced(void) { return m_frameLegacy != m_frameLegacyLast; }
+#endif
 
 inline Bool GameLogic::isInGame( void ) { return m_gameMode != GAME_NONE; }
 inline GameMode GameLogic::getGameMode( void ) { return m_gameMode; }

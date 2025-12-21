@@ -236,6 +236,10 @@ GameLogic::GameLogic( void )
 
 	m_frame = 0;
 	m_hasUpdated = FALSE;
+#if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
+	m_frameLegacy = 0;
+	m_frameLegacyLast = 0;
+#endif
 	m_frameObjectsChangedTriggerAreas = 0;
 	m_width = 0;
 	m_height = 0;
@@ -271,6 +275,10 @@ void GameLogic::setDefaults( Bool loadingSaveGame )
 {
 	m_frame = 0;
 	m_hasUpdated = FALSE;
+#if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
+	m_frameLegacy = 0;
+	m_frameLegacyLast = 0;
+#endif
 	m_width = DEFAULT_WORLD_WIDTH;
 	m_height = DEFAULT_WORLD_HEIGHT;
 	m_objList = NULL;
@@ -1158,6 +1166,10 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	// reset the frame counter
 	m_frame = 0;
 	m_hasUpdated = FALSE;
+#if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
+	m_frameLegacy = 0;
+	m_frameLegacyLast = 0;
+#endif
 
 #ifdef DEBUG_CRC
 	// TheSuperHackers @info helmutbuhler 04/09/2025
@@ -1335,6 +1347,10 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 		updateLoadProgress(LOAD_PROGRESS_POST_PARTICLE_INI_LOAD);
 
 	DEBUG_ASSERTCRASH(m_frame == 0, ("framecounter expected to be 0 here"));
+#if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
+	DEBUG_ASSERTCRASH(m_frameLegacy == 0, ("framecounter expected to be 0 here\n"));
+	DEBUG_ASSERTCRASH(m_frameLegacyLast == 0, ("framecounter expected to be 0 here\n"));
+#endif
 
 	// before loading the map, load the map.ini file in the same directory.
 	loadMapINI( TheGlobalData->m_mapName );
@@ -3650,6 +3666,13 @@ void GameLogic::update( void )
 {
 	USE_PERF_TIMER(GameLogic_update)
 
+#if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
+	if (m_frame % 2 != 0)
+	{
+		m_frameLegacyLast = m_frameLegacy;
+	}
+#endif
+
 	LatchRestore<Bool> inUpdateLatch(m_isInUpdate, TRUE);
 #ifdef DO_UNIT_TIMINGS
 	unitTimings();
@@ -3873,6 +3896,12 @@ void GameLogic::update( void )
 	{
 		m_frame++;
 		m_hasUpdated = TRUE;
+#if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
+		if (m_frame % 2 == 0)
+		{
+			m_frameLegacy++;
+		}
+#endif
 	}
 }
 

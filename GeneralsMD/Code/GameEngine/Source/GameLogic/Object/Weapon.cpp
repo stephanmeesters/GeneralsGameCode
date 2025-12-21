@@ -500,6 +500,21 @@ Int WeaponTemplate::getDelayBetweenShots(const WeaponBonus& bonus) const
 	else
 		delayToUse = GameLogicRandomValue( m_minDelayBetweenShots, m_maxDelayBetweenShots );
 
+#if defined(GENERALS_ONLINE_HIGH_FPS_SERVER)
+	if (delayToUse != 0 && delayToUse < (2 * GENERALS_ONLINE_HIGH_FPS_FRAME_MULTIPLIER))
+	{
+		delayToUse = 2 * GENERALS_ONLINE_HIGH_FPS_FRAME_MULTIPLIER;
+	}
+
+	if (getName().compareNoCase("GattlingBuilding") == 0
+		|| getName().compareNoCase("GattlingBuildingGun") == 0
+		|| getName().compareNoCase("GattlingBuildingGunAir") == 0
+		|| getName().compareNoCase("GattlingBuildingGunAirDummy") == 0)
+	{
+		delayToUse /= 1.5;
+	}
+#endif
+
 	Real bonusROF = bonus.getField(WeaponBonus::RATE_OF_FIRE);
 	//CRCDEBUG_LOG(("WeaponTemplate::getDelayBetweenShots() - min:%d max:%d val:%d, bonusROF=%g/%8.8X",
 		//m_minDelayBetweenShots, m_maxDelayBetweenShots, delayToUse, bonusROF, AS_INT(bonusROF)));

@@ -85,6 +85,8 @@
 #include "GameLogic/Object.h"
 #include "GameLogic/ScriptEngine.h"		// For TheScriptEngine - jkmcd
 
+#include <chrono>
+
 #define DRAWABLE_HASH_SIZE	8192
 
 /// The GameClient singleton instance
@@ -104,6 +106,12 @@ GameClient::GameClient()
 	m_textBearingDrawableList.clear();
 
 	m_frame = 0;
+
+#if defined(GENERALS_ONLINE_HIGH_FPS_RENDER)
+	m_legacyFrameMSAccured = 0;
+	m_frameLegacy = 0;
+	m_frameLegacyLast = 0;
+#endif
 
 	m_drawableList = NULL;
 
@@ -773,6 +781,23 @@ void GameClient::update( void )
 		// update the in game UI
 		TheInGameUI->UPDATE();
 	}
+
+#if defined(GENERALS_ONLINE_HIGH_FPS_RENDER)
+	const int64_t currTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now().time_since_epoch()).count();
+	m_legacyFrameMSAccured += currTime - m_LegacyFrameEndLastFrame;
+	m_LegacyFrameEndLastFrame = currTime;
+
+	if (m_legacyFrameMSAccured >= 33)
+	{
+		m_legacyFrameMSAccured = 0;
+		m_frameLegacy++;
+	}
+	else
+	{
+		m_frameLegacyLast = m_frameLegacy;
+	}
+#endif
 }
 
 void GameClient::step()
