@@ -36,6 +36,50 @@
 #include "Common/Snapshot.h"
 #include "GameLogic/GameLogic.h"
 #include "utility/endian_compat.h"
+#include <time.h>
+#include <windows.h>
+
+static Bool g_crcSessionReady = FALSE;
+static AsciiString g_crcSessionTimestamp;
+static AsciiString g_crcSessionDir;
+
+static void buildCRCSessionDir()
+{
+	if( g_crcSessionReady )
+	{
+		return;
+	}
+
+	char timeBuffer[32];
+	time_t now = time( NULL );
+	struct tm localTime;
+#if defined(_WIN32)
+	localtime_s( &localTime, &now );
+#else
+	localTime = *localtime( &now );
+#endif
+	strftime( timeBuffer, sizeof( timeBuffer ), "%Y%m%d_%H%M%S", &localTime );
+	g_crcSessionTimestamp = timeBuffer;
+
+	char exePath[ _MAX_PATH ];
+	exePath[0] = 0;
+	::GetModuleFileName( NULL, exePath, ARRAY_SIZE( exePath ) );
+	if( char *pEnd = strrchr( exePath, '\\' ) )
+	{
+		*(pEnd + 1) = 0;
+	}
+
+	g_crcSessionDir = exePath;
+	g_crcSessionDir.concat( g_crcSessionTimestamp );
+	CreateDirectory( g_crcSessionDir.str(), NULL );
+
+	g_crcSessionReady = TRUE;
+}
+
+void InitCRCSessionTimestamp( void )
+{
+	buildCRCSessionDir();
+}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -64,6 +108,7 @@ XferCRC::~XferCRC( void )
 //-------------------------------------------------------------------------------------------------
 void XferCRC::open( AsciiString identifier )
 {
+	buildCRCSessionDir();
 
 	// call base class
 	Xfer::open( identifier );
@@ -84,7 +129,7 @@ void XferCRC::open( AsciiString identifier )
 	}
 
 	AsciiString logFileName;
-	logFileName.format( "D:/crc_frame_%04u.txt", frame );
+	logFileName.format( "%s\\crc_frame_%04u.txt", g_crcSessionDir.str(), frame );
 	m_textFP = fopen( logFileName.str(), "w" );
 	if( m_textFP == NULL )
 	{

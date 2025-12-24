@@ -29,6 +29,7 @@
 #include "Common/Debug.h"
 #include "Common/PerfTimer.h"
 #include "Common/LocalFileSystem.h"
+#include "Common/XferCRC.h"
 #include "GameClient/InGameUI.h"
 #include "GameNetwork/IPEnumeration.h"
 #include <cstdarg>
@@ -117,6 +118,7 @@ void CRCDebugStartNewGame()
 {
 	if (TheGameLogic->isInShellGame())
 		return;
+	InitCRCSessionTimestamp();
 	if (g_saveDebugCRCPerFrame)
 	{
 		// Create folder for frame data, if it doesn't exist yet.

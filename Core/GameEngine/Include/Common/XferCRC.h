@@ -71,3 +71,5 @@ protected:
 	FILE *m_textFP;
 
 };
+
+void InitCRCSessionTimestamp( void );
