@@ -37,6 +37,7 @@
 #include "GameLogic/GameLogic.h"
 #include "utility/endian_compat.h"
 #include <time.h>
+#include <string.h>
 #include <windows.h>
 
 static Bool g_crcSessionReady = FALSE;
@@ -51,10 +52,22 @@ static void buildCRCSessionDir()
 	}
 
 	char timeBuffer[32];
-	time_t now = time( NULL );
-	struct tm localTime;
+time_t now = time( NULL );
+struct tm localTime;
 #if defined(_WIN32)
-	localtime_s( &localTime, &now );
+	#if defined(_MSC_VER) && _MSC_VER >= 1400
+		localtime_s( &localTime, &now );
+	#else
+		struct tm *tmp = localtime( &now );
+		if( tmp != NULL )
+		{
+			localTime = *tmp;
+		}
+		else
+		{
+			memset( &localTime, 0, sizeof( localTime ) );
+		}
+	#endif
 #else
 	localTime = *localtime( &now );
 #endif

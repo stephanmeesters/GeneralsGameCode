@@ -31,7 +31,7 @@
 
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
-#include <stdio.h>
+#include <Utility/stdio_adapter.h>
 #include <string.h>
 #include "Common/Upgrade.h"
 #include "Common/GameState.h"
@@ -159,7 +159,7 @@ void Xfer::xferInt64( Int64 *int64Data, const char *label )
 	if( getXferMode() == XFER_CRC )
 	{
 		char buffer[64];
-		snprintf( buffer, sizeof( buffer ), "%lld", static_cast<long long>(*int64Data) );
+		snprintf( buffer, sizeof( buffer ), "%I64d", static_cast<Int64>(*int64Data) );
 		logCRCValue( label, buffer );
 	}
 
