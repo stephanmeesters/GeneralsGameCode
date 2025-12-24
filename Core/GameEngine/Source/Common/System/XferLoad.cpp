@@ -171,8 +171,9 @@ void XferLoad::skip( Int dataSize )
 // ------------------------------------------------------------------------------------------------
 /** Entry point for xfering a snapshot */
 // ------------------------------------------------------------------------------------------------
-void XferLoad::xferSnapshot( Snapshot *snapshot )
+void XferLoad::xferSnapshot( Snapshot *snapshot, const char *label )
 {
+	(void)label;
 
 	if( snapshot == NULL )
 	{

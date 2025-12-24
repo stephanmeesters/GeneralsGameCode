@@ -51,7 +51,7 @@ public:
 	virtual void endBlock( void );											///< reading an end block is a no-op
 	virtual void skip( Int dataSize );									///< skip forward dataSize bytes in file
 
-	virtual void xferSnapshot( Snapshot *snapshot );		///< entry point for xfering a snapshot
+	virtual void xferSnapshot( Snapshot *snapshot, const char *label = "" );		///< entry point for xfering a snapshot
 
 	// xfer methods
 	virtual void xferAsciiString( AsciiString *asciiStringData, const char *label = "" );  ///< xfer ascii string (need our own)

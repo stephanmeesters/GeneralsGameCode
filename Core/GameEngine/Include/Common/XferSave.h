@@ -56,7 +56,7 @@ public:
 	virtual void endBlock( void );									///< backup to last begin block and write size
 	virtual void skip( Int dataSize );							///< skipping during a write is a no-op
 
-	virtual void xferSnapshot( Snapshot *snapshot );		///< entry point for xfering a snapshot
+	virtual void xferSnapshot( Snapshot *snapshot, const char *label = "" );		///< entry point for xfering a snapshot
 
 	// xfer methods
 	virtual void xferAsciiString( AsciiString *asciiStringData, const char *label = "" );  ///< xfer ascii string (need our own)

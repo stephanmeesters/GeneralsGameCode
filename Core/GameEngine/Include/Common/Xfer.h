@@ -132,7 +132,7 @@ public:
 	virtual void endBlock( void ) = 0;									///< xfer end block event
 	virtual void skip( Int dataSize ) = 0;							///< xfer skip data
 
-	virtual void xferSnapshot( Snapshot *snapshot ) = 0;		///< entry point for xfering a snapshot
+	virtual void xferSnapshot( Snapshot *snapshot, const char *label = "" ) = 0;		///< entry point for xfering a snapshot
 
 	//
 	// default transfer methods, these call the implementation method with the data
@@ -178,6 +178,8 @@ public:
 	virtual void xferMatrix3D( Matrix3D* mtx, const char *label = "" );
 	virtual void xferMapName( AsciiString *mapNameData, const char *label = "" );
 
+	static void buildCRCLabel( const char *functionName, const char *memberName, const char *typeName, char *out, size_t outSize );
+
 protected:
 
 	// this is the actual xfer impelmentation that each derived class should implement
@@ -190,3 +192,46 @@ protected:
 	AsciiString m_identifier;				///< the string identifier
 
 };
+
+#if defined(_MSC_VER)
+#define CRC_FUNCTION_NAME __FUNCSIG__
+#elif defined(__GNUC__)
+#define CRC_FUNCTION_NAME __PRETTY_FUNCTION__
+#else
+#define CRC_FUNCTION_NAME __FUNCTION__
+#endif
+
+#define CRC_XFER(xfer, method, member, typeName) \
+	do { \
+		char _crcLabel[128]; \
+		Xfer::buildCRCLabel( CRC_FUNCTION_NAME, #member, typeName, _crcLabel, sizeof( _crcLabel ) ); \
+		(xfer)->method( &(member), _crcLabel ); \
+	} while(0)
+
+#define CRC_XFER_PTR(xfer, method, ptr, memberName, typeName) \
+	do { \
+		char _crcLabel[128]; \
+		Xfer::buildCRCLabel( CRC_FUNCTION_NAME, memberName, typeName, _crcLabel, sizeof( _crcLabel ) ); \
+		(xfer)->method( (ptr), _crcLabel ); \
+	} while(0)
+
+#define CRC_XFER_WITH_ARG(xfer, method, member, arg, typeName) \
+	do { \
+		char _crcLabel[128]; \
+		Xfer::buildCRCLabel( CRC_FUNCTION_NAME, #member, typeName, _crcLabel, sizeof( _crcLabel ) ); \
+		(xfer)->method( &(member), (arg), _crcLabel ); \
+	} while(0)
+
+#define CRC_XFER_USER(xfer, ptr, size, memberName, typeName) \
+	do { \
+		char _crcLabel[128]; \
+		Xfer::buildCRCLabel( CRC_FUNCTION_NAME, memberName, typeName, _crcLabel, sizeof( _crcLabel ) ); \
+		(xfer)->xferUser( (ptr), (size), _crcLabel ); \
+	} while(0)
+
+#define CRC_XFER_SNAPSHOT(xfer, snapshot, memberName) \
+	do { \
+		char _crcLabel[128]; \
+		Xfer::buildCRCLabel( CRC_FUNCTION_NAME, memberName, "Snapshot", _crcLabel, sizeof( _crcLabel ) ); \
+		(xfer)->xferSnapshot( (snapshot), _crcLabel ); \
+	} while(0)

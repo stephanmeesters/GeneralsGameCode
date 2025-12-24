@@ -53,7 +53,7 @@ public:
 	virtual void endBlock( void );									///< end block event
 	virtual void skip( Int dataSize );							///< skip xfer event
 
-	virtual void xferSnapshot( Snapshot *snapshot );		///< entry point for xfering a snapshot
+	virtual void xferSnapshot( Snapshot *snapshot, const char *label = "" );		///< entry point for xfering a snapshot
 
 	// Xfer CRC methods
 	virtual UnsignedInt getCRC( void );										///< get computed CRC in network byte order

@@ -179,7 +179,7 @@ void XferCRC::addCRC( UnsignedInt val )
 // ------------------------------------------------------------------------------------------------
 /** Entry point for xfering a snapshot */
 // ------------------------------------------------------------------------------------------------
-void XferCRC::xferSnapshot( Snapshot *snapshot )
+void XferCRC::xferSnapshot( Snapshot *snapshot, const char *label )
 {
 
 	if( snapshot == NULL )
@@ -187,6 +187,11 @@ void XferCRC::xferSnapshot( Snapshot *snapshot )
 
 		return;
 
+	}
+
+	if( label != NULL && label[0] != '\0' )
+	{
+		logCRCValue( label, "Snapshot" );
 	}
 
 	// run the crc function of the snapshot

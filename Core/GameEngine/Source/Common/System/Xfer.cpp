@@ -32,6 +32,7 @@
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 #include <stdio.h>
+#include <string.h>
 #include "Common/Upgrade.h"
 #include "Common/GameState.h"
 #include "Common/Xfer.h"
@@ -991,6 +992,62 @@ void Xfer::logCRCBytes( const char *label, const void *data, Int dataSize )
 	(void)label;
 	(void)data;
 	(void)dataSize;
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void Xfer::buildCRCLabel( const char *functionName, const char *memberName, const char *typeName, char *out, size_t outSize )
+{
+	if( out == NULL || outSize == 0 )
+	{
+		return;
+	}
+
+	const char *className = functionName;
+	const char *classStart = functionName;
+	const char *lastScope = NULL;
+	if( functionName != NULL )
+	{
+		for( const char *p = functionName; *p != '\0'; ++p )
+		{
+			if( p[0] == ':' && p[1] == ':' )
+			{
+				lastScope = p;
+			}
+			if( *p == ' ' || *p == '\t' )
+			{
+				classStart = p + 1;
+			}
+		}
+	}
+
+	char classBuffer[64];
+	if( lastScope != NULL && functionName != NULL )
+	{
+		size_t len = static_cast<size_t>( lastScope - classStart );
+		if( len >= sizeof( classBuffer ) )
+		{
+			len = sizeof( classBuffer ) - 1;
+		}
+		memcpy( classBuffer, classStart, len );
+		classBuffer[len] = '\0';
+		className = classBuffer;
+	}
+
+	if( className == NULL || className[0] == '\0' )
+	{
+		className = "Unknown";
+	}
+	if( memberName == NULL )
+	{
+		memberName = "";
+	}
+	if( typeName == NULL )
+	{
+		typeName = "";
+	}
+
+	snprintf( out, outSize, "%s::%s::%s", className, memberName, typeName );
 }
 
 

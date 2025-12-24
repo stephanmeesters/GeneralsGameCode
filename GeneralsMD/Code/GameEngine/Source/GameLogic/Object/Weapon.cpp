@@ -3245,10 +3245,10 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	AsciiString tmplName = m_template->getName();
-	xfer->xferAsciiString(&tmplName);
+	CRC_XFER(xfer, xferAsciiString, tmplName, "AsciiString");
 
 	// slot
-	xfer->xferUser( &m_wslot, sizeof( WeaponSlotType ) );
+	CRC_XFER_USER(xfer, &m_wslot, sizeof( WeaponSlotType ), "m_wslot", "WeaponSlotType");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3259,7 +3259,7 @@ void Weapon::crc( Xfer *xfer )
 
 	// status
 	/*
-	xfer->xferUser( &m_status, sizeof( WeaponStatus ) );
+	CRC_XFER_USER(xfer, &m_status, sizeof( WeaponStatus ), "m_status", "WeaponStatus");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3270,7 +3270,7 @@ void Weapon::crc( Xfer *xfer )
 	*/
 
 	// ammo
-	xfer->xferUnsignedInt( &m_ammoInClip );
+	CRC_XFER(xfer, xferUnsignedInt, m_ammoInClip, "UnsignedInt");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3280,7 +3280,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// when can fire again
-	xfer->xferUnsignedInt( &m_whenWeCanFireAgain );
+	CRC_XFER(xfer, xferUnsignedInt, m_whenWeCanFireAgain, "UnsignedInt");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3290,7 +3290,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// when pre attack finished
-	xfer->xferUnsignedInt( &m_whenPreAttackFinished );
+	CRC_XFER(xfer, xferUnsignedInt, m_whenPreAttackFinished, "UnsignedInt");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3300,7 +3300,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// when last reload started
-	xfer->xferUnsignedInt( &m_whenLastReloadStarted );
+	CRC_XFER(xfer, xferUnsignedInt, m_whenLastReloadStarted, "UnsignedInt");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3310,7 +3310,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// last fire frame
-	xfer->xferUnsignedInt( &m_lastFireFrame );
+	CRC_XFER(xfer, xferUnsignedInt, m_lastFireFrame, "UnsignedInt");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3320,7 +3320,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// projectile stream object
-	xfer->xferObjectID( &m_projectileStreamID );
+	CRC_XFER(xfer, xferObjectID, m_projectileStreamID, "ObjectID");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3331,7 +3331,7 @@ void Weapon::crc( Xfer *xfer )
 
 	// laser object (defunct)
 	ObjectID laserIDUnused = INVALID_ID;
-	xfer->xferObjectID( &laserIDUnused );
+	CRC_XFER(xfer, xferObjectID, laserIDUnused, "ObjectID");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3341,7 +3341,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// max shot count
-	xfer->xferInt( &m_maxShotCount );
+	CRC_XFER(xfer, xferInt, m_maxShotCount, "Int");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3351,7 +3351,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// current barrel
-	xfer->xferInt( &m_curBarrel );
+	CRC_XFER(xfer, xferInt, m_curBarrel, "Int");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3361,7 +3361,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// num shots for current barrel
-	xfer->xferInt( &m_numShotsForCurBarrel );
+	CRC_XFER(xfer, xferInt, m_numShotsForCurBarrel, "Int");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3372,7 +3372,7 @@ void Weapon::crc( Xfer *xfer )
 
 	// scatter targets unused
 	UnsignedShort scatterCount = m_scatterTargetsUnused.size();
-	xfer->xferUnsignedShort( &scatterCount );
+	CRC_XFER(xfer, xferUnsignedShort, scatterCount, "UnsignedShort");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3389,7 +3389,7 @@ void Weapon::crc( Xfer *xfer )
 	{
 
 		intData = *it;
-		xfer->xferInt( &intData );
+		CRC_XFER(xfer, xferInt, intData, "Int");
 #ifdef DEBUG_CRC
 		if (doLogging)
 		{
@@ -3401,7 +3401,7 @@ void Weapon::crc( Xfer *xfer )
 	}
 
 	// pitch limited
-	xfer->xferBool( &m_pitchLimited );
+	CRC_XFER(xfer, xferBool, m_pitchLimited, "Bool");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3411,7 +3411,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// leech weapon range active
-	xfer->xferBool( &m_leechWeaponRangeActive );
+	CRC_XFER(xfer, xferBool, m_leechWeaponRangeActive, "Bool");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3601,4 +3601,3 @@ void WeaponBonusSet::appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus&
 		this->m_bonus[i].appendBonuses(bonus);
 	}
 }
-
