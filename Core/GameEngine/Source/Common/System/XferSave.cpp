@@ -289,8 +289,9 @@ void XferSave::xferSnapshot( Snapshot *snapshot )
 // ------------------------------------------------------------------------------------------------
 /** Save ascii string */
 // ------------------------------------------------------------------------------------------------
-void XferSave::xferAsciiString( AsciiString *asciiStringData )
+void XferSave::xferAsciiString( AsciiString *asciiStringData, const char *label )
 {
+	(void)label;
 
 	// sanity
 	if( asciiStringData->getLength() > 255 )
@@ -314,8 +315,9 @@ void XferSave::xferAsciiString( AsciiString *asciiStringData )
 // ------------------------------------------------------------------------------------------------
 /** Save unicodee string */
 // ------------------------------------------------------------------------------------------------
-void XferSave::xferUnicodeString( UnicodeString *unicodeStringData )
+void XferSave::xferUnicodeString( UnicodeString *unicodeStringData, const char *label )
 {
+	(void)label;
 
 	// sanity
 	if( unicodeStringData->getLength() > 255 )

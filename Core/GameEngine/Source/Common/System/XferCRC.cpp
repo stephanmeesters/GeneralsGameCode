@@ -34,6 +34,7 @@
 #include "Common/XferDeepCRC.h"
 #include "Common/crc.h"
 #include "Common/Snapshot.h"
+#include "GameLogic/GameLogic.h"
 #include "utility/endian_compat.h"
 
 //-------------------------------------------------------------------------------------------------
@@ -43,12 +44,18 @@ XferCRC::XferCRC( void )
 
 	m_xferMode = XFER_CRC;
 	m_crc = 0;
+	m_textFP = NULL;
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 XferCRC::~XferCRC( void )
 {
+	if( m_textFP != NULL )
+	{
+		fclose( m_textFP );
+		m_textFP = NULL;
+	}
 
 }
 
@@ -64,6 +71,25 @@ void XferCRC::open( AsciiString identifier )
 	// initialize CRC to brand new one at zero
 	m_crc = 0;
 
+	if( m_textFP != NULL )
+	{
+		fclose( m_textFP );
+		m_textFP = NULL;
+	}
+
+	UnsignedInt frame = 0;
+	if( TheGameLogic != NULL )
+	{
+		frame = TheGameLogic->getFrame();
+	}
+
+	AsciiString logFileName;
+	logFileName.format( "D:/crc_frame_%04u.txt", frame );
+	m_textFP = fopen( logFileName.str(), "w" );
+	if( m_textFP == NULL )
+	{
+		DEBUG_LOG(( "XferCRC - Unable to open CRC log file '%s'", logFileName.str() ));
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -71,6 +97,12 @@ void XferCRC::open( AsciiString identifier )
 //-------------------------------------------------------------------------------------------------
 void XferCRC::close( void )
 {
+
+	if( m_textFP != NULL )
+	{
+		fclose( m_textFP );
+		m_textFP = NULL;
+	}
 
 }
 
@@ -169,6 +201,53 @@ UnsignedInt XferCRC::getCRC( void )
 
 }
 
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void XferCRC::logCRCValue( const char *label, const char *valueText )
+{
+	if( m_textFP == NULL )
+	{
+		return;
+	}
+
+	if( label != NULL && label[0] != '\0' )
+	{
+		fprintf( m_textFP, "%s: %s\n", label, (valueText != NULL) ? valueText : "" );
+	}
+	else
+	{
+		fprintf( m_textFP, "%s\n", (valueText != NULL) ? valueText : "" );
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void XferCRC::logCRCBytes( const char *label, const void *data, Int dataSize )
+{
+	if( m_textFP == NULL )
+	{
+		return;
+	}
+
+	if( label != NULL && label[0] != '\0' )
+	{
+		fprintf( m_textFP, "%s: ", label );
+	}
+
+	if( data == NULL || dataSize <= 0 )
+	{
+		fprintf( m_textFP, "\n" );
+		return;
+	}
+
+	const unsigned char *bytes = static_cast<const unsigned char *>( data );
+	for( Int i = 0; i < dataSize; ++i )
+	{
+		fprintf( m_textFP, "%02X", bytes[i] );
+	}
+	fprintf( m_textFP, "\n" );
+}
+
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -215,7 +294,7 @@ void XferDeepCRC::open( AsciiString identifier )
 	}
 
 	// call base class
-	Xfer::open( identifier );
+	XferCRC::open( identifier );
 
 	// open the file
 	m_fileFP = fopen( identifier.str(), "w+b" );
@@ -226,9 +305,6 @@ void XferDeepCRC::open( AsciiString identifier )
 		throw XFER_FILE_NOT_FOUND;
 
 	}
-
-	// initialize CRC to brand new one at zero
-	m_crc = 0;
 
 }
 
@@ -254,6 +330,7 @@ void XferDeepCRC::close( void )
 	// erase the filename
 	m_identifier.clear();
 
+	XferCRC::close();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -287,16 +364,18 @@ void XferDeepCRC::xferImplementation( void *data, Int dataSize )
 // ------------------------------------------------------------------------------------------------
 /** Save ascii string */
 // ------------------------------------------------------------------------------------------------
-void XferDeepCRC::xferMarkerLabel( AsciiString asciiStringData )
+void XferDeepCRC::xferMarkerLabel( AsciiString asciiStringData, const char *label )
 {
+	(void)label;
 
 }
 
 // ------------------------------------------------------------------------------------------------
 /** Save ascii string */
 // ------------------------------------------------------------------------------------------------
-void XferDeepCRC::xferAsciiString( AsciiString *asciiStringData )
+void XferDeepCRC::xferAsciiString( AsciiString *asciiStringData, const char *label )
 {
+	(void)label;
 
 	// sanity
 	if( asciiStringData->getLength() > 16385 )
@@ -320,8 +399,9 @@ void XferDeepCRC::xferAsciiString( AsciiString *asciiStringData )
 // ------------------------------------------------------------------------------------------------
 /** Save unicodee string */
 // ------------------------------------------------------------------------------------------------
-void XferDeepCRC::xferUnicodeString( UnicodeString *unicodeStringData )
+void XferDeepCRC::xferUnicodeString( UnicodeString *unicodeStringData, const char *label )
 {
+	(void)label;
 
 	// sanity
 	if( unicodeStringData->getLength() > 255 )

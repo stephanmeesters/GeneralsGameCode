@@ -139,49 +139,51 @@ public:
 	// parameters.  You may use the default, or derive and create new ways to xfer each
 	// of these types of data
 	//
-	virtual void xferVersion( XferVersion *versionData, XferVersion currentVersion );
-	virtual void xferByte( Byte *byteData );
-	virtual void xferUnsignedByte( UnsignedByte *unsignedByteData );
-	virtual void xferBool( Bool *boolData );
-	virtual void xferInt( Int *intData );
-	virtual void xferInt64( Int64 *int64Data );
-	virtual void xferUnsignedInt( UnsignedInt *unsignedIntData );
-	virtual void xferShort( Short *shortData );
-	virtual void xferUnsignedShort( UnsignedShort *unsignedShortData );
-	virtual void xferReal( Real *realData );
-	virtual void xferMarkerLabel( AsciiString asciiStringData ); // This is purely for readability purposes - it is explicitly discarded on load.
-	virtual void xferAsciiString( AsciiString *asciiStringData );
-	virtual void xferUnicodeString( UnicodeString *unicodeStringData );
-	virtual void xferCoord3D( Coord3D *coord3D );
-	virtual void xferICoord3D( ICoord3D *iCoord3D );
-	virtual void xferRegion3D( Region3D *region3D );
-	virtual void xferIRegion3D( IRegion3D *iRegion3D );
-	virtual void xferCoord2D( Coord2D *coord2D );
-	virtual void xferICoord2D( ICoord2D *iCoord2D );
-	virtual void xferRegion2D( Region2D *region2D );
-	virtual void xferIRegion2D( IRegion2D *iRegion2D );
-	virtual void xferRealRange( RealRange *realRange );
-	virtual void xferColor( Color *color );
-	virtual void xferRGBColor( RGBColor *rgbColor );
-	virtual void xferRGBAColorReal( RGBAColorReal *rgbaColorReal );
-	virtual void xferRGBAColorInt( RGBAColorInt *rgbaColorInt );
-	virtual void xferObjectID( ObjectID *objectID );
-	virtual void xferDrawableID( DrawableID *drawableID );
-	virtual void xferSTLObjectIDVector( std::vector<ObjectID> *objectIDVectorData );
-	virtual void xferSTLObjectIDList( std::list< ObjectID > *objectIDListData );
-	virtual void xferSTLIntList( std::list< Int > *intListData );
-	virtual void xferScienceType( ScienceType *science );
-	virtual void xferScienceVec( ScienceVec *scienceVec );
-	virtual void xferKindOf( KindOfType *kindOfData );
-	virtual void xferUpgradeMask( UpgradeMaskType *upgradeMaskData );
-	virtual void xferUser( void *data, Int dataSize );
-	virtual void xferMatrix3D( Matrix3D* mtx );
-	virtual void xferMapName( AsciiString *mapNameData );
+	virtual void xferVersion( XferVersion *versionData, XferVersion currentVersion, const char *label = "" );
+	virtual void xferByte( Byte *byteData, const char *label = "" );
+	virtual void xferUnsignedByte( UnsignedByte *unsignedByteData, const char *label = "" );
+	virtual void xferBool( Bool *boolData, const char *label = "" );
+	virtual void xferInt( Int *intData, const char *label = "" );
+	virtual void xferInt64( Int64 *int64Data, const char *label = "" );
+	virtual void xferUnsignedInt( UnsignedInt *unsignedIntData, const char *label = "" );
+	virtual void xferShort( Short *shortData, const char *label = "" );
+	virtual void xferUnsignedShort( UnsignedShort *unsignedShortData, const char *label = "" );
+	virtual void xferReal( Real *realData, const char *label = "" );
+	virtual void xferMarkerLabel( AsciiString asciiStringData, const char *label = "" ); // This is purely for readability purposes - it is explicitly discarded on load.
+	virtual void xferAsciiString( AsciiString *asciiStringData, const char *label = "" );
+	virtual void xferUnicodeString( UnicodeString *unicodeStringData, const char *label = "" );
+	virtual void xferCoord3D( Coord3D *coord3D, const char *label = "" );
+	virtual void xferICoord3D( ICoord3D *iCoord3D, const char *label = "" );
+	virtual void xferRegion3D( Region3D *region3D, const char *label = "" );
+	virtual void xferIRegion3D( IRegion3D *iRegion3D, const char *label = "" );
+	virtual void xferCoord2D( Coord2D *coord2D, const char *label = "" );
+	virtual void xferICoord2D( ICoord2D *iCoord2D, const char *label = "" );
+	virtual void xferRegion2D( Region2D *region2D, const char *label = "" );
+	virtual void xferIRegion2D( IRegion2D *iRegion2D, const char *label = "" );
+	virtual void xferRealRange( RealRange *realRange, const char *label = "" );
+	virtual void xferColor( Color *color, const char *label = "" );
+	virtual void xferRGBColor( RGBColor *rgbColor, const char *label = "" );
+	virtual void xferRGBAColorReal( RGBAColorReal *rgbaColorReal, const char *label = "" );
+	virtual void xferRGBAColorInt( RGBAColorInt *rgbaColorInt, const char *label = "" );
+	virtual void xferObjectID( ObjectID *objectID, const char *label = "" );
+	virtual void xferDrawableID( DrawableID *drawableID, const char *label = "" );
+	virtual void xferSTLObjectIDVector( std::vector<ObjectID> *objectIDVectorData, const char *label = "" );
+	virtual void xferSTLObjectIDList( std::list< ObjectID > *objectIDListData, const char *label = "" );
+	virtual void xferSTLIntList( std::list< Int > *intListData, const char *label = "" );
+	virtual void xferScienceType( ScienceType *science, const char *label = "" );
+	virtual void xferScienceVec( ScienceVec *scienceVec, const char *label = "" );
+	virtual void xferKindOf( KindOfType *kindOfData, const char *label = "" );
+	virtual void xferUpgradeMask( UpgradeMaskType *upgradeMaskData, const char *label = "" );
+	virtual void xferUser( void *data, Int dataSize, const char *label = "" );
+	virtual void xferMatrix3D( Matrix3D* mtx, const char *label = "" );
+	virtual void xferMapName( AsciiString *mapNameData, const char *label = "" );
 
 protected:
 
 	// this is the actual xfer impelmentation that each derived class should implement
 	virtual void xferImplementation( void *data, Int dataSize ) = 0;
+	virtual void logCRCValue( const char *label, const char *valueText );
+	virtual void logCRCBytes( const char *label, const void *data, Int dataSize );
 
 	UnsignedInt m_options;					///< xfer options
 	XferMode m_xferMode;						///< the current xfer mode

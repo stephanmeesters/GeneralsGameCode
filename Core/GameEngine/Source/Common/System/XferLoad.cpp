@@ -194,8 +194,9 @@ void XferLoad::xferSnapshot( Snapshot *snapshot )
 // ------------------------------------------------------------------------------------------------
 /** Read string from file and store in ascii string */
 // ------------------------------------------------------------------------------------------------
-void XferLoad::xferAsciiString( AsciiString *asciiStringData )
+void XferLoad::xferAsciiString( AsciiString *asciiStringData, const char *label )
 {
+	(void)label;
 
 	// read bytes of string length to follow
 	UnsignedByte len;
@@ -217,8 +218,9 @@ void XferLoad::xferAsciiString( AsciiString *asciiStringData )
 // ------------------------------------------------------------------------------------------------
 /** Read string from file and store in unicode string */
 // ------------------------------------------------------------------------------------------------
-void XferLoad::xferUnicodeString( UnicodeString *unicodeStringData )
+void XferLoad::xferUnicodeString( UnicodeString *unicodeStringData, const char *label )
 {
+	(void)label;
 
 	// read bytes of string length to follow
 	UnsignedByte len;

@@ -30,6 +30,7 @@
 #pragma once
 
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
+#include <stdio.h>
 #include "Common/Xfer.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
@@ -63,6 +64,10 @@ protected:
 
 	inline void addCRC( UnsignedInt val );								///< CRC a 4-byte block
 
+	virtual void logCRCValue( const char *label, const char *valueText );
+	virtual void logCRCBytes( const char *label, const void *data, Int dataSize );
+
 	UnsignedInt m_crc;
+	FILE *m_textFP;
 
 };
