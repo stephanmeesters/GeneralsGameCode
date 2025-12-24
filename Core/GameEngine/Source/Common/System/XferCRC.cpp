@@ -145,6 +145,11 @@ void XferCRC::close( void )
 
 	if( m_textFP != NULL )
 	{
+		UnsignedInt finalCRC = getCRC();
+		fprintf( m_textFP, "FinalCRC: 0x%8.8X\n", finalCRC );
+	}
+	if( m_textFP != NULL )
+	{
 		fclose( m_textFP );
 		m_textFP = NULL;
 	}

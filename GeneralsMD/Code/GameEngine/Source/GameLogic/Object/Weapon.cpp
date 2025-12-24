@@ -3245,10 +3245,10 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	AsciiString tmplName = m_template->getName();
-	CRC_XFER(xfer, xferAsciiString, tmplName, "AsciiString");
+	CRC_XFER(xfer, "Weapon", xferAsciiString, tmplName, "AsciiString");
 
 	// slot
-	CRC_XFER_USER(xfer, &m_wslot, sizeof( WeaponSlotType ), "m_wslot", "WeaponSlotType");
+	CRC_XFER_USER(xfer, "Weapon", &m_wslot, sizeof( WeaponSlotType ), "m_wslot", "WeaponSlotType");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3259,7 +3259,7 @@ void Weapon::crc( Xfer *xfer )
 
 	// status
 	/*
-	CRC_XFER_USER(xfer, &m_status, sizeof( WeaponStatus ), "m_status", "WeaponStatus");
+	CRC_XFER_USER(xfer, "Weapon", &m_status, sizeof( WeaponStatus ), "m_status", "WeaponStatus");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3270,7 +3270,7 @@ void Weapon::crc( Xfer *xfer )
 	*/
 
 	// ammo
-	CRC_XFER(xfer, xferUnsignedInt, m_ammoInClip, "UnsignedInt");
+	CRC_XFER(xfer, "Weapon", xferUnsignedInt, m_ammoInClip, "UnsignedInt");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3280,7 +3280,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// when can fire again
-	CRC_XFER(xfer, xferUnsignedInt, m_whenWeCanFireAgain, "UnsignedInt");
+	CRC_XFER(xfer, "Weapon", xferUnsignedInt, m_whenWeCanFireAgain, "UnsignedInt");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3290,7 +3290,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// when pre attack finished
-	CRC_XFER(xfer, xferUnsignedInt, m_whenPreAttackFinished, "UnsignedInt");
+	CRC_XFER(xfer, "Weapon", xferUnsignedInt, m_whenPreAttackFinished, "UnsignedInt");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3300,7 +3300,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// when last reload started
-	CRC_XFER(xfer, xferUnsignedInt, m_whenLastReloadStarted, "UnsignedInt");
+	CRC_XFER(xfer, "Weapon", xferUnsignedInt, m_whenLastReloadStarted, "UnsignedInt");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3310,7 +3310,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// last fire frame
-	CRC_XFER(xfer, xferUnsignedInt, m_lastFireFrame, "UnsignedInt");
+	CRC_XFER(xfer, "Weapon", xferUnsignedInt, m_lastFireFrame, "UnsignedInt");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3320,7 +3320,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// projectile stream object
-	CRC_XFER(xfer, xferObjectID, m_projectileStreamID, "ObjectID");
+	CRC_XFER(xfer, "Weapon", xferObjectID, m_projectileStreamID, "ObjectID");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3331,7 +3331,7 @@ void Weapon::crc( Xfer *xfer )
 
 	// laser object (defunct)
 	ObjectID laserIDUnused = INVALID_ID;
-	CRC_XFER(xfer, xferObjectID, laserIDUnused, "ObjectID");
+	CRC_XFER(xfer, "Weapon", xferObjectID, laserIDUnused, "ObjectID");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3341,7 +3341,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// max shot count
-	CRC_XFER(xfer, xferInt, m_maxShotCount, "Int");
+	CRC_XFER(xfer, "Weapon", xferInt, m_maxShotCount, "Int");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3351,7 +3351,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// current barrel
-	CRC_XFER(xfer, xferInt, m_curBarrel, "Int");
+	CRC_XFER(xfer, "Weapon", xferInt, m_curBarrel, "Int");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3361,7 +3361,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// num shots for current barrel
-	CRC_XFER(xfer, xferInt, m_numShotsForCurBarrel, "Int");
+	CRC_XFER(xfer, "Weapon", xferInt, m_numShotsForCurBarrel, "Int");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3372,7 +3372,7 @@ void Weapon::crc( Xfer *xfer )
 
 	// scatter targets unused
 	UnsignedShort scatterCount = m_scatterTargetsUnused.size();
-	CRC_XFER(xfer, xferUnsignedShort, scatterCount, "UnsignedShort");
+	CRC_XFER(xfer, "Weapon", xferUnsignedShort, scatterCount, "UnsignedShort");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3389,7 +3389,7 @@ void Weapon::crc( Xfer *xfer )
 	{
 
 		intData = *it;
-		CRC_XFER(xfer, xferInt, intData, "Int");
+		CRC_XFER(xfer, "Weapon", xferInt, intData, "Int");
 #ifdef DEBUG_CRC
 		if (doLogging)
 		{
@@ -3401,7 +3401,7 @@ void Weapon::crc( Xfer *xfer )
 	}
 
 	// pitch limited
-	CRC_XFER(xfer, xferBool, m_pitchLimited, "Bool");
+	CRC_XFER(xfer, "Weapon", xferBool, m_pitchLimited, "Bool");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3411,7 +3411,7 @@ void Weapon::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	// leech weapon range active
-	CRC_XFER(xfer, xferBool, m_leechWeaponRangeActive, "Bool");
+	CRC_XFER(xfer, "Weapon", xferBool, m_leechWeaponRangeActive, "Bool");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{

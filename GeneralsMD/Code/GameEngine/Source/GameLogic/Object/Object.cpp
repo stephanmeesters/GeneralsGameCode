@@ -3932,7 +3932,7 @@ void Object::crc( Xfer *xfer )
 	}
 #endif // DEBUG_CRC
 
-	CRC_XFER(xfer, xferUnsignedByte, m_privateStatus, "UnsignedByte");
+	CRC_XFER(xfer, "Object", xferUnsignedByte, m_privateStatus, "UnsignedByte");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3944,7 +3944,7 @@ void Object::crc( Xfer *xfer )
 	// This is evil - we cast the const Matrix3D * to a Matrix3D * because the XferCRC class must use
 	// the same interface as the XferLoad class for save game restore.  This only works because
 	// XferCRC does not modify its data.
-		CRC_XFER_USER(xfer, (Matrix3D *)getTransformMatrix(), sizeof(Matrix3D), "getTransformMatrix()", "Matrix3D");
+		CRC_XFER_USER(xfer, "Object", (Matrix3D *)getTransformMatrix(), sizeof(Matrix3D), "getTransformMatrix()", "Matrix3D");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3958,7 +3958,7 @@ void Object::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 
-	CRC_XFER_USER(xfer, &m_id, sizeof(m_id), "m_id", "ObjectID");
+	CRC_XFER_USER(xfer, "Object", &m_id, sizeof(m_id), "m_id", "ObjectID");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3966,7 +3966,7 @@ void Object::crc( Xfer *xfer )
 		logString.concat(tmp);
 	}
 #endif // DEBUG_CRC
-	CRC_XFER_USER(xfer, &m_objectUpgradesCompleted, sizeof(Int64), "m_objectUpgradesCompleted", "Int64");
+	CRC_XFER_USER(xfer, "Object", &m_objectUpgradesCompleted, sizeof(Int64), "m_objectUpgradesCompleted", "Int64");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3975,7 +3975,7 @@ void Object::crc( Xfer *xfer )
 	}
 #endif // DEBUG_CRC
 	if (m_experienceTracker)
-		CRC_XFER_SNAPSHOT(xfer, m_experienceTracker, "m_experienceTracker");
+		CRC_XFER_SNAPSHOT(xfer, "Object", m_experienceTracker, "m_experienceTracker");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3989,7 +3989,7 @@ void Object::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	Real health = getBodyModule()->getHealth();
-	CRC_XFER_USER(xfer, &health, sizeof(health), "health", "Real");
+	CRC_XFER_USER(xfer, "Object", &health, sizeof(health), "health", "Real");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -3998,7 +3998,7 @@ void Object::crc( Xfer *xfer )
 	}
 #endif // DEBUG_CRC
 
-	CRC_XFER(xfer, xferUnsignedInt, m_weaponBonusCondition, "UnsignedInt");
+	CRC_XFER(xfer, "Object", xferUnsignedInt, m_weaponBonusCondition, "UnsignedInt");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -4008,7 +4008,7 @@ void Object::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	Real scalar = getBodyModule()->getDamageScalar();
-	CRC_XFER_USER(xfer, &scalar, sizeof(scalar), "scalar", "Real");
+	CRC_XFER_USER(xfer, "Object", &scalar, sizeof(scalar), "scalar", "Real");
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -4024,7 +4024,7 @@ void Object::crc( Xfer *xfer )
 		Weapon *thisWeapon = getWeaponInWeaponSlot((WeaponSlotType)i);
 		if (thisWeapon)
 		{
-			CRC_XFER_SNAPSHOT(xfer, thisWeapon, "thisWeapon");
+			CRC_XFER_SNAPSHOT(xfer, "Object", thisWeapon, "thisWeapon");
 		}
 	}
 

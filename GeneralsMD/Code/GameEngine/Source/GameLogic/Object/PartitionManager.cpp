@@ -1505,9 +1505,9 @@ void PartitionCell::validateCoiList()
 void PartitionCell::crc( Xfer *xfer )
 {
 
-	CRC_XFER_USER(xfer, &m_shroudLevel, sizeof(ShroudLevel) * MAX_PLAYER_COUNT, "m_shroudLevel", "ShroudLevel[]");
-	CRC_XFER_USER(xfer, &m_cellX, sizeof(m_cellX), "m_cellX", "Int[]");
-	CRC_XFER_USER(xfer, &m_cellY, sizeof(m_cellY), "m_cellY", "Int[]");
+	CRC_XFER_USER(xfer, "PartitionCell", &m_shroudLevel, sizeof(ShroudLevel) * MAX_PLAYER_COUNT, "m_shroudLevel", "ShroudLevel[]");
+	CRC_XFER_USER(xfer, "PartitionCell", &m_cellX, sizeof(m_cellX), "m_cellX", "Int[]");
+	CRC_XFER_USER(xfer, "PartitionCell", &m_cellY, sizeof(m_cellY), "m_cellY", "Int[]");
 
 }
 
