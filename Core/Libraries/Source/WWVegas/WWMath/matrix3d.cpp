@@ -66,6 +66,25 @@
 #include "quat.h"
 #include "d3dx8math.h"
 
+#if defined(_MSC_VER) && defined(_M_IX86)
+static float VC6_Atan2(float y, float x)
+{
+	float retval = 0.0f;
+	__asm {
+		fld y
+		fld x
+		fpatan
+		fstp retval
+	}
+	return retval;
+}
+#else
+static float VC6_Atan2(float y, float x)
+{
+	return atan2f(y, x);
+}
+#endif
+
 // some static matrices which are sometimes useful
 const Matrix3D Matrix3D::Identity
 (
@@ -245,7 +264,7 @@ void Matrix3D::Set_Rotation(const Quaternion & q)
  *=============================================================================================*/
 float Matrix3D::Get_X_Rotation(void) const
 {
-	return WWMath::Atan2(Row[2][1], Row[1][1]);
+	return VC6_Atan2(Row[2][1], Row[1][1]);
 }
 
 
@@ -263,7 +282,7 @@ float Matrix3D::Get_X_Rotation(void) const
  *=============================================================================================*/
 float Matrix3D::Get_Y_Rotation(void) const
 {
-	return WWMath::Atan2(Row[0][2], Row[2][2]);
+	return VC6_Atan2(Row[0][2], Row[2][2]);
 }
 
 
@@ -281,7 +300,7 @@ float Matrix3D::Get_Y_Rotation(void) const
  *=============================================================================================*/
 float Matrix3D::Get_Z_Rotation(void) const
 {
-	return WWMath::Atan2(Row[1][0], Row[0][0]);
+	return VC6_Atan2(Row[1][0], Row[0][0]);
 }
 
 

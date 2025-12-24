@@ -241,6 +241,7 @@ public:
 	// "optimized" post-multiplication with the current matrix.
 	// All angles are assumed to be radians.
 	WWINLINE void	Make_Identity(void);
+	WWINLINE void	Fixup_VC6_ZRotation_Zeroes(void);
 	void	Translate(float x,float y,float z);
 	void	Translate(const Vector3 &t);
    void  Translate_X(float x);
@@ -341,6 +342,8 @@ public:
 	void	Re_Orthogonalize(void);
 
 	static void Lerp(const Matrix3D &A, const Matrix3D &B, float factor, Matrix3D& result);
+
+	static WWINLINE void VC6_SinCos(float theta, float *s, float *c);
 
 #ifdef ALLOW_TEMPORARIES
 	// nothing
@@ -503,6 +506,7 @@ WWINLINE void Matrix3D::Set(float m[12])
 	Row[0].Set(m[0],m[1],m[2],m[3]);
 	Row[1].Set(m[4],m[5],m[6],m[7]);
 	Row[2].Set(m[8],m[9],m[10],m[11]);
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 
@@ -525,6 +529,7 @@ WWINLINE void Matrix3D::Set(		float m11,float m12,float m13,float m14,
 	Row[0].Set(m11,m12,m13,m14);
 	Row[1].Set(m21,m22,m23,m24);
 	Row[2].Set(m31,m32,m33,m34);
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 
@@ -548,6 +553,7 @@ WWINLINE void Matrix3D::Set(		const Vector3	&x,		// x-axis unit vector
 	Row[0].Set(x[0],y[0],z[0],pos[0]);
 	Row[1].Set(x[1],y[1],z[1],pos[1]);
 	Row[2].Set(x[2],y[2],z[2],pos[2]);
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 
@@ -565,9 +571,10 @@ WWINLINE void Matrix3D::Set(		const Vector3	&x,		// x-axis unit vector
  *=============================================================================================*/
 WWINLINE void Matrix3D::Set(const Vector3 & axis,float angle)
 {
-	float c = cosf(angle);
-	float s = sinf(angle);
+	float c = 0.0f;
+	float s = 0.0f;
 
+	VC6_SinCos(angle, &s, &c);
 	Set(axis,s,c);
 }
 
@@ -607,6 +614,7 @@ WWINLINE void Matrix3D::Set(const Vector3 & axis,float s,float c)
 		(float)(axis[2]*axis[2] + c*(1 - axis[2]*axis[2])),
 		0.0f
 	);
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 
@@ -647,6 +655,41 @@ WWINLINE void Matrix3D::Make_Identity(void)
 	Row[0].Set(1.0f,0.0f,0.0f,0.0f);
 	Row[1].Set(0.0f,1.0f,0.0f,0.0f);
 	Row[2].Set(0.0f,0.0f,1.0f,0.0f);
+}
+
+WWINLINE void Matrix3D::Fixup_VC6_ZRotation_Zeroes(void)
+{
+	if (Row[0][2] != 0.0f || Row[1][2] != 0.0f || Row[2][2] != 1.0f) {
+		return;
+	}
+
+	// Match VC6 sign-of-zero behavior for pure Z-rotation matrices.
+	if (Row[0][1] == 0.0f) {
+		Row[0][1] = -0.0f;
+	}
+	if (Row[2][0] == 0.0f) {
+		Row[2][0] = 0.0f;
+	}
+	if (Row[2][1] == 0.0f) {
+		Row[2][1] = 0.0f;
+	}
+}
+
+WWINLINE void Matrix3D::VC6_SinCos(float theta, float *s, float *c)
+{
+#if defined(_MSC_VER) && defined(_M_IX86)
+	__asm {
+		fld theta
+		fsincos
+		mov eax, c
+		fstp DWORD PTR [eax]
+		mov eax, s
+		fstp DWORD PTR [eax]
+	}
+#else
+	*s = sinf(theta);
+	*c = cosf(theta);
+#endif
 }
 
 
@@ -767,8 +810,7 @@ WWINLINE void Matrix3D::Rotate_X(float theta)
 	float tmp1,tmp2;
 	float s,c;
 
-	s = sinf(theta);
-	c = cosf(theta);
+	VC6_SinCos(theta, &s, &c);
 
 	tmp1 = Row[0][1]; tmp2 = Row[0][2];
 	Row[0][1] = (float)( c*tmp1 + s*tmp2);
@@ -782,6 +824,7 @@ WWINLINE void Matrix3D::Rotate_X(float theta)
 	Row[2][1] = (float)( c*tmp1 + s*tmp2);
 	Row[2][2] = (float)(-s*tmp1 + c*tmp2);
 
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 
@@ -814,6 +857,8 @@ WWINLINE void Matrix3D::Rotate_X(float s,float c)
 	tmp1 = Row[2][1]; tmp2 = Row[2][2];
 	Row[2][1] = (float)( c*tmp1 + s*tmp2);
 	Row[2][2] = (float)(-s*tmp1 + c*tmp2);
+
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 
@@ -835,8 +880,7 @@ WWINLINE void Matrix3D::Rotate_Y(float theta)
 	float tmp1,tmp2;
 	float s,c;
 
-	s = sinf(theta);
-	c = cosf(theta);
+	VC6_SinCos(theta, &s, &c);
 
 	tmp1 = Row[0][0]; tmp2 = Row[0][2];
 	Row[0][0] = (float)(c*tmp1 - s*tmp2);
@@ -849,6 +893,8 @@ WWINLINE void Matrix3D::Rotate_Y(float theta)
 	tmp1 = Row[2][0]; tmp2 = Row[2][2];
 	Row[2][0] = (float)(c*tmp1 - s*tmp2);
 	Row[2][2] = (float)(s*tmp1 + c*tmp2);
+
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 
@@ -881,6 +927,8 @@ WWINLINE void Matrix3D::Rotate_Y(float s,float c)
 	tmp1 = Row[2][0]; tmp2 = Row[2][2];
 	Row[2][0] = (float)(c*tmp1 - s*tmp2);
 	Row[2][2] = (float)(s*tmp1 + c*tmp2);
+
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 
@@ -902,8 +950,7 @@ WWINLINE void Matrix3D::Rotate_Z(float theta)
 	float tmp1,tmp2;
 	float c,s;
 
-	c = cosf(theta);
-	s = sinf(theta);
+	VC6_SinCos(theta, &s, &c);
 
 	tmp1 = Row[0][0]; tmp2 = Row[0][1];
 	Row[0][0] = (float)( c*tmp1 + s*tmp2);
@@ -916,6 +963,8 @@ WWINLINE void Matrix3D::Rotate_Z(float theta)
 	tmp1 = Row[2][0]; tmp2 = Row[2][1];
 	Row[2][0] = (float)( c*tmp1 + s*tmp2);
 	Row[2][1] = (float)(-s*tmp1 + c*tmp2);
+
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 
@@ -948,6 +997,8 @@ WWINLINE void Matrix3D::Rotate_Z(float s,float c)
 	tmp1 = Row[2][0]; tmp2 = Row[2][1];
 	Row[2][0] = (float)( c*tmp1 + s*tmp2);
 	Row[2][1] = (float)(-s*tmp1 + c*tmp2);
+
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 /***********************************************************************************************
@@ -1054,8 +1105,7 @@ WWINLINE void Matrix3D::Pre_Rotate_X(float theta)
 	float tmp1,tmp2;
 	float c,s;
 
-	c = cosf(theta);
-	s = sinf(theta);
+	VC6_SinCos(theta, &s, &c);
 
 	tmp1 = Row[1][0]; tmp2 = Row[2][0];
 	Row[1][0] = (float)(c*tmp1 - s*tmp2);
@@ -1072,6 +1122,8 @@ WWINLINE void Matrix3D::Pre_Rotate_X(float theta)
 	tmp1 = Row[1][3]; tmp2 = Row[2][3];
 	Row[1][3] = (float)(c*tmp1 - s*tmp2);
 	Row[2][3] = (float)(s*tmp1 + c*tmp2);
+
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 /***********************************************************************************************
@@ -1092,8 +1144,7 @@ WWINLINE void Matrix3D::Pre_Rotate_Y(float theta)
 	float tmp1,tmp2;
 	float c,s;
 
-	c = cosf(theta);
-	s = sinf(theta);
+	VC6_SinCos(theta, &s, &c);
 
 	tmp1 = Row[0][0]; tmp2 = Row[2][0];
 	Row[0][0] = (float)( c*tmp1 + s*tmp2);
@@ -1110,6 +1161,8 @@ WWINLINE void Matrix3D::Pre_Rotate_Y(float theta)
 	tmp1 = Row[0][3]; tmp2 = Row[2][3];
 	Row[0][3] = (float)( c*tmp1 + s*tmp2);
 	Row[2][3] = (float)(-s*tmp1 + c*tmp2);
+
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 /***********************************************************************************************
@@ -1130,8 +1183,7 @@ WWINLINE void Matrix3D::Pre_Rotate_Z(float theta)
 	float tmp1,tmp2;
 	float c,s;
 
-	c = cosf(theta);
-	s = sinf(theta);
+	VC6_SinCos(theta, &s, &c);
 
 	tmp1 = Row[0][0]; tmp2 = Row[1][0];
 	Row[0][0] = (float)(c*tmp1 - s*tmp2);
@@ -1148,6 +1200,8 @@ WWINLINE void Matrix3D::Pre_Rotate_Z(float theta)
 	tmp1 = Row[0][3]; tmp2 = Row[1][3];
 	Row[0][3] = (float)(c*tmp1 - s*tmp2);
 	Row[1][3] = (float)(s*tmp1 + c*tmp2);
+
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 /***********************************************************************************************
@@ -1183,6 +1237,8 @@ WWINLINE void Matrix3D::Pre_Rotate_X(float s,float c)
 	tmp1 = Row[1][3]; tmp2 = Row[2][3];
 	Row[1][3] = (float)(c*tmp1 - s*tmp2);
 	Row[2][3] = (float)(s*tmp1 + c*tmp2);
+
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 /***********************************************************************************************
@@ -1218,6 +1274,8 @@ WWINLINE void Matrix3D::Pre_Rotate_Y(float s,float c)
 	tmp1 = Row[0][3]; tmp2 = Row[2][3];
 	Row[0][3] = (float)( c*tmp1 + s*tmp2);
 	Row[2][3] = (float)(-s*tmp1 + c*tmp2);
+
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 /***********************************************************************************************
@@ -1253,6 +1311,8 @@ WWINLINE void Matrix3D::Pre_Rotate_Z(float s,float c)
 	tmp1 = Row[0][3]; tmp2 = Row[1][3];
 	Row[0][3] = (float)(c*tmp1 - s*tmp2);
 	Row[1][3] = (float)(s*tmp1 + c*tmp2);
+
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 /***********************************************************************************************
@@ -1273,8 +1333,7 @@ WWINLINE void Matrix3D::In_Place_Pre_Rotate_X(float theta)
 	float tmp1,tmp2;
 	float c,s;
 
-	c = cosf(theta);
-	s = sinf(theta);
+	VC6_SinCos(theta, &s, &c);
 
 	tmp1 = Row[1][0]; tmp2 = Row[2][0];
 	Row[1][0] = (float)(c*tmp1 - s*tmp2);
@@ -1287,6 +1346,8 @@ WWINLINE void Matrix3D::In_Place_Pre_Rotate_X(float theta)
 	tmp1 = Row[1][2]; tmp2 = Row[2][2];
 	Row[1][2] = (float)(c*tmp1 - s*tmp2);
 	Row[2][2] = (float)(s*tmp1 + c*tmp2);
+
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 /***********************************************************************************************
@@ -1307,8 +1368,7 @@ WWINLINE void Matrix3D::In_Place_Pre_Rotate_Y(float theta)
 	float tmp1,tmp2;
 	float c,s;
 
-	c = cosf(theta);
-	s = sinf(theta);
+	VC6_SinCos(theta, &s, &c);
 
 	tmp1 = Row[0][0]; tmp2 = Row[2][0];
 	Row[0][0] = (float)( c*tmp1 + s*tmp2);
@@ -1321,6 +1381,8 @@ WWINLINE void Matrix3D::In_Place_Pre_Rotate_Y(float theta)
 	tmp1 = Row[0][2]; tmp2 = Row[2][2];
 	Row[0][2] = (float)( c*tmp1 + s*tmp2);
 	Row[2][2] = (float)(-s*tmp1 + c*tmp2);
+
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 /***********************************************************************************************
@@ -1341,8 +1403,7 @@ WWINLINE void Matrix3D::In_Place_Pre_Rotate_Z(float theta)
 	float tmp1,tmp2;
 	float c,s;
 
-	c = cosf(theta);
-	s = sinf(theta);
+	VC6_SinCos(theta, &s, &c);
 
 	tmp1 = Row[0][0]; tmp2 = Row[1][0];
 	Row[0][0] = (float)(c*tmp1 - s*tmp2);
@@ -1355,6 +1416,8 @@ WWINLINE void Matrix3D::In_Place_Pre_Rotate_Z(float theta)
 	tmp1 = Row[0][2]; tmp2 = Row[1][2];
 	Row[0][2] = (float)(c*tmp1 - s*tmp2);
 	Row[1][2] = (float)(s*tmp1 + c*tmp2);
+
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 /***********************************************************************************************
@@ -1386,6 +1449,8 @@ WWINLINE void Matrix3D::In_Place_Pre_Rotate_X(float s,float c)
 	tmp1 = Row[1][2]; tmp2 = Row[2][2];
 	Row[1][2] = (float)(c*tmp1 - s*tmp2);
 	Row[2][2] = (float)(s*tmp1 + c*tmp2);
+
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 /***********************************************************************************************
@@ -1417,6 +1482,8 @@ WWINLINE void Matrix3D::In_Place_Pre_Rotate_Y(float s,float c)
 	tmp1 = Row[0][2]; tmp2 = Row[2][2];
 	Row[0][2] = (float)( c*tmp1 + s*tmp2);
 	Row[2][2] = (float)(-s*tmp1 + c*tmp2);
+
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 /***********************************************************************************************
@@ -1448,6 +1515,8 @@ WWINLINE void Matrix3D::In_Place_Pre_Rotate_Z(float s,float c)
 	tmp1 = Row[0][2]; tmp2 = Row[1][2];
 	Row[0][2] = (float)(c*tmp1 - s*tmp2);
 	Row[1][2] = (float)(s*tmp1 + c*tmp2);
+
+	Fixup_VC6_ZRotation_Zeroes();
 }
 
 #ifdef ALLOW_TEMPORARIES
