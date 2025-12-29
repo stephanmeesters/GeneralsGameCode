@@ -3433,13 +3433,13 @@ void Object::crc( Xfer *xfer )
 	// This is evil - we cast the const Matrix3D * to a Matrix3D * because the XferCRC class must use
 	// the same interface as the XferLoad class for save game restore.  This only works because
 	// XferCRC does not modify its data.
-	xfer->xferUser((Matrix3D *)getTransformMatrix(),	sizeof(Matrix3D));
+	xfer->xferMatrix3D((Matrix3D *)getTransformMatrix());
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
 		XferCRC tmpXfer;
 		tmpXfer.open("tmp");
-		tmpXfer.xferUser((Matrix3D *)getTransformMatrix(),	sizeof(Matrix3D));
+		tmpXfer.xferMatrix3D((Matrix3D *)getTransformMatrix());
 		tmp.format("getTransformMatrix(): %8.8X, ", tmpXfer.getCRC());
 		tmpXfer.close();
 		logString.concat(tmp);

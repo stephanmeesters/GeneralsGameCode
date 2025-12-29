@@ -31,11 +31,13 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
 #include "Common/XferCRC.h"
+#include "Common/CRCFloatQuantizer.h"
 #include "Common/XferDeepCRC.h"
 #include "Common/crc.h"
 #include "Common/Snapshot.h"
 #include "GameLogic/GameLogic.h"
 #include "utility/endian_compat.h"
+#include <Utility/stdio_adapter.h>
 #include <time.h>
 #include <string.h>
 #include <windows.h>
@@ -215,6 +217,47 @@ void XferCRC::xferSnapshot( Snapshot *snapshot, const char *label )
 	// run the crc function of the snapshot
 	snapshot->crc( this );
 
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void XferCRC::xferReal( Real *realData, const char *label )
+{
+	const float value = static_cast<float>( *realData );
+	unsigned char quantized[8];
+	CRCFloatQuantizer::quantizeFloat32ToBytes( value, quantized );
+
+	xferImplementation( quantized, static_cast<Int>( sizeof( quantized ) ) );
+	if( getXferMode() == XFER_CRC )
+	{
+		char buffer[64];
+		snprintf( buffer, sizeof( buffer ), "%.9g", static_cast<double>( *realData ) );
+		logCRCValue( label, buffer );
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void XferCRC::xferMatrix3D( Matrix3D* mtx, const char *label )
+{
+	Vector4& tmp0 = (*mtx)[0];
+	Vector4& tmp1 = (*mtx)[1];
+	Vector4& tmp2 = (*mtx)[2];
+
+	xferReal( &tmp0.X, label );
+	xferReal( &tmp0.Y, label );
+	xferReal( &tmp0.Z, label );
+	xferReal( &tmp0.W, label );
+
+	xferReal( &tmp1.X, label );
+	xferReal( &tmp1.Y, label );
+	xferReal( &tmp1.Z, label );
+	xferReal( &tmp1.W, label );
+
+	xferReal( &tmp2.X, label );
+	xferReal( &tmp2.Y, label );
+	xferReal( &tmp2.Z, label );
+	xferReal( &tmp2.W, label );
 }
 
 //-------------------------------------------------------------------------------------------------

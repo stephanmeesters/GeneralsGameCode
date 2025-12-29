@@ -54,6 +54,8 @@ public:
 	virtual void skip( Int dataSize );							///< skip xfer event
 
 	virtual void xferSnapshot( Snapshot *snapshot, const char *label = "" );		///< entry point for xfering a snapshot
+	virtual void xferReal( Real *realData, const char *label = "" );
+	virtual void xferMatrix3D( Matrix3D* mtx, const char *label = "" );
 
 	// Xfer CRC methods
 	virtual UnsignedInt getCRC( void );										///< get computed CRC in network byte order
