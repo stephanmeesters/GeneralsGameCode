@@ -221,6 +221,7 @@ void Xfer::xferReal( Real *realData, const char *label )
 		char buffer[64];
 		snprintf( buffer, sizeof( buffer ), "%.9g", static_cast<double>(*realData) );
 		logCRCValue( label, buffer );
+		logCRCBytes(label, buffer, sizeof( buffer ) );
 	}
 
 }
