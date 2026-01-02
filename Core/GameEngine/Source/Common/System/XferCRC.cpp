@@ -31,7 +31,6 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
 #include "Common/XferCRC.h"
-#include "Common/CRCFloatQuantizer.h"
 #include "Common/XferDeepCRC.h"
 #include "Common/crc.h"
 #include "Common/Snapshot.h"
@@ -45,6 +44,14 @@
 static Bool g_crcSessionReady = FALSE;
 static AsciiString g_crcSessionTimestamp;
 static AsciiString g_crcSessionDir;
+
+static float quantizeFloat(float x)
+{
+	double v = static_cast<double>(x) * 10e6;
+	v = v >= 0.0 ? floor(v + 0.5) : ceil(v - 0.5);
+	v = v == -0.0f ? 0.0f : v;
+	return v / 10e6; // NOLINT(*-narrowing-conversions)
+}
 
 static void buildCRCSessionDir()
 {
@@ -223,17 +230,22 @@ void XferCRC::xferSnapshot( Snapshot *snapshot, const char *label )
 //-------------------------------------------------------------------------------------------------
 void XferCRC::xferReal( Real *realData, const char *label )
 {
-	const float value = static_cast<float>( *realData );
-	unsigned char quantized[8];
-	CRCFloatQuantizer::quantizeFloat32ToBytes( value, quantized );
+	// const float value = static_cast<float>( *realData );
+	// unsigned char quantized[8];
+	// xferImplementation( quantized, static_cast<Int>( sizeof( quantized ) ) );
 
-	xferImplementation( quantized, static_cast<Int>( sizeof( quantized ) ) );
+	// float quantized = quantizeFloat(value);
+
+	xferImplementation( realData, sizeof( Real ) );
+	// xferImplementation( &quantized, sizeof( Real ) );
 	if( getXferMode() == XFER_CRC )
 	{
-		char buffer[64];
-		snprintf( buffer, sizeof( buffer ), "%.9g", static_cast<double>( *realData ) );
+		char buffer[128];
+		// snprintf( buffer, sizeof( buffer ), "%.15g", quantized );
+		snprintf( buffer, sizeof( buffer ), "%.15g", static_cast<float>( *realData ) );
 		logCRCValue( label, buffer );
-		logCRCBytes( label, buffer, sizeof(buffer));
+		logCRCBytes( label, realData, sizeof(Real));
+		// logCRCBytes( label, &quantized, sizeof(Real));
 	}
 }
 
