@@ -13,6 +13,7 @@ endif()
 
 # Build less useful tool/test binaries.
 if(RTS_BUILD_ZEROHOUR_EXTRAS)
+    add_subdirectory(MatrixPrecisionTest)
     add_subdirectory(Autorun)
     add_subdirectory(Launcher)
     add_subdirectory(PATCHGET)
