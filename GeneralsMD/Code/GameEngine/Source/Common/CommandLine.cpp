@@ -43,6 +43,9 @@
 Bool TheDebugIgnoreSyncErrors = FALSE;
 extern Int DX8Wrapper_PreserveFPU;
 
+Int g_crcLogFromFrame = -1;
+UnsignedInt g_crcLogUntilFrame = 0xffffffff;
+
 #ifdef DEBUG_CRC
 Int TheCRCFirstFrameToLog = -1;
 UnsignedInt TheCRCLastFrameToLog = 0xffffffff;
@@ -212,12 +215,13 @@ Int parseNoMilCap(char *args[], int)
 //=============================================================================
 Int parseDebugCRCFromFrame(char *args[], int argc)
 {
-#ifdef DEBUG_CRC
 	if (argc > 1)
 	{
-		TheCRCFirstFrameToLog = atoi(args[1]);
-	}
+		g_crcLogFromFrame = atoi(args[1]);
+#ifdef DEBUG_CRC
+		TheCRCFirstFrameToLog = g_crcLogFromFrame;
 #endif
+	}
 	return 2;
 }
 
@@ -225,12 +229,13 @@ Int parseDebugCRCFromFrame(char *args[], int argc)
 //=============================================================================
 Int parseDebugCRCUntilFrame(char *args[], int argc)
 {
-#ifdef DEBUG_CRC
 	if (argc > 1)
 	{
-		TheCRCLastFrameToLog = atoi(args[1]);
-	}
+		g_crcLogUntilFrame = atoi(args[1]);
+#ifdef DEBUG_CRC
+		TheCRCLastFrameToLog = g_crcLogUntilFrame;
 #endif
+	}
 	return 2;
 }
 
@@ -1199,6 +1204,9 @@ static CommandLineParam paramsForEngineInit[] =
 	{ "-UseCSF", parseUseCSF },
 	{ "-NoInputDisable", parseNoInputDisable },
 #endif
+	// CRC frame range for targeted per-frame logging (available in all builds).
+	{ "-DebugCRCFromFrame", parseDebugCRCFromFrame },
+	{ "-DebugCRCUntilFrame", parseDebugCRCUntilFrame },
 #ifdef DEBUG_CRC
 	// TheSuperHackers @info helmutbuhler 04/09/2025
 	// The following arguments are useful for CRC debugging.
@@ -1210,12 +1218,6 @@ static CommandLineParam paramsForEngineInit[] =
 	// -ignoreAsserts -DebugCRCFromFrame 0 -VerifyClientCRC -LogObjectCRCs -NetCRCInterval 1
 	// After mismatch occurs, you can examine the logfile and also reproduce the crc from the replay with this (and diff that with the log):
 	// -ignoreAsserts -DebugCRCFromFrame xxx -LogObjectCRCs -SaveDebugCRCPerFrame crc
-
-	// After which frame to log crc logging. Call with 0 to log all frames and with -1 to log none (default).
-	{ "-DebugCRCFromFrame", parseDebugCRCFromFrame },
-
-	// Last frame to log
-	{ "-DebugCRCUntilFrame", parseDebugCRCUntilFrame },
 
 	// Save data involving CRC calculation to a binary file. (This isn't that useful.)
 	{ "-KeepCRCSaves", parseKeepCRCSave },

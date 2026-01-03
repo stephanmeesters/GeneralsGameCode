@@ -43,6 +43,9 @@
 Bool TheDebugIgnoreSyncErrors = FALSE;
 extern Int DX8Wrapper_PreserveFPU;
 
+Int g_crcLogFromFrame = -1;
+UnsignedInt g_crcLogUntilFrame = 0xffffffff;
+
 #ifdef DEBUG_CRC
 Int TheCRCFirstFrameToLog = -1;
 UnsignedInt TheCRCLastFrameToLog = 0xffffffff;
@@ -212,12 +215,13 @@ Int parseNoMilCap(char *args[], int)
 //=============================================================================
 Int parseDebugCRCFromFrame(char *args[], int argc)
 {
-#ifdef DEBUG_CRC
 	if (argc > 1)
 	{
-		TheCRCFirstFrameToLog = atoi(args[1]);
-	}
+		g_crcLogFromFrame = atoi(args[1]);
+#ifdef DEBUG_CRC
+		TheCRCFirstFrameToLog = g_crcLogFromFrame;
 #endif
+	}
 	return 2;
 }
 
@@ -225,12 +229,13 @@ Int parseDebugCRCFromFrame(char *args[], int argc)
 //=============================================================================
 Int parseDebugCRCUntilFrame(char *args[], int argc)
 {
-#ifdef DEBUG_CRC
 	if (argc > 1)
 	{
-		TheCRCLastFrameToLog = atoi(args[1]);
-	}
+		g_crcLogUntilFrame = atoi(args[1]);
+#ifdef DEBUG_CRC
+		TheCRCLastFrameToLog = g_crcLogUntilFrame;
 #endif
+	}
 	return 2;
 }
 

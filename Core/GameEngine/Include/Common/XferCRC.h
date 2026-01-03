@@ -59,6 +59,7 @@ public:
 
 	// Xfer CRC methods
 	virtual UnsignedInt getCRC( void );										///< get computed CRC in network byte order
+	void setTextLogEnabled( Bool enable );							///< enable/disable per-frame text logging
 
 protected:
 
@@ -69,6 +70,7 @@ protected:
 	virtual void logCRCValue( const char *label, const char *valueText );
 	virtual void logCRCBytes( const char *label, const void *data, Int dataSize );
 
+	Bool m_textLogEnabled;
 	UnsignedInt m_crc;
 	FILE *m_textFP;
 

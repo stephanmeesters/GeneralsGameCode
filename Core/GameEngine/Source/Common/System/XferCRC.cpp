@@ -109,6 +109,7 @@ XferCRC::XferCRC( void )
 {
 
 	m_xferMode = XFER_CRC;
+	m_textLogEnabled = FALSE;
 	m_crc = 0;
 	m_textFP = NULL;
 }
@@ -130,7 +131,10 @@ XferCRC::~XferCRC( void )
 //-------------------------------------------------------------------------------------------------
 void XferCRC::open( AsciiString identifier )
 {
-	buildCRCSessionDir();
+	if( m_textLogEnabled )
+	{
+		buildCRCSessionDir();
+	}
 
 	// call base class
 	Xfer::open( identifier );
@@ -144,18 +148,21 @@ void XferCRC::open( AsciiString identifier )
 		m_textFP = NULL;
 	}
 
-	UnsignedInt frame = 0;
-	if( TheGameLogic != NULL )
+	if( m_textLogEnabled )
 	{
-		frame = TheGameLogic->getFrame();
-	}
+		UnsignedInt frame = 0;
+		if( TheGameLogic != NULL )
+		{
+			frame = TheGameLogic->getFrame();
+		}
 
-	AsciiString logFileName;
-	logFileName.format( "%s\\crc_frame_%04u.txt", g_crcSessionDir.str(), frame );
-	m_textFP = fopen( logFileName.str(), "w" );
-	if( m_textFP == NULL )
-	{
-		DEBUG_LOG(( "XferCRC - Unable to open CRC log file '%s'", logFileName.str() ));
+		AsciiString logFileName;
+		logFileName.format( "%s\\crc_frame_%04u.txt", g_crcSessionDir.str(), frame );
+		m_textFP = fopen( logFileName.str(), "w" );
+		if( m_textFP == NULL )
+		{
+			DEBUG_LOG(( "XferCRC - Unable to open CRC log file '%s'", logFileName.str() ));
+		}
 	}
 }
 
@@ -323,6 +330,11 @@ UnsignedInt XferCRC::getCRC( void )
 
 	return htobe(m_crc);
 
+}
+
+void XferCRC::setTextLogEnabled( Bool enable )
+{
+	m_textLogEnabled = enable;
 }
 
 //-------------------------------------------------------------------------------------------------
