@@ -4104,6 +4104,7 @@ UnsignedInt GameLogic::getCRC( Int mode, AsciiString deepCRCFileName, Bool write
 	if (deepCRCFileName.isNotEmpty())
 	{
 		xferCRC = NEW XferDeepCRC;
+		xferCRC->setForceRealSpill(TRUE);
 		xferCRC->setTextLogEnabled(writeTextLog);
 		xferCRC->open(deepCRCFileName.str());
 	}
@@ -4128,6 +4129,7 @@ UnsignedInt GameLogic::getCRC( Int mode, AsciiString deepCRCFileName, Bool write
 			xferCRC = NEW XferCRC;
 			crcName = "lightCRC";
 		}
+		xferCRC->setForceRealSpill(TRUE);
 		xferCRC->setTextLogEnabled(writeTextLog);
 		xferCRC->open(crcName);
 	}

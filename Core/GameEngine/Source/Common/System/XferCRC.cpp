@@ -109,6 +109,7 @@ XferCRC::XferCRC( void )
 {
 
 	m_xferMode = XFER_CRC;
+	m_forceRealSpill = FALSE;
 	m_textLogEnabled = FALSE;
 	m_crc = 0;
 	m_textFP = NULL;
@@ -243,15 +244,21 @@ void XferCRC::xferReal( Real *realData, const char *label )
 
 	// float quantized = quantizeFloat(value);
 
-	xferImplementation( realData, sizeof( Real ) );
+	Real value = *realData;
+	if( m_forceRealSpill )
+	{
+		volatile Real spill = value;
+		value = spill;
+	}
+	xferImplementation( &value, sizeof( Real ) );
 	// xferImplementation( &quantized, sizeof( Real ) );
 	if( getXferMode() == XFER_CRC )
 	{
 		char buffer[128];
 		// snprintf( buffer, sizeof( buffer ), "%.15g", quantized );
-		snprintf( buffer, sizeof( buffer ), "%.15g", static_cast<float>( *realData ) );
+		snprintf( buffer, sizeof( buffer ), "%.15g", static_cast<float>( value ) );
 		logCRCValue( label, buffer );
-		logCRCBytes( label, realData, sizeof(Real));
+		logCRCBytes( label, &value, sizeof(Real) );
 		// logCRCBytes( label, &quantized, sizeof(Real));
 	}
 }
@@ -335,6 +342,11 @@ UnsignedInt XferCRC::getCRC( void )
 void XferCRC::setTextLogEnabled( Bool enable )
 {
 	m_textLogEnabled = enable;
+}
+
+void XferCRC::setForceRealSpill( Bool enable )
+{
+	m_forceRealSpill = enable;
 }
 
 //-------------------------------------------------------------------------------------------------
