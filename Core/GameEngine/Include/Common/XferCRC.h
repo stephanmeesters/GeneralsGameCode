@@ -30,6 +30,7 @@
 #pragma once
 
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
+#include <stdio.h>
 #include "Common/Xfer.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
@@ -52,10 +53,13 @@ public:
 	virtual void endBlock( void );									///< end block event
 	virtual void skip( Int dataSize );							///< skip xfer event
 
-	virtual void xferSnapshot( Snapshot *snapshot );		///< entry point for xfering a snapshot
+	virtual void xferSnapshot( Snapshot *snapshot, const char *label = "" );		///< entry point for xfering a snapshot
+	virtual void xferReal( Real *realData, const char *label = "" );
+	virtual void xferMatrix3D( Matrix3D* mtx, const char *label = "" );
 
 	// Xfer CRC methods
 	virtual UnsignedInt getCRC( void );										///< get computed CRC in network byte order
+	void setTextLogEnabled( Bool enable );							///< enable/disable per-frame text logging
 
 protected:
 
@@ -63,6 +67,13 @@ protected:
 
 	inline void addCRC( UnsignedInt val );								///< CRC a 4-byte block
 
+	virtual void logCRCValue( const char *label, const char *valueText );
+	virtual void logCRCBytes( const char *label, const void *data, Int dataSize );
+
+	Bool m_textLogEnabled;
 	UnsignedInt m_crc;
+	FILE *m_textFP;
 
 };
+
+void InitCRCSessionTimestamp( void );

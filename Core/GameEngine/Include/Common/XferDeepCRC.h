@@ -51,9 +51,9 @@ public:
 	virtual void close( void );											///< stop CRC session
 
 	// xfer methods
-	virtual void xferMarkerLabel( AsciiString asciiStringData );  ///< xfer ascii string (need our own)
-	virtual void xferAsciiString( AsciiString *asciiStringData );  ///< xfer ascii string (need our own)
-	virtual void xferUnicodeString( UnicodeString *unicodeStringData );	///< xfer unicode string (need our own);
+	virtual void xferMarkerLabel( AsciiString asciiStringData, const char *label = "" );  ///< xfer ascii string (need our own)
+	virtual void xferAsciiString( AsciiString *asciiStringData, const char *label = "" );  ///< xfer ascii string (need our own)
+	virtual void xferUnicodeString( UnicodeString *unicodeStringData, const char *label = "" );	///< xfer unicode string (need our own);
 
 protected:
 

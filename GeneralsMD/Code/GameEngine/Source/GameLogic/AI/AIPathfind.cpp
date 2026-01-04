@@ -10985,38 +10985,38 @@ void Pathfinder::crc( Xfer *xfer )
 	CRCDEBUG_LOG(("Pathfinder::crc() on frame %d", TheGameLogic->getFrame()));
 	CRCDEBUG_LOG(("beginning CRC: %8.8X", ((XferCRC *)xfer)->getCRC()));
 
-	xfer->xferUser( &m_extent, sizeof(IRegion2D) );
+		CRC_XFER_USER(xfer, "Pathfinder", &m_extent, sizeof(IRegion2D), "m_extent", "IRegion2D");
 	CRCDEBUG_LOG(("m_extent: %8.8X", ((XferCRC *)xfer)->getCRC()));
 
-	xfer->xferBool( &m_isMapReady );
+	CRC_XFER(xfer, "Pathfinder", xferBool, m_isMapReady, "Bool");
 	CRCDEBUG_LOG(("m_isMapReady: %8.8X", ((XferCRC *)xfer)->getCRC()));
-	xfer->xferBool( &m_isTunneling );
+	CRC_XFER(xfer, "Pathfinder", xferBool, m_isTunneling, "Bool");
 	CRCDEBUG_LOG(("m_isTunneling: %8.8X", ((XferCRC *)xfer)->getCRC()));
 
 	Int obsolete1 = 0;
-	xfer->xferInt( &obsolete1 );
+	CRC_XFER(xfer, "Pathfinder", xferInt, obsolete1, "Int");
 
-	xfer->xferUser(&m_ignoreObstacleID, sizeof(ObjectID));
+		CRC_XFER_USER(xfer, "Pathfinder", &m_ignoreObstacleID, sizeof(ObjectID), "m_ignoreObstacleID", "ObjectID");
 	CRCDEBUG_LOG(("m_ignoreObstacleID: %8.8X", ((XferCRC *)xfer)->getCRC()));
 
-	xfer->xferUser(m_queuedPathfindRequests, sizeof(ObjectID)*PATHFIND_QUEUE_LEN);
+		CRC_XFER_USER(xfer, "Pathfinder", m_queuedPathfindRequests, sizeof(ObjectID)*PATHFIND_QUEUE_LEN, "m_queuedPathfindRequests", "ObjectID[]");
 	CRCDEBUG_LOG(("m_queuedPathfindRequests: %8.8X", ((XferCRC *)xfer)->getCRC()));
-	xfer->xferInt(&m_queuePRHead);
+	CRC_XFER(xfer, "Pathfinder", xferInt, m_queuePRHead, "Int");
 	CRCDEBUG_LOG(("m_queuePRHead: %8.8X", ((XferCRC *)xfer)->getCRC()));
-	xfer->xferInt(&m_queuePRTail);
+	CRC_XFER(xfer, "Pathfinder", xferInt, m_queuePRTail, "Int");
 	CRCDEBUG_LOG(("m_queuePRTail: %8.8X", ((XferCRC *)xfer)->getCRC()));
 
-	xfer->xferInt(&m_numWallPieces);
+	CRC_XFER(xfer, "Pathfinder", xferInt, m_numWallPieces, "Int");
 	CRCDEBUG_LOG(("m_numWallPieces: %8.8X", ((XferCRC *)xfer)->getCRC()));
 	for (Int i=0; i<MAX_WALL_PIECES; ++i)
 	{
-		xfer->xferObjectID(&m_wallPieces[MAX_WALL_PIECES]);
+		CRC_XFER_PTR(xfer, "Pathfinder", xferObjectID, &m_wallPieces[MAX_WALL_PIECES], "m_wallPieces[MAX_WALL_PIECES]", "ObjectID");
 	}
 	CRCDEBUG_LOG(("m_wallPieces: %8.8X", ((XferCRC *)xfer)->getCRC()));
 
-	xfer->xferReal(&m_wallHeight);
+	CRC_XFER(xfer, "Pathfinder", xferReal, m_wallHeight, "Real");
 	CRCDEBUG_LOG(("m_wallHeight: %8.8X", ((XferCRC *)xfer)->getCRC()));
-	xfer->xferInt(&m_cumulativeCellsAllocated);
+	CRC_XFER(xfer, "Pathfinder", xferInt, m_cumulativeCellsAllocated, "Int");
 	CRCDEBUG_LOG(("m_cumulativeCellsAllocated: %8.8X", ((XferCRC *)xfer)->getCRC()));
 
 }

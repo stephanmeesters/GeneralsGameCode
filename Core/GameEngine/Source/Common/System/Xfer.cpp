@@ -31,6 +31,8 @@
 
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
+#include <Utility/stdio_adapter.h>
+#include <string.h>
 #include "Common/Upgrade.h"
 #include "Common/GameState.h"
 #include "Common/Xfer.h"
@@ -67,16 +69,22 @@ void Xfer::open( AsciiString identifier )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferByte( Byte *byteData )
+void Xfer::xferByte( Byte *byteData, const char *label )
 {
 
 	xferImplementation( byteData, sizeof( Byte ) );
+	if( getXferMode() == XFER_CRC )
+	{
+		char buffer[32];
+		snprintf( buffer, sizeof( buffer ), "%d", static_cast<Int>(*byteData) );
+		logCRCValue( label, buffer );
+	}
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferVersion( XferVersion *versionData, XferVersion currentVersion )
+void Xfer::xferVersion( XferVersion *versionData, XferVersion currentVersion, const char *label )
 {
 
 	xferImplementation( versionData, sizeof( XferVersion ) );
@@ -90,278 +98,361 @@ void Xfer::xferVersion( XferVersion *versionData, XferVersion currentVersion )
 		throw XFER_INVALID_VERSION;
 
 	}
+	if( getXferMode() == XFER_CRC )
+	{
+		char buffer[32];
+		snprintf( buffer, sizeof( buffer ), "%u", static_cast<UnsignedInt>(*versionData) );
+		logCRCValue( label, buffer );
+	}
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferUnsignedByte( UnsignedByte *unsignedByteData )
+void Xfer::xferUnsignedByte( UnsignedByte *unsignedByteData, const char *label )
 {
 
 	xferImplementation( unsignedByteData, sizeof( UnsignedByte ) );
+	if( getXferMode() == XFER_CRC )
+	{
+		char buffer[32];
+		snprintf( buffer, sizeof( buffer ), "%u", static_cast<UnsignedInt>(*unsignedByteData) );
+		logCRCValue( label, buffer );
+	}
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferBool( Bool *boolData )
+void Xfer::xferBool( Bool *boolData, const char *label )
 {
 
 	xferImplementation( boolData, sizeof( Bool ) );
+	if( getXferMode() == XFER_CRC )
+	{
+		logCRCValue( label, (*boolData) ? "1" : "0" );
+	}
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferInt( Int *intData )
+void Xfer::xferInt( Int *intData, const char *label )
 {
 
 	xferImplementation( intData, sizeof( Int ) );
+	if( getXferMode() == XFER_CRC )
+	{
+		char buffer[32];
+		snprintf( buffer, sizeof( buffer ), "%d", *intData );
+		logCRCValue( label, buffer );
+	}
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferInt64( Int64 *int64Data )
+void Xfer::xferInt64( Int64 *int64Data, const char *label )
 {
 
 	xferImplementation( int64Data, sizeof( Int64 ) );
+	if( getXferMode() == XFER_CRC )
+	{
+		char buffer[64];
+		snprintf( buffer, sizeof( buffer ), "%I64d", static_cast<Int64>(*int64Data) );
+		logCRCValue( label, buffer );
+	}
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferUnsignedInt( UnsignedInt *unsignedIntData )
+void Xfer::xferUnsignedInt( UnsignedInt *unsignedIntData, const char *label )
 {
 
 	xferImplementation( unsignedIntData, sizeof( UnsignedInt ) );
+	if( getXferMode() == XFER_CRC )
+	{
+		char buffer[32];
+		snprintf( buffer, sizeof( buffer ), "%u", *unsignedIntData );
+		logCRCValue( label, buffer );
+	}
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferShort( Short *shortData )
+void Xfer::xferShort( Short *shortData, const char *label )
 {
 
 	xferImplementation( shortData, sizeof( Short ) );
+	if( getXferMode() == XFER_CRC )
+	{
+		char buffer[32];
+		snprintf( buffer, sizeof( buffer ), "%d", static_cast<Int>(*shortData) );
+		logCRCValue( label, buffer );
+	}
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferUnsignedShort( UnsignedShort *unsignedShortData )
+void Xfer::xferUnsignedShort( UnsignedShort *unsignedShortData, const char *label )
 {
 
 	xferImplementation( unsignedShortData, sizeof( UnsignedShort ) );
+	if( getXferMode() == XFER_CRC )
+	{
+		char buffer[32];
+		snprintf( buffer, sizeof( buffer ), "%u", static_cast<UnsignedInt>(*unsignedShortData) );
+		logCRCValue( label, buffer );
+	}
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferReal( Real *realData )
+void Xfer::xferReal( Real *realData, const char *label )
 {
 
 	xferImplementation( realData, sizeof( Real ) );
+	if( getXferMode() == XFER_CRC )
+	{
+		char buffer[64];
+		snprintf( buffer, sizeof( buffer ), "%.9g", static_cast<double>(*realData) );
+		logCRCValue( label, buffer );
+		logCRCBytes(label, buffer, sizeof( buffer ) );
+	}
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferMapName( AsciiString *mapNameData )
+void Xfer::xferMapName( AsciiString *mapNameData, const char *label )
 {
 	if (getXferMode() == XFER_SAVE)
 	{
 		AsciiString tmp = TheGameState->realMapPathToPortableMapPath(*mapNameData);
-		xferAsciiString(&tmp);
+		xferAsciiString(&tmp, label);
 	}
 	else if (getXferMode() == XFER_LOAD)
 	{
-		xferAsciiString(mapNameData);
+		xferAsciiString(mapNameData, label);
 		*mapNameData = TheGameState->portableMapPathToRealMapPath(*mapNameData);
 	}
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferAsciiString( AsciiString *asciiStringData )
+void Xfer::xferAsciiString( AsciiString *asciiStringData, const char *label )
 {
 
 	xferImplementation( (void *)asciiStringData->str(), sizeof( Byte ) * asciiStringData->getLength() );
+	if( getXferMode() == XFER_CRC )
+	{
+		logCRCValue( label, asciiStringData->str() );
+	}
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferMarkerLabel( AsciiString asciiStringData )
+void Xfer::xferMarkerLabel( AsciiString asciiStringData, const char *label )
 {
+	if( getXferMode() == XFER_CRC )
+	{
+		logCRCValue( label, asciiStringData.str() );
+	}
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferUnicodeString( UnicodeString *unicodeStringData )
+void Xfer::xferUnicodeString( UnicodeString *unicodeStringData, const char *label )
 {
 
 	xferImplementation( (void *)unicodeStringData->str(), sizeof( WideChar ) * unicodeStringData->getLength() );
+	if( getXferMode() == XFER_CRC )
+	{
+		logCRCBytes( label, unicodeStringData->str(), sizeof( WideChar ) * unicodeStringData->getLength() );
+	}
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferCoord3D( Coord3D *coord3D )
+void Xfer::xferCoord3D( Coord3D *coord3D, const char *label )
 {
 
-	xferReal( &coord3D->x );
-	xferReal( &coord3D->y );
-	xferReal( &coord3D->z );
+	xferReal( &coord3D->x, label );
+	xferReal( &coord3D->y, label );
+	xferReal( &coord3D->z, label );
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferICoord3D( ICoord3D *iCoord3D )
+void Xfer::xferICoord3D( ICoord3D *iCoord3D, const char *label )
 {
 
-	xferInt( &iCoord3D->x );
-	xferInt( &iCoord3D->y );
-	xferInt( &iCoord3D->z );
+	xferInt( &iCoord3D->x, label );
+	xferInt( &iCoord3D->y, label );
+	xferInt( &iCoord3D->z, label );
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferRegion3D( Region3D *region3D )
+void Xfer::xferRegion3D( Region3D *region3D, const char *label )
 {
 
-	xferCoord3D( &region3D->lo );
-	xferCoord3D( &region3D->hi );
+	xferCoord3D( &region3D->lo, label );
+	xferCoord3D( &region3D->hi, label );
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferIRegion3D( IRegion3D *iRegion3D )
+void Xfer::xferIRegion3D( IRegion3D *iRegion3D, const char *label )
 {
 
-	xferICoord3D( &iRegion3D->lo );
-	xferICoord3D( &iRegion3D->hi );
+	xferICoord3D( &iRegion3D->lo, label );
+	xferICoord3D( &iRegion3D->hi, label );
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferCoord2D( Coord2D *coord2D )
+void Xfer::xferCoord2D( Coord2D *coord2D, const char *label )
 {
 
-	xferReal( &coord2D->x );
-	xferReal( &coord2D->y );
+	xferReal( &coord2D->x, label );
+	xferReal( &coord2D->y, label );
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferICoord2D( ICoord2D *iCoord2D )
+void Xfer::xferICoord2D( ICoord2D *iCoord2D, const char *label )
 {
 
-	xferInt( &iCoord2D->x );
-	xferInt( &iCoord2D->y );
+	xferInt( &iCoord2D->x, label );
+	xferInt( &iCoord2D->y, label );
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferRegion2D( Region2D *region2D )
+void Xfer::xferRegion2D( Region2D *region2D, const char *label )
 {
 
-	xferCoord2D( &region2D->lo );
-	xferCoord2D( &region2D->hi );
+	xferCoord2D( &region2D->lo, label );
+	xferCoord2D( &region2D->hi, label );
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferIRegion2D( IRegion2D *iRegion2D )
+void Xfer::xferIRegion2D( IRegion2D *iRegion2D, const char *label )
 {
 
-	xferICoord2D( &iRegion2D->lo );
-	xferICoord2D( &iRegion2D->hi );
+	xferICoord2D( &iRegion2D->lo, label );
+	xferICoord2D( &iRegion2D->hi, label );
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferRealRange( RealRange *realRange )
+void Xfer::xferRealRange( RealRange *realRange, const char *label )
 {
 
-	xferReal( &realRange->lo );
-	xferReal( &realRange->hi );
+	xferReal( &realRange->lo, label );
+	xferReal( &realRange->hi, label );
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferColor( Color *color )
+void Xfer::xferColor( Color *color, const char *label )
 {
 
 	xferImplementation( color, sizeof( Color ) );
+	if( getXferMode() == XFER_CRC )
+	{
+		char buffer[32];
+		snprintf( buffer, sizeof( buffer ), "%d", static_cast<Int>(*color) );
+		logCRCValue( label, buffer );
+	}
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferRGBColor( RGBColor *rgbColor )
+void Xfer::xferRGBColor( RGBColor *rgbColor, const char *label )
 {
 
-	xferReal( &rgbColor->red );
-	xferReal( &rgbColor->green );
-	xferReal( &rgbColor->blue );
+	xferReal( &rgbColor->red, label );
+	xferReal( &rgbColor->green, label );
+	xferReal( &rgbColor->blue, label );
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferRGBAColorReal( RGBAColorReal *rgbaColorReal )
+void Xfer::xferRGBAColorReal( RGBAColorReal *rgbaColorReal, const char *label )
 {
 
-	xferReal( &rgbaColorReal->red );
-	xferReal( &rgbaColorReal->green );
-	xferReal( &rgbaColorReal->blue );
-	xferReal( &rgbaColorReal->alpha );
+	xferReal( &rgbaColorReal->red, label );
+	xferReal( &rgbaColorReal->green, label );
+	xferReal( &rgbaColorReal->blue, label );
+	xferReal( &rgbaColorReal->alpha, label );
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferRGBAColorInt( RGBAColorInt *rgbaColorInt )
+void Xfer::xferRGBAColorInt( RGBAColorInt *rgbaColorInt, const char *label )
 {
 
-	xferUnsignedInt( &rgbaColorInt->red );
-	xferUnsignedInt( &rgbaColorInt->green );
-	xferUnsignedInt( &rgbaColorInt->blue );
-	xferUnsignedInt( &rgbaColorInt->alpha );
+	xferUnsignedInt( &rgbaColorInt->red, label );
+	xferUnsignedInt( &rgbaColorInt->green, label );
+	xferUnsignedInt( &rgbaColorInt->blue, label );
+	xferUnsignedInt( &rgbaColorInt->alpha, label );
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferObjectID( ObjectID *objectID )
+void Xfer::xferObjectID( ObjectID *objectID, const char *label )
 {
 
 	xferImplementation( objectID, sizeof( ObjectID ) );
+	if( getXferMode() == XFER_CRC )
+	{
+		char buffer[32];
+		snprintf( buffer, sizeof( buffer ), "%d", static_cast<Int>(*objectID) );
+		logCRCValue( label, buffer );
+	}
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferDrawableID( DrawableID *drawableID )
+void Xfer::xferDrawableID( DrawableID *drawableID, const char *label )
 {
 
 	xferImplementation( drawableID, sizeof( DrawableID ) );
+	if( getXferMode() == XFER_CRC )
+	{
+		char buffer[32];
+		snprintf( buffer, sizeof( buffer ), "%d", static_cast<Int>(*drawableID) );
+		logCRCValue( label, buffer );
+	}
 
 }
 
 
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferSTLObjectIDVector( std::vector<ObjectID> *objectIDVectorData )
+void Xfer::xferSTLObjectIDVector( std::vector<ObjectID> *objectIDVectorData, const char *label )
 {
 	//
 	// the fact that this is a list and a little higher level than a simple data type
@@ -369,11 +460,11 @@ void Xfer::xferSTLObjectIDVector( std::vector<ObjectID> *objectIDVectorData )
 	//
 	XferVersion currentVersion = 1;
 	XferVersion version = currentVersion;
-	xferVersion( &version, currentVersion );
+	xferVersion( &version, currentVersion, label );
 
 	// xfer the count of the vector
 	UnsignedShort listCount = objectIDVectorData->size();
-	xferUnsignedShort( &listCount );
+	xferUnsignedShort( &listCount, label );
 
 	// xfer vector data
 	ObjectID objectID;
@@ -386,7 +477,7 @@ void Xfer::xferSTLObjectIDVector( std::vector<ObjectID> *objectIDVectorData )
 		{
 
 			objectID = *it;
-			xferObjectID( &objectID );
+			xferObjectID( &objectID, label );
 
 		}
 
@@ -407,7 +498,7 @@ void Xfer::xferSTLObjectIDVector( std::vector<ObjectID> *objectIDVectorData )
 		for( UnsignedShort i = 0; i < listCount; ++i )
 		{
 
-			xferObjectID( &objectID );
+			xferObjectID( &objectID, label );
 			objectIDVectorData->push_back( objectID );
 
 		}
@@ -427,7 +518,7 @@ void Xfer::xferSTLObjectIDVector( std::vector<ObjectID> *objectIDVectorData )
 	* Version Info;
 	* 1: Initial version */
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferSTLObjectIDList( std::list< ObjectID > *objectIDListData )
+void Xfer::xferSTLObjectIDList( std::list< ObjectID > *objectIDListData, const char *label )
 {
 
 	//
@@ -436,11 +527,11 @@ void Xfer::xferSTLObjectIDList( std::list< ObjectID > *objectIDListData )
 	//
 	XferVersion currentVersion = 1;
 	XferVersion version = currentVersion;
-	xferVersion( &version, currentVersion );
+	xferVersion( &version, currentVersion, label );
 
 	// xfer the count of the list
 	UnsignedShort listCount = objectIDListData->size();
-	xferUnsignedShort( &listCount );
+	xferUnsignedShort( &listCount, label );
 
 	// xfer list data
 	ObjectID objectID;
@@ -453,7 +544,7 @@ void Xfer::xferSTLObjectIDList( std::list< ObjectID > *objectIDListData )
 		{
 
 			objectID = *it;
-			xferObjectID( &objectID );
+			xferObjectID( &objectID, label );
 
 		}
 
@@ -474,7 +565,7 @@ void Xfer::xferSTLObjectIDList( std::list< ObjectID > *objectIDListData )
 		for( UnsignedShort i = 0; i < listCount; ++i )
 		{
 
-			xferObjectID( &objectID );
+			xferObjectID( &objectID, label );
 			objectIDListData->push_back( objectID );
 
 		}
@@ -492,7 +583,7 @@ void Xfer::xferSTLObjectIDList( std::list< ObjectID > *objectIDListData )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferSTLIntList( std::list< Int > *intListData )
+void Xfer::xferSTLIntList( std::list< Int > *intListData, const char *label )
 {
 
 	// sanity
@@ -502,11 +593,11 @@ void Xfer::xferSTLIntList( std::list< Int > *intListData )
 	// version
 	XferVersion currentVersion = 1;
 	XferVersion version = currentVersion;
-	xferVersion( &version, currentVersion );
+	xferVersion( &version, currentVersion, label );
 
 	// xfer the count of the list
 	UnsignedShort listCount = intListData->size();
-	xferUnsignedShort( &listCount );
+	xferUnsignedShort( &listCount, label );
 
 	// xfer list data
 	Int intData;
@@ -519,7 +610,7 @@ void Xfer::xferSTLIntList( std::list< Int > *intListData )
 		{
 
 			intData = *it;
-			xferInt( &intData );
+			xferInt( &intData, label );
 
 		}
 
@@ -540,7 +631,7 @@ void Xfer::xferSTLIntList( std::list< Int > *intListData )
 		for( UnsignedShort i = 0; i < listCount; ++i )
 		{
 
-			xferInt( &intData );
+			xferInt( &intData, label );
 			intListData->push_back( intData );
 
 		}
@@ -558,7 +649,7 @@ void Xfer::xferSTLIntList( std::list< Int > *intListData )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferScienceType( ScienceType *science )
+void Xfer::xferScienceType( ScienceType *science, const char *label )
 {
 
 	// sanity
@@ -572,12 +663,12 @@ void Xfer::xferScienceType( ScienceType *science )
 		scienceName = TheScienceStore->getInternalNameForScience( *science );
 
 		// write the string
-		xferAsciiString( &scienceName );
+		xferAsciiString( &scienceName, label );
 
 	}
 	else if( getXferMode() == XFER_LOAD )
 	{
-		xferAsciiString( &scienceName );
+		xferAsciiString( &scienceName, label );
 
 		// translate to science
 		*science = TheScienceStore->getScienceFromInternalName( scienceName );
@@ -593,6 +684,12 @@ void Xfer::xferScienceType( ScienceType *science )
 	else if( getXferMode() == XFER_CRC )
 	{
 			xferImplementation( science, sizeof( *science ) );
+			if( getXferMode() == XFER_CRC )
+			{
+				char buffer[32];
+				snprintf( buffer, sizeof( buffer ), "%d", static_cast<Int>(*science) );
+				logCRCValue( label, buffer );
+			}
 
 	}
 	else
@@ -607,7 +704,7 @@ void Xfer::xferScienceType( ScienceType *science )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferScienceVec( ScienceVec *scienceVec )
+void Xfer::xferScienceVec( ScienceVec *scienceVec, const char *label )
 {
 
 	// sanity
@@ -616,18 +713,18 @@ void Xfer::xferScienceVec( ScienceVec *scienceVec )
 	// this deserves a version number
 	const XferVersion currentVersion = 1;
 	XferVersion version = currentVersion;
-	xferVersion( &version, currentVersion );
+	xferVersion( &version, currentVersion, label );
 
 	// count of vector
 	UnsignedShort count = scienceVec->size();
-	xferUnsignedShort( &count );
+	xferUnsignedShort( &count, label );
 
 	if( getXferMode() == XFER_SAVE )
 	{
 		for( ScienceVec::const_iterator it = scienceVec->begin(); it != scienceVec->end(); ++it )
 		{
 			ScienceType science = *it;
-			xferScienceType(&science);
+			xferScienceType(&science, label);
 		}
 	}
 	else if( getXferMode() == XFER_LOAD )
@@ -646,7 +743,7 @@ void Xfer::xferScienceVec( ScienceVec *scienceVec )
 		for( UnsignedShort i = 0; i < count; ++i )
 		{
 			ScienceType science;
-			xferScienceType(&science);
+			xferScienceType(&science, label);
 			scienceVec->push_back( science );
 		}
 
@@ -657,6 +754,12 @@ void Xfer::xferScienceVec( ScienceVec *scienceVec )
 		{
 			ScienceType science = *it;
 			xferImplementation( &science, sizeof( ScienceType ) );
+			if( getXferMode() == XFER_CRC )
+			{
+				char buffer[32];
+				snprintf( buffer, sizeof( buffer ), "%d", static_cast<Int>(science) );
+				logCRCValue( label, buffer );
+			}
 		}
 	}
 	else
@@ -675,13 +778,13 @@ void Xfer::xferScienceVec( ScienceVec *scienceVec )
 	* Version Info:
 	* 1: Initial version */
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferKindOf( KindOfType *kindOfData )
+void Xfer::xferKindOf( KindOfType *kindOfData, const char *label )
 {
 
 	// this deserves a version number
 	XferVersion currentVersion = 1;
 	XferVersion version = currentVersion;
-	xferVersion( &version, currentVersion );
+	xferVersion( &version, currentVersion, label );
 
 	// check which type of xfer we're doing
 	if( getXferMode() == XFER_SAVE )
@@ -689,7 +792,7 @@ void Xfer::xferKindOf( KindOfType *kindOfData )
 
 		// save as an ascii string
 		AsciiString kindOfName = KindOfMaskType::getNameFromSingleBit(*kindOfData);
-		xferAsciiString( &kindOfName );
+		xferAsciiString( &kindOfName, label );
 
 	}
 	else if( getXferMode() == XFER_LOAD )
@@ -697,7 +800,7 @@ void Xfer::xferKindOf( KindOfType *kindOfData )
 
 		// read ascii string from file
 		AsciiString kindOfName;
-		xferAsciiString( &kindOfName );
+		xferAsciiString( &kindOfName, label );
 
 		// turn kind of name into an enum value
 		Int bit = KindOfMaskType::getSingleBitFromName(kindOfName.str());
@@ -710,6 +813,12 @@ void Xfer::xferKindOf( KindOfType *kindOfData )
 
 		// just call the xfer implementation on the data values
 		xferImplementation( kindOfData, sizeof( KindOfType ) );
+		if( getXferMode() == XFER_CRC )
+		{
+			char buffer[32];
+			snprintf( buffer, sizeof( buffer ), "%d", static_cast<Int>(*kindOfData) );
+			logCRCValue( label, buffer );
+		}
 
 	}
 	else
@@ -724,13 +833,13 @@ void Xfer::xferKindOf( KindOfType *kindOfData )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferUpgradeMask( UpgradeMaskType *upgradeMaskData )
+void Xfer::xferUpgradeMask( UpgradeMaskType *upgradeMaskData, const char *label )
 {
 
 	// this deserves a version number
 	XferVersion currentVersion = 1;
 	XferVersion version = currentVersion;
-	xferVersion( &version, currentVersion );
+	xferVersion( &version, currentVersion, label );
 
 	//Kris: The Upgrade system has been converted from Int64 to BitFlags. However because the
 	//names of upgrades are saved to preserve order reassignments (inserting a new upgrade in
@@ -758,7 +867,7 @@ void Xfer::xferUpgradeMask( UpgradeMaskType *upgradeMaskData )
 		}
 
 		// write the count
-		xferUnsignedShort( &count );
+		xferUnsignedShort( &count, label );
 
 		// write out the upgrades as strings
 		for( upgradeTemplate = TheUpgradeCenter->firstUpgradeTemplate(); upgradeTemplate; upgradeTemplate = upgradeTemplate->friend_getNext() )
@@ -767,7 +876,7 @@ void Xfer::xferUpgradeMask( UpgradeMaskType *upgradeMaskData )
 			if( upgradeMaskData->testForAll( upgradeTemplate->getUpgradeMask() ) )
 			{
 				upgradeName = upgradeTemplate->getUpgradeName();
-				xferAsciiString( &upgradeName );
+				xferAsciiString( &upgradeName, label );
 			}
 		}
 	}
@@ -778,7 +887,7 @@ void Xfer::xferUpgradeMask( UpgradeMaskType *upgradeMaskData )
 
 		// how many strings are we going to read from the file
 		UnsignedShort count;
-		xferUnsignedShort( &count );
+		xferUnsignedShort( &count, label );
 
 		// zero the mask data
 		upgradeMaskData->clear();
@@ -788,7 +897,7 @@ void Xfer::xferUpgradeMask( UpgradeMaskType *upgradeMaskData )
 		{
 
 			// read the string
-			xferAsciiString( &upgradeName );
+			xferAsciiString( &upgradeName, label );
 
 			// find this upgrade template
 			upgradeTemplate = TheUpgradeCenter->findUpgrade( upgradeName );
@@ -811,6 +920,10 @@ void Xfer::xferUpgradeMask( UpgradeMaskType *upgradeMaskData )
 
 		// just xfer implementation the data itself
 		xferImplementation( upgradeMaskData, sizeof( UpgradeMaskType ) );
+		if( getXferMode() == XFER_CRC )
+		{
+			logCRCBytes( label, upgradeMaskData, sizeof( UpgradeMaskType ) );
+		}
 
 	}
 	else
@@ -825,40 +938,86 @@ void Xfer::xferUpgradeMask( UpgradeMaskType *upgradeMaskData )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferUser( void *data, Int dataSize )
+void Xfer::xferUser( void *data, Int dataSize, const char *label )
 {
 
 	xferImplementation( data, dataSize );
+	if( getXferMode() == XFER_CRC )
+	{
+		logCRCBytes( label, data, dataSize );
+	}
 
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferMatrix3D( Matrix3D* mtx )
+void Xfer::xferMatrix3D( Matrix3D* mtx, const char *label )
 {
 	// this deserves a version number
 	const XferVersion currentVersion = 1;
 	XferVersion version = currentVersion;
-	xferVersion( &version, currentVersion );
+	xferVersion( &version, currentVersion, label );
 
  	Vector4& tmp0 = (*mtx)[0];
  	Vector4& tmp1 = (*mtx)[1];
  	Vector4& tmp2 = (*mtx)[2];
 
-	xferReal(&tmp0.X);
-	xferReal(&tmp0.Y);
-	xferReal(&tmp0.Z);
-	xferReal(&tmp0.W);
+	xferReal(&tmp0.X, label);
+	xferReal(&tmp0.Y, label);
+	xferReal(&tmp0.Z, label);
+	xferReal(&tmp0.W, label);
 
-	xferReal(&tmp1.X);
-	xferReal(&tmp1.Y);
-	xferReal(&tmp1.Z);
-	xferReal(&tmp1.W);
+	xferReal(&tmp1.X, label);
+	xferReal(&tmp1.Y, label);
+	xferReal(&tmp1.Z, label);
+	xferReal(&tmp1.W, label);
 
-	xferReal(&tmp2.X);
-	xferReal(&tmp2.Y);
-	xferReal(&tmp2.Z);
-	xferReal(&tmp2.W);
+	xferReal(&tmp2.X, label);
+	xferReal(&tmp2.Y, label);
+	xferReal(&tmp2.Z, label);
+	xferReal(&tmp2.W, label);
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void Xfer::logCRCValue( const char *label, const char *valueText )
+{
+	(void)label;
+	(void)valueText;
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void Xfer::logCRCBytes( const char *label, const void *data, Int dataSize )
+{
+	(void)label;
+	(void)data;
+	(void)dataSize;
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void Xfer::buildCRCLabel( const char *className, const char *memberName, const char *typeName, char *out, size_t outSize )
+{
+	if( out == NULL || outSize == 0 )
+	{
+		return;
+	}
+
+	if( className == NULL || className[0] == '\0' )
+	{
+		className = "Unknown";
+	}
+	if( memberName == NULL )
+	{
+		memberName = "";
+	}
+	if( typeName == NULL )
+	{
+		typeName = "";
+	}
+
+	snprintf( out, outSize, "%s::%s::%s", className, memberName, typeName );
 }
 
 

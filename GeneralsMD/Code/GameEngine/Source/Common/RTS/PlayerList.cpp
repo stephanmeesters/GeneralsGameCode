@@ -433,10 +433,10 @@ PlayerMaskType PlayerList::getPlayersWithRelationship( Int srcPlayerIndex, Unsig
 // ------------------------------------------------------------------------------------------------
 void PlayerList::crc( Xfer *xfer )
 {
-	xfer->xferInt( &m_playerCount );
+	CRC_XFER(xfer, "PlayerList", xferInt, m_playerCount, "Int");
 
 	for( Int i = 0; i < m_playerCount; ++i )
-		xfer->xferSnapshot( m_players[ i ] );
+		CRC_XFER_SNAPSHOT(xfer, "PlayerList", m_players[ i ], "m_players[ i ]");
 }
 
 // ------------------------------------------------------------------------------------------------

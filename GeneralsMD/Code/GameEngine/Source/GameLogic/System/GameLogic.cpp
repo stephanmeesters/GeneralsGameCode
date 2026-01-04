@@ -32,6 +32,7 @@
 #include "Common/AudioAffect.h"
 #include "Common/AudioHandleSpecialValues.h"
 #include "Common/BuildAssistant.h"
+#include "Common/CRCFrameLog.h"
 #include "Common/CRCDebug.h"
 #include "Common/FramePacer.h"
 #include "Common/GameAudio.h"
@@ -3673,10 +3674,19 @@ void GameLogic::update( void )
 #else
 	Bool generateForSolo = isSoloGameOrReplay && ((m_frame % REPLAY_CRC_INTERVAL) == 0);
 #endif // DEBUG_CRC
+	Int crcLogFromFrame = g_crcLogFromFrame;
+	UnsignedInt crcLogUntilFrame = g_crcLogUntilFrame;
+	Bool crcLogRangeActive = (crcLogFromFrame >= 0 || crcLogUntilFrame != 0xffffffff);
+	if (crcLogFromFrame < 0)
+	{
+		crcLogFromFrame = 0;
+	}
+	Bool shouldLogCRCThisFrame = (isMPGameOrReplay || isSoloGameOrReplay) && crcLogRangeActive &&
+		(now >= static_cast<UnsignedInt>(crcLogFromFrame) && now <= crcLogUntilFrame);
 
 	if (generateForSolo || generateForMP)
 	{
-		m_CRC = getCRC( CRC_RECALC );
+		m_CRC = getCRC( CRC_RECALC, AsciiString::TheEmptyString, FALSE );
 		bool isPlayback = (TheRecorder && TheRecorder->isPlaybackMode());
 
 		GameMessage *msg = newInstance(GameMessage)(GameMessage::MSG_LOGIC_CRC);
@@ -3692,6 +3702,10 @@ void GameLogic::update( void )
 		messageList->appendMessage(msg);
 
 		DEBUG_LOG(("Appended %sCRC on frame %d: %8.8X", isPlayback ? "Playback " : "", m_frame, m_CRC));
+	}
+	if (shouldLogCRCThisFrame)
+	{
+		getCRC( CRC_RECALC, AsciiString::TheEmptyString, TRUE );
 	}
 
 	// collect stats
@@ -4032,7 +4046,7 @@ void GameLogic::destroyObject( Object *obj )
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 Bool inCRCGen = FALSE;
-UnsignedInt GameLogic::getCRC( Int mode, AsciiString deepCRCFileName )
+UnsignedInt GameLogic::getCRC( Int mode, AsciiString deepCRCFileName, Bool writeTextLog )
 {
 	if (mode != CRC_RECALC)
 		return m_CRC;
@@ -4046,6 +4060,7 @@ UnsignedInt GameLogic::getCRC( Int mode, AsciiString deepCRCFileName )
 	if (deepCRCFileName.isNotEmpty())
 	{
 		xferCRC = NEW XferDeepCRC;
+		xferCRC->setTextLogEnabled(writeTextLog);
 		xferCRC->open(deepCRCFileName.str());
 	}
 	else
@@ -4069,6 +4084,7 @@ UnsignedInt GameLogic::getCRC( Int mode, AsciiString deepCRCFileName )
 			xferCRC = NEW XferCRC;
 			crcName = "lightCRC";
 		}
+		xferCRC->setTextLogEnabled(writeTextLog);
 		xferCRC->open(crcName);
 	}
 

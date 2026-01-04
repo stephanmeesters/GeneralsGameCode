@@ -247,10 +247,10 @@ void ExperienceTracker::setExperienceAndLevel( Int experienceIn, Bool provideFee
 //-----------------------------------------------------------------------------
 void ExperienceTracker::crc( Xfer *xfer )
 {
-	xfer->xferInt( &m_currentExperience );
-	xfer->xferUser( &m_currentLevel, sizeof( VeterancyLevel ) );
+	CRC_XFER(xfer, "ExperienceTracker", xferInt, m_currentExperience, "Int");
+	CRC_XFER_USER(xfer, "ExperienceTracker", &m_currentLevel, sizeof( VeterancyLevel ), "m_currentLevel", "VeterancyLevel");
 #if !RETAIL_COMPATIBLE_CRC
-	xfer->xferBool(&m_isTrainable);
+	CRC_XFER(xfer, "ExperienceTracker", xferBool, m_isTrainable, "Bool");
 #endif
 }
 
@@ -297,4 +297,3 @@ void ExperienceTracker::loadPostProcess( void )
 {
 
 }
-

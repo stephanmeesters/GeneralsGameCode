@@ -955,30 +955,30 @@ m_retaliateFriendsRadius(120.0f)
 //-------------------------------------------------------------------------------------------------
 void TAiData::crc( Xfer *xfer )
 {
-	xfer->xferReal( &m_structureSeconds );
-	xfer->xferReal( &m_teamSeconds );
-	xfer->xferInt( &m_resourcesWealthy );
-	xfer->xferInt( &m_resourcesPoor );
-	xfer->xferUnsignedInt( &m_forceIdleFramesCount );
-	xfer->xferReal( &m_structuresWealthyMod );
-	xfer->xferReal( &m_teamWealthyMod );
-	xfer->xferReal( &m_structuresPoorMod );
-	xfer->xferReal( &m_teamPoorMod );
-	xfer->xferReal( &m_teamResourcesToBuild );
-	xfer->xferReal( &m_guardInnerModifierAI );
-	xfer->xferReal( &m_guardOuterModifierAI );
-	xfer->xferReal( &m_guardInnerModifierHuman );
-	xfer->xferReal( &m_guardOuterModifierHuman );
-	xfer->xferUnsignedInt( &m_guardChaseUnitFrames );
-	xfer->xferUnsignedInt( &m_guardEnemyScanRate );
-	xfer->xferUnsignedInt( &m_guardEnemyReturnScanRate );
-	xfer->xferReal( &m_alertRangeModifier );
-	xfer->xferReal( &m_aggressiveRangeModifier );
-	xfer->xferReal( &m_attackPriorityDistanceModifier );
-	xfer->xferReal( &m_maxRecruitDistance );
-	xfer->xferReal( &m_skirmishBaseDefenseExtraDistance );
-	xfer->xferReal( &m_repulsedDistance );
-	xfer->xferBool( &m_enableRepulsors );
+	CRC_XFER(xfer, "TAiData", xferReal, m_structureSeconds, "Real");
+	CRC_XFER(xfer, "TAiData", xferReal, m_teamSeconds, "Real");
+	CRC_XFER(xfer, "TAiData", xferInt, m_resourcesWealthy, "Int");
+	CRC_XFER(xfer, "TAiData", xferInt, m_resourcesPoor, "Int");
+	CRC_XFER(xfer, "TAiData", xferUnsignedInt, m_forceIdleFramesCount, "UnsignedInt");
+	CRC_XFER(xfer, "TAiData", xferReal, m_structuresWealthyMod, "Real");
+	CRC_XFER(xfer, "TAiData", xferReal, m_teamWealthyMod, "Real");
+	CRC_XFER(xfer, "TAiData", xferReal, m_structuresPoorMod, "Real");
+	CRC_XFER(xfer, "TAiData", xferReal, m_teamPoorMod, "Real");
+	CRC_XFER(xfer, "TAiData", xferReal, m_teamResourcesToBuild, "Real");
+	CRC_XFER(xfer, "TAiData", xferReal, m_guardInnerModifierAI, "Real");
+	CRC_XFER(xfer, "TAiData", xferReal, m_guardOuterModifierAI, "Real");
+	CRC_XFER(xfer, "TAiData", xferReal, m_guardInnerModifierHuman, "Real");
+	CRC_XFER(xfer, "TAiData", xferReal, m_guardOuterModifierHuman, "Real");
+	CRC_XFER(xfer, "TAiData", xferUnsignedInt, m_guardChaseUnitFrames, "UnsignedInt");
+	CRC_XFER(xfer, "TAiData", xferUnsignedInt, m_guardEnemyScanRate, "UnsignedInt");
+	CRC_XFER(xfer, "TAiData", xferUnsignedInt, m_guardEnemyReturnScanRate, "UnsignedInt");
+	CRC_XFER(xfer, "TAiData", xferReal, m_alertRangeModifier, "Real");
+	CRC_XFER(xfer, "TAiData", xferReal, m_aggressiveRangeModifier, "Real");
+	CRC_XFER(xfer, "TAiData", xferReal, m_attackPriorityDistanceModifier, "Real");
+	CRC_XFER(xfer, "TAiData", xferReal, m_maxRecruitDistance, "Real");
+	CRC_XFER(xfer, "TAiData", xferReal, m_skirmishBaseDefenseExtraDistance, "Real");
+	CRC_XFER(xfer, "TAiData", xferReal, m_repulsedDistance, "Real");
+	CRC_XFER(xfer, "TAiData", xferBool, m_enableRepulsors, "Bool");
 	CRCGEN_LOG(("CRC after AI TAiData for frame %d is 0x%8.8X", TheGameLogic->getFrame(), ((XferCRC *)xfer)->getCRC()));
 
 }
@@ -1004,7 +1004,7 @@ void TAiData::loadPostProcess( void )
 void AI::crc( Xfer *xfer )
 {
 
-	xfer->xferSnapshot( m_pathfinder );
+	CRC_XFER_SNAPSHOT(xfer, "AI", m_pathfinder, "m_pathfinder");
 	CRCGEN_LOG(("CRC after AI pathfinder for frame %d is 0x%8.8X", TheGameLogic->getFrame(), ((XferCRC *)xfer)->getCRC()));
 
 	AsciiString marker;
@@ -1012,8 +1012,8 @@ void AI::crc( Xfer *xfer )
 	while (aiData)
 	{
 		marker = "MARKER:TAiData";
-		xfer->xferAsciiString(&marker);
-		xfer->xferSnapshot( aiData );
+		CRC_XFER(xfer, "AI", xferAsciiString, marker, "AsciiString");
+		CRC_XFER_SNAPSHOT(xfer, "AI", aiData, "aiData");
 		aiData = aiData->m_next;
 	}
 
@@ -1022,8 +1022,8 @@ void AI::crc( Xfer *xfer )
 		if (*groupIt)
 		{
 			marker = "MARKER:AIGroup";
-			xfer->xferAsciiString(&marker);
-			xfer->xferSnapshot( (*groupIt) );
+			CRC_XFER(xfer, "AI", xferAsciiString, marker, "AsciiString");
+		CRC_XFER_SNAPSHOT(xfer, "AI", (*groupIt), "groupIt");
 		}
 	}
 
@@ -1045,5 +1045,4 @@ void AI::loadPostProcess( void )
 {
 
 }
-
 

@@ -270,8 +270,9 @@ void XferSave::skip( Int dataSize )
 // ------------------------------------------------------------------------------------------------
 /** Entry point for xfering a snapshot */
 // ------------------------------------------------------------------------------------------------
-void XferSave::xferSnapshot( Snapshot *snapshot )
+void XferSave::xferSnapshot( Snapshot *snapshot, const char *label )
 {
+	(void)label;
 
 	if( snapshot == NULL )
 	{
@@ -289,8 +290,9 @@ void XferSave::xferSnapshot( Snapshot *snapshot )
 // ------------------------------------------------------------------------------------------------
 /** Save ascii string */
 // ------------------------------------------------------------------------------------------------
-void XferSave::xferAsciiString( AsciiString *asciiStringData )
+void XferSave::xferAsciiString( AsciiString *asciiStringData, const char *label )
 {
+	(void)label;
 
 	// sanity
 	if( asciiStringData->getLength() > 255 )
@@ -314,8 +316,9 @@ void XferSave::xferAsciiString( AsciiString *asciiStringData )
 // ------------------------------------------------------------------------------------------------
 /** Save unicodee string */
 // ------------------------------------------------------------------------------------------------
-void XferSave::xferUnicodeString( UnicodeString *unicodeStringData )
+void XferSave::xferUnicodeString( UnicodeString *unicodeStringData, const char *label )
 {
+	(void)label;
 
 	// sanity
 	if( unicodeStringData->getLength() > 255 )

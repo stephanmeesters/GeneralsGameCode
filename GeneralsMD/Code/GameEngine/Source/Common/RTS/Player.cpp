@@ -3959,22 +3959,22 @@ void Player::crc( Xfer *xfer )
 {
 	// Player battle plan bonuses
 	Bool battlePlanBonus = m_battlePlanBonuses != NULL;
-	xfer->xferBool( &battlePlanBonus );
+	CRC_XFER(xfer, "Player", xferBool, battlePlanBonus, "Bool");
 	CRCDEBUG_LOG(("Player %d[%ls] %s battle plans", m_playerIndex, m_playerDisplayName.str(), (battlePlanBonus)?"has":"doesn't have"));
 	if( m_battlePlanBonuses )
 	{
 		CRCDUMPBATTLEPLANBONUSES(m_battlePlanBonuses, this, NULL);
-		xfer->xferReal( &m_battlePlanBonuses->m_armorScalar );
-		xfer->xferReal( &m_battlePlanBonuses->m_sightRangeScalar );
-		xfer->xferInt( &m_battlePlanBonuses->m_bombardment );
-		xfer->xferInt( &m_battlePlanBonuses->m_holdTheLine );
-		xfer->xferInt( &m_battlePlanBonuses->m_searchAndDestroy );
+		CRC_XFER_PTR(xfer, "Player", xferReal, &m_battlePlanBonuses->m_armorScalar, "m_battlePlanBonuses.m_armorScalar", "Real");
+		CRC_XFER_PTR(xfer, "Player", xferReal, &m_battlePlanBonuses->m_sightRangeScalar, "m_battlePlanBonuses.m_sightRangeScalar", "Real");
+		CRC_XFER_PTR(xfer, "Player", xferInt, &m_battlePlanBonuses->m_bombardment, "m_battlePlanBonuses.m_bombardment", "Int");
+		CRC_XFER_PTR(xfer, "Player", xferInt, &m_battlePlanBonuses->m_holdTheLine, "m_battlePlanBonuses.m_holdTheLine", "Int");
+		CRC_XFER_PTR(xfer, "Player", xferInt, &m_battlePlanBonuses->m_searchAndDestroy, "m_battlePlanBonuses.m_searchAndDestroy", "Int");
 		m_battlePlanBonuses->m_validKindOf.xfer(xfer);
 		m_battlePlanBonuses->m_invalidKindOf.xfer(xfer);
 	}
 
-	xfer->xferInt( &m_skillPoints );
-	xfer->xferInt( &m_sciencePurchasePoints );
+	CRC_XFER(xfer, "Player", xferInt, m_skillPoints, "Int");
+	CRC_XFER(xfer, "Player", xferInt, m_sciencePurchasePoints, "Int");
 
 }
 
@@ -4538,4 +4538,3 @@ void Player::loadPostProcess( void )
 {
 
 }
-
