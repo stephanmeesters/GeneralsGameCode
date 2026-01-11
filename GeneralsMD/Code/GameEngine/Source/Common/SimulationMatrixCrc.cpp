@@ -95,13 +95,9 @@ UnsignedInt SimulationMatrixCrc::calculate()
 {
 	static const FpRoundingMode kRoundingModes[] = {
 		{ _RC_NEAR },
-		{ _RC_DOWN },
-		{ _RC_UP },
-		{ _RC_CHOP },
 	};
 	static const FpPrecisionMode kPrecisionModes[] = {
 		{ _PC_24, true },
-		{ 0, false },
 	};
 
 	XferCRC xfer;
