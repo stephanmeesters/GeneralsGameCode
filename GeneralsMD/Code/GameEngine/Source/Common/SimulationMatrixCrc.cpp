@@ -26,7 +26,20 @@
 #include <math.h>
 #include <stdio.h>
 
-UnsignedInt SimulationMatrixCrc::calculate()
+namespace
+{
+struct FpRoundingMode
+{
+	UnsignedInt mode;
+};
+
+struct FpPrecisionMode
+{
+	UnsignedInt mode;
+	bool use_precision_control;
+};
+
+void append_matrix_crc(XferCRC &xfer)
 {
 	Matrix3D matrix;
 	Matrix3D factors_matrix;
@@ -37,25 +50,69 @@ UnsignedInt SimulationMatrixCrc::calculate()
 		0.9f, 1.0f, 2.1f, 1.2f);
 
 	factors_matrix.Set(
-			WWMath::Cos(-0.0) * WWMath::Sin(0.7f) * (float)log10(2.3f),
-		WWMath::Sin(-1.0) * WWMath::Cos(1.1f) * (float)pow(1.1f, 2.0f),
-		(float)tan(0.3f),
+			WWMath::Cos(-0.0) * WWMath::Sin(0.7f) * log10(2.3f),
+		WWMath::Sin(-1.0) * WWMath::Cos(1.1f) * pow(1.1f, 2.0f),
+		tan(0.3f),
 		WWMath::Asin(0.5f),
 		WWMath::Acos(-0.3f),
-		WWMath::Atan(0.9f) * (float)pow(1.1f, 2.0f),
+		WWMath::Atan(0.9f) * pow(1.1f, 2.0f),
 		WWMath::Atan2(0.4f, 1.3f),
-		(float)sinh(0.2f),
-		(float)cosh(0.4f),
-		(float)tanh(0.5f),
-		(float)exp(0.1f) * (float)log10(2.3f),
-		(float)log(1.4f));
+		sinh(0.2f),
+		cosh(0.4f),
+		tanh(0.5f),
+		exp(0.1f) * log10(2.3f),
+		log(1.4f));
 
 	Matrix3D::Multiply(matrix, factors_matrix, &matrix);
 	matrix.Get_Inverse(matrix);
 
+	factors_matrix.Set(
+		sqrtf(55788.84375), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	);
+
+	xfer.xferMatrix3D(&matrix);
+	xfer.xferMatrix3D(&factors_matrix);
+}
+
+void run_with_modes(XferCRC &xfer, UnsignedInt rounding_mode, const FpPrecisionMode &precision_mode)
+{
+	_fpreset();
+	UnsignedInt curVal = _statusfp();
+	UnsignedInt newVal = curVal;
+	newVal = (newVal & ~_MCW_RC) | (rounding_mode & _MCW_RC);
+	if (precision_mode.use_precision_control) {
+		newVal = (newVal & ~_MCW_PC) | (precision_mode.mode & _MCW_PC);
+	}
+	_controlfp(newVal, precision_mode.use_precision_control ? (_MCW_PC | _MCW_RC) : _MCW_RC);
+
+	append_matrix_crc(xfer);
+
+	_fpreset();
+}
+}
+
+UnsignedInt SimulationMatrixCrc::calculate()
+{
+	static const FpRoundingMode kRoundingModes[] = {
+		{ _RC_NEAR },
+		{ _RC_DOWN },
+		{ _RC_UP },
+		{ _RC_CHOP },
+	};
+	static const FpPrecisionMode kPrecisionModes[] = {
+		{ _PC_24, true },
+		{ 0, false },
+	};
+
 	XferCRC xfer;
 	xfer.open("SimulationMatrixCrc");
-	xfer.xferMatrix3D(&matrix);
+
+	for (size_t i = 0; i < sizeof(kRoundingModes) / sizeof(kRoundingModes[0]); ++i) {
+		for (size_t j = 0; j < sizeof(kPrecisionModes) / sizeof(kPrecisionModes[0]); ++j) {
+			run_with_modes(xfer, kRoundingModes[i].mode, kPrecisionModes[j]);
+		}
+	}
+
 	xfer.close();
 
 	return xfer.getCRC();
@@ -64,5 +121,5 @@ UnsignedInt SimulationMatrixCrc::calculate()
 void SimulationMatrixCrc::print()
 {
 	UnsignedInt crc = calculate();
-	printf("Simulation CRC: %08X\n", crc);
+	printf("Simulation CRC: %08X %u\n", crc, crc);
 }

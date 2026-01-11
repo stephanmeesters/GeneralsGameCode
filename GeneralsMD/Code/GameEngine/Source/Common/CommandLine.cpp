@@ -1466,6 +1466,7 @@ void CommandLine::parseCommandLineForStartup()
 	// Note that this function is potentially called multiple times and only initializes the first time.
 	createGlobalData();
 
+		SimulationMatrixCrc::print();
 	if (TheGlobalData->m_commandLineData.m_hasParsedCommandLineForStartup)
 		return;
 	TheWritableGlobalData->m_commandLineData.m_hasParsedCommandLineForStartup = true;

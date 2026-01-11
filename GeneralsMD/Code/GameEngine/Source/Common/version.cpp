@@ -32,6 +32,7 @@
 #include "Common/version.h"
 
 #include "gitinfo.h"
+#include "Common/SimulationMatrixCrc.h"
 
 Version *TheVersion = NULL;	///< The Version singleton
 
@@ -325,7 +326,14 @@ UnicodeString Version::getUnicodeProductAuthor() const
 UnicodeString Version::getUnicodeProductString() const
 {
 	UnicodeString str;
-	UnicodeString productTitle = TheGameText->FETCH_OR_SUBSTITUTE("Version:ProductTitle", getUnicodeProductTitle().str());
+	// UnicodeString productTitle = TheGameText->FETCH_OR_SUBSTITUTE("Version:ProductTitle", getUnicodeProductTitle().str());
+
+	UnsignedInt sim = SimulationMatrixCrc::calculate();
+	SimulationMatrixCrc::print();
+	printf("Sim CRC: %08X %u\n", sim, sim);
+	UnicodeString strz;
+	strz.format(L"Sim CRC: %08X %u", sim, sim);
+	UnicodeString productTitle = TheGameText->FETCH_OR_SUBSTITUTE("Version:ProductTitle", strz.str());
 
 	if (!productTitle.isEmpty())
 	{
