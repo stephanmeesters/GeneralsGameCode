@@ -28,16 +28,13 @@
 
 namespace
 {
-struct FpRoundingMode
-{
-	UnsignedInt mode;
-};
+static const UnsignedInt kFpControl = 0x000A001F;
 
-struct FpPrecisionMode
+void apply_fp_control()
 {
-	UnsignedInt mode;
-	bool use_precision_control;
-};
+	_fpreset();
+	_controlfp(kFpControl, _MCW_RC | _MCW_PC | _MCW_EM);
+}
 
 void append_matrix_crc(XferCRC &xfer)
 {
@@ -66,48 +63,22 @@ void append_matrix_crc(XferCRC &xfer)
 	Matrix3D::Multiply(matrix, factors_matrix, &matrix);
 	matrix.Get_Inverse(matrix);
 
-	factors_matrix.Set(
-		sqrtf(55788.84375), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	);
+	Real aap = sqrtf(55788.84375);
 
 	xfer.xferMatrix3D(&matrix);
-	xfer.xferMatrix3D(&factors_matrix);
+	xfer.xferReal(&aap);
 }
 
-void run_with_modes(XferCRC &xfer, UnsignedInt rounding_mode, const FpPrecisionMode &precision_mode)
-{
-	_fpreset();
-	UnsignedInt curVal = _statusfp();
-	UnsignedInt newVal = curVal;
-	newVal = (newVal & ~_MCW_RC) | (rounding_mode & _MCW_RC);
-	if (precision_mode.use_precision_control) {
-		newVal = (newVal & ~_MCW_PC) | (precision_mode.mode & _MCW_PC);
-	}
-	_controlfp(newVal, precision_mode.use_precision_control ? (_MCW_PC | _MCW_RC) : _MCW_RC);
-
-	append_matrix_crc(xfer);
-
-	_fpreset();
-}
 }
 
 UnsignedInt SimulationMatrixCrc::calculate()
 {
-	static const FpRoundingMode kRoundingModes[] = {
-		{ _RC_NEAR },
-	};
-	static const FpPrecisionMode kPrecisionModes[] = {
-		{ _PC_24, true },
-	};
-
 	XferCRC xfer;
 	xfer.open("SimulationMatrixCrc");
 
-	for (size_t i = 0; i < sizeof(kRoundingModes) / sizeof(kRoundingModes[0]); ++i) {
-		for (size_t j = 0; j < sizeof(kPrecisionModes) / sizeof(kPrecisionModes[0]); ++j) {
-			run_with_modes(xfer, kRoundingModes[i].mode, kPrecisionModes[j]);
-		}
-	}
+	apply_fp_control();
+	append_matrix_crc(xfer);
+	_fpreset();
 
 	xfer.close();
 
