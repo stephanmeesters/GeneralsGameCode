@@ -1,5 +1,5 @@
-win32: 						Simulation CRC: C431042A
-vc6:						Simulation CRC: 0BD422DB
+win32: 						Simulation CRC: 6F1107DC
+vc6:						Simulation CRC: 0F5C04DC
 linux good config vc6:		Simulation CRC: 0F5C04DC
 linux bad config vc6:		Simulation CRC: CD503379
 
