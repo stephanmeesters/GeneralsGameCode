@@ -563,7 +563,6 @@ set(GAMEENGINE_SRC
     Source/Common/Bezier/BezierSegment.cpp
     Source/Common/BitFlags.cpp
     Source/Common/CommandLine.cpp
-    Source/Common/SimulationMatrixCrc.cpp
 #    Source/Common/crc.cpp
 #    Source/Common/CRCDebug.cpp
     Source/Common/DamageFX.cpp

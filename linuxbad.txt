@@ -1,0 +1,12 @@
+proton/cmd exit code: 0
+=== STDOUT (C:\stdout.log) ===
+Run "Z:\var\home\stephan\.var\app\com.valvesoftware.Steam\data\Steam\steamapps\common\Command & Conquer Generals - Zero Hour\generalszh.exe" -headless -replay "00-03-45_2v6_PC03_ss_HardAI_HardAI_HardAI_HardAI_HardAI_HardAI.rep" -DebugCRCFromFrame 3750 -DebugCRCUntilFrame 3850
+Run "Z:\var\home\stephan\.var\app\com.valvesoftware.Steam\data\Steam\steamapps\common\Command & Conquer Generals - Zero Hour\generalszh.exe" -printSimMathCrc
+Simulation CRC: 0B9F1BB5 194976693
+Simulation CRC: 0B9F1BB5 194976693
+Sim CRC: 0B9F1BB5 194976693
+Simulating Replay "00-03-45_2v6_PC03_ss_HardAI_HardAI_HardAI_HardAI_HardAI_HardAI.rep"
+CRC Mismatch in Frame 3810
+Elapsed Time: 00:01 Game Time: 02:07/11:35
+Exit code: 
+=== STDERR (C:\stderr.log) ===

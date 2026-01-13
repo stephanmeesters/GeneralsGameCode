@@ -96,7 +96,8 @@
                 "strategy": "external"
             },
             "cacheVariables": {
-                "RTS_FLAGS": "/W3"
+                "RTS_FLAGS": "/W3",
+                "CMAKE_BUILD_TYPE": "Release"
             },
             "vendor": {
                 "jetbrains.com/clion": {

@@ -1,5 +1,13 @@
-win32: 						Simulation CRC: 6F1107DC
-vc6:						Simulation CRC: 0F5C04DC
-linux good config vc6:		Simulation CRC: 0F5C04DC
-linux bad config vc6:		Simulation CRC: CD503379
+win32: 						Simulation CRC: B5B838E0
+vc6:						Simulation CRC: 89B53879
+linux good config vc6:		Simulation CRC: 89B53879
+linux bad config vc6:		Simulation CRC: DCB83820
 
+
+linux good config win32:		Simulation CRC: B5B838E0
+linux bad config win32:		N/A
+
+windows ARM win32: N/A
+apple ARM win32: N/A
+
+CI vc6: 
