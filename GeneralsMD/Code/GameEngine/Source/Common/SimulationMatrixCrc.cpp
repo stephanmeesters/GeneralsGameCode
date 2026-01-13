@@ -26,67 +26,57 @@
 #include <math.h>
 #include <stdio.h>
 
-namespace
-{
-static const UnsignedInt kFpControl = 0x000A001F;
+namespace {
+    void append_matrix_crc(XferCRC &xfer)
+    {
+        Matrix3D matrix;
+        Matrix3D factors_matrix;
 
-void apply_fp_control()
-{
-	_fpreset();
-	_controlfp(kFpControl, _MCW_RC | _MCW_PC | _MCW_EM);
-}
+        matrix.Set(
+            4.1f, 1.2f, 0.3f, 0.4f,
+            0.5f, 3.6f, 0.7f, 0.8f,
+            0.9f, 1.0f, 2.1f, 1.2f);
 
-void append_matrix_crc(XferCRC &xfer)
-{
-	Matrix3D matrix;
-	Matrix3D factors_matrix;
+        factors_matrix.Set(
+            WWMath::Sin(0.7f) * log10f(2.3f),
+            WWMath::Cos(1.1f) * powf(1.1f, 2.0f),
+            tanf(0.3f),
+            asinf(0.9673022627830505),
+            acosf(0.9673022627830505),
+            atanf(0.9673022627830505) * powf(1.1f, 2.0f),
+            atan2f(0.4f, 1.3f),
+            sinhf(0.2f),
+            coshf(0.4f) * tanhf(0.5f),
+            sqrtf(55788.84375),
+            expf(0.1f) * log10f(2.3f),
+            logf(1.4f));
 
-	matrix.Set(
-		4.1f, 1.2f, 0.3f, 0.4f,
-		0.5f, 3.6f, 0.7f, 0.8f,
-		0.9f, 1.0f, 2.1f, 1.2f);
+        Matrix3D::Multiply(matrix, factors_matrix, &matrix);
+        matrix.Get_Inverse(matrix);
 
-	factors_matrix.Set(
-			WWMath::Cos(-0.0) * WWMath::Sin(0.7f) * log10(2.3f),
-		WWMath::Sin(-1.0) * WWMath::Cos(1.1f) * pow(1.1f, 2.0f),
-		tan(0.3f),
-		WWMath::Asin(0.5f),
-		WWMath::Acos(-0.3f),
-		WWMath::Atan(0.9f) * pow(1.1f, 2.0f),
-		WWMath::Atan2(0.4f, 1.3f),
-		sinh(0.2f),
-		cosh(0.4f),
-		tanh(0.5f),
-		exp(0.1f) * log10(2.3f),
-		log(1.4f));
-
-	Matrix3D::Multiply(matrix, factors_matrix, &matrix);
-	matrix.Get_Inverse(matrix);
-
-	Real aap = sqrtf(55788.84375);
-
-	xfer.xferMatrix3D(&matrix);
-	xfer.xferReal(&aap);
-}
-
+        xfer.xferMatrix3D(&matrix);
+    }
 }
 
 UnsignedInt SimulationMatrixCrc::calculate()
 {
-	XferCRC xfer;
-	xfer.open("SimulationMatrixCrc");
+    XferCRC xfer;
+    xfer.open("SimulationMatrixCrc");
 
-	apply_fp_control();
-	append_matrix_crc(xfer);
-	_fpreset();
+    _fpreset();
+    constexpr UnsignedInt kFpControl = 0x000A001F;
+    _controlfp(kFpControl, _MCW_RC | _MCW_PC | _MCW_EM);
 
-	xfer.close();
+    append_matrix_crc(xfer);
 
-	return xfer.getCRC();
+    _fpreset();
+
+    xfer.close();
+
+    return xfer.getCRC();
 }
 
-void SimulationMatrixCrc::print()
-{
-	UnsignedInt crc = calculate();
-	printf("Simulation CRC: %08X %u\n", crc, crc);
+void SimulationMatrixCrc::print() {
+    UnsignedInt crc = calculate();
+    printf("Simulation CRC: %08X\n", crc);
 }
