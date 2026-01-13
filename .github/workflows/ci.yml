@@ -178,3 +178,21 @@ jobs:
       userdata: "GeneralsReplays/GeneralsZH/1.04"
       preset: ${{ matrix.preset }}
     secrets: inherit
+
+  simcrc-generalsmd:
+    name: Simulation CRC GeneralsMD${{ matrix.preset && '' }}
+    needs:
+      - build-generalsmd-vc6
+      - build-generalsmd-win32
+    if: ${{ github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.generalsmd == 'true' || needs.detect-changes.outputs.shared == 'true' }}
+    strategy:
+      matrix:
+        include:
+          - preset: "vc6+t+e"
+          - preset: "win32+t+e"
+      fail-fast: false
+    uses: ./.github/workflows/check-simulation-crc.yml
+    with:
+      game: "GeneralsMD"
+      preset: ${{ matrix.preset }}
+    secrets: inherit
