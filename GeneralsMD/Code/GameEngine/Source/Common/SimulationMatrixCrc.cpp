@@ -26,36 +26,34 @@
 #include <math.h>
 #include <stdio.h>
 
-namespace {
-    void append_matrix_crc(XferCRC &xfer)
-    {
-        Matrix3D matrix;
-        Matrix3D factors_matrix;
+static void append_matrix_crc(XferCRC &xfer)
+{
+    Matrix3D matrix;
+    Matrix3D factors_matrix;
 
-        matrix.Set(
-            4.1f, 1.2f, 0.3f, 0.4f,
-            0.5f, 3.6f, 0.7f, 0.8f,
-            0.9f, 1.0f, 2.1f, 1.2f);
+    matrix.Set(
+        4.1f, 1.2f, 0.3f, 0.4f,
+        0.5f, 3.6f, 0.7f, 0.8f,
+        0.9f, 1.0f, 2.1f, 1.2f);
 
-        factors_matrix.Set(
-            WWMath::Sin(0.7f) * log10f(2.3f),
-            WWMath::Cos(1.1f) * powf(1.1f, 2.0f),
-            tanf(0.3f),
-            asinf(0.9673022627830505),
-            acosf(0.9673022627830505),
-            atanf(0.9673022627830505) * powf(1.1f, 2.0f),
-            atan2f(0.4f, 1.3f),
-            sinhf(0.2f),
-            coshf(0.4f) * tanhf(0.5f),
-            sqrtf(55788.84375),
-            expf(0.1f) * log10f(2.3f),
-            logf(1.4f));
+    factors_matrix.Set(
+        WWMath::Sin(0.7f) * log10f(2.3f),
+        WWMath::Cos(1.1f) * powf(1.1f, 2.0f),
+        tanf(0.3f),
+        asinf(0.9673022627830505),
+        acosf(0.9673022627830505),
+        atanf(0.9673022627830505) * powf(1.1f, 2.0f),
+        atan2f(0.4f, 1.3f),
+        sinhf(0.2f),
+        coshf(0.4f) * tanhf(0.5f),
+        sqrtf(55788.84375),
+        expf(0.1f) * log10f(2.3f),
+        logf(1.4f));
 
-        Matrix3D::Multiply(matrix, factors_matrix, &matrix);
-        matrix.Get_Inverse(matrix);
+    Matrix3D::Multiply(matrix, factors_matrix, &matrix);
+    matrix.Get_Inverse(matrix);
 
-        xfer.xferMatrix3D(&matrix);
-    }
+    xfer.xferMatrix3D(&matrix);
 }
 
 UnsignedInt SimulationMatrixCrc::calculate()
@@ -64,8 +62,7 @@ UnsignedInt SimulationMatrixCrc::calculate()
     xfer.open("SimulationMatrixCrc");
 
     _fpreset();
-    constexpr UnsignedInt kFpControl = 0x000A001F;
-    _controlfp(kFpControl, _MCW_RC | _MCW_PC | _MCW_EM);
+    _controlfp(0x000A001F, _MCW_RC | _MCW_PC | _MCW_EM);
 
     append_matrix_crc(xfer);
 
@@ -77,6 +74,5 @@ UnsignedInt SimulationMatrixCrc::calculate()
 }
 
 void SimulationMatrixCrc::print() {
-    UnsignedInt crc = calculate();
-    printf("Simulation CRC: %08X\n", crc);
+    printf("Simulation CRC: %08X\n", calculate());
 }
