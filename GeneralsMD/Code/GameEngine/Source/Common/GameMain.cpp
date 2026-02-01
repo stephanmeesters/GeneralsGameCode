@@ -30,6 +30,7 @@
 
 #include "Common/FramePacer.h"
 #include "Common/GameEngine.h"
+#include "Common/GameState.h"
 #include "Common/ReplaySimulation.h"
 
 
@@ -45,7 +46,15 @@ Int GameMain()
 	TheGameEngine = CreateGameEngine();
 	TheGameEngine->init();
 
-	if (!TheGlobalData->m_simulateReplays.empty())
+	const bool hasSaveGame = TheGlobalData->m_initialSaveGame.isNotEmpty();
+	const bool hasReplays = !TheGlobalData->m_simulateReplays.empty();
+
+	if (hasSaveGame && hasReplays)
+	{
+		printf("Cannot combine -savegame with -replay.\n");
+		exitcode = 1;
+	}
+	else if (hasReplays)
 	{
 		exitcode = ReplaySimulation::simulateReplays(TheGlobalData->m_simulateReplays, TheGlobalData->m_simulateReplayJobs);
 	}

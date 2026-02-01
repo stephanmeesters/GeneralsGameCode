@@ -468,7 +468,7 @@ void Shell::showShell( Bool runInit )
 {
 	DEBUG_LOG(("Shell:showShell() - %s (%s)", TheGlobalData->m_initialFile.str(), (top())?top()->getFilename().str():"no top screen"));
 
-	if(!TheGlobalData->m_initialFile.isEmpty() || !TheGlobalData->m_simulateReplays.empty())
+	if(!TheGlobalData->m_initialFile.isEmpty() || !TheGlobalData->m_initialSaveGame.isEmpty() || !TheGlobalData->m_simulateReplays.empty())
 	{
 		return;
 	}
@@ -530,7 +530,7 @@ void Shell::showShell( Bool runInit )
 void Shell::showShellMap(Bool useShellMap )
 {
 	// we don't want any of this to show if we're loading straight into a file
-	if (TheGlobalData->m_initialFile.isNotEmpty() || !TheGameLogic || !TheGlobalData->m_simulateReplays.empty())
+	if (TheGlobalData->m_initialFile.isNotEmpty() || TheGlobalData->m_initialSaveGame.isNotEmpty() || !TheGameLogic || !TheGlobalData->m_simulateReplays.empty())
 		return;
 	if(useShellMap && TheGlobalData->m_shellMapOn)
 	{

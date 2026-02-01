@@ -443,6 +443,45 @@ Int parseReplay(char *args[], int num)
 	return 1;
 }
 
+Int parseSaveGame(char *args[], int num)
+{
+	if (num > 1)
+	{
+		AsciiString saveName = args[1];
+		if (!saveName.endsWithNoCase(".sav"))
+		{
+			saveName.concat(".sav");
+		}
+
+		if (strchr(saveName.str(), ':') || saveName.startsWith("/") || saveName.startsWith("\\"))
+		{
+			printf("Invalid save game name \"%s\" (must be relative to the Save directory)\n", saveName.str());
+			exit(1);
+		}
+
+		AsciiString savePath = TheGlobalData->getPath_UserData();
+		savePath.concat("Save\\");
+		savePath.concat(saveName);
+
+		struct _stat statBuf;
+		if (_stat(savePath.str(), &statBuf) != 0 || !(statBuf.st_mode & _S_IFREG))
+		{
+			printf("Save game not found \"%s\"\n", savePath.str());
+			exit(1);
+		}
+
+		TheWritableGlobalData->m_initialSaveGame = saveName;
+
+		TheWritableGlobalData->m_playIntro = FALSE;
+		TheWritableGlobalData->m_afterIntro = TRUE;
+		TheWritableGlobalData->m_playSizzle = FALSE;
+		TheWritableGlobalData->m_shellMapOn = FALSE;
+
+		return 2;
+	}
+	return 1;
+}
+
 Int parseJobs(char *args[], int num)
 {
 	if (num > 1)
@@ -1157,6 +1196,10 @@ static CommandLineParam paramsForStartup[] =
 	// You can pass this multiple times to play back multiple replays.
 	// You can also include wildcards. The file must be in the replay folder or in a subfolder.
 	{ "-replay", parseReplay },
+
+	// TheSuperHackers @feature 01/02/2026
+	// Load a save game from the Save directory and start immediately. Pass the filename including .sav afterwards.
+	{ "-savegame", parseSaveGame },
 
 	// TheSuperHackers @feature helmutbuhler 23/05/2025
 	// Simulate each replay in a separate process and use 1..N processes at the same time.

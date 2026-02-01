@@ -71,6 +71,9 @@
 #include "Common/Registry.h"
 #include "Common/GameCommon.h"	// FOR THE ALLOW_DEBUG_CHEATS_IN_RELEASE #define
 
+#include "GameClient/GameWindowTransitions.h"
+#include "GameClient/Shell.h"
+
 #include "GameLogic/Armor.h"
 #include "GameLogic/AI.h"
 #include "GameLogic/CaveSystem.h"
@@ -879,6 +882,52 @@ void GameEngine::update( void )
 {
 	USE_PERF_TIMER(GameEngine_update)
 	{
+		static Bool pendingStartupSaveGame = TRUE;
+		if (pendingStartupSaveGame && TheGlobalData->m_initialSaveGame.isNotEmpty() && !TheGameLogic->isInGame())
+		{
+			pendingStartupSaveGame = FALSE;
+
+			TheWritableGlobalData->m_playIntro = FALSE;
+			TheWritableGlobalData->m_playSizzle = FALSE;
+			TheWritableGlobalData->m_afterIntro = FALSE;
+
+			AvailableGameInfo gameInfo;
+			gameInfo.filename = TheGlobalData->m_initialSaveGame;
+			gameInfo.next = nullptr;
+			gameInfo.prev = nullptr;
+
+			AsciiString fullPath = TheGameState->getFilePathInSaveDirectory(gameInfo.filename);
+			try
+			{
+				TheGameState->getSaveGameInfoFromFile(fullPath, &gameInfo.saveGameInfo);
+			}
+			catch (...)
+			{
+				printf("Failed to read save game \"%s\".\n", fullPath.str());
+				setQuitting(TRUE);
+				return;
+			}
+
+			if (TheShell && TheShell->isShellActive())
+			{
+				if (TheTransitionHandler)
+				{
+					TheTransitionHandler->remove("MainMenuLoadReplayMenu");
+					TheTransitionHandler->remove("MainMenuLoadReplayMenuBack");
+				}
+				TheGameLogic->prepareNewGame(GAME_SINGLE_PLAYER, DIFFICULTY_NORMAL, 0);
+			}
+
+			if (TheGameState->loadGame(gameInfo) != SC_OK)
+			{
+				printf("Failed to load save game \"%s\".\n", fullPath.str());
+				setQuitting(TRUE);
+				return;
+			}
+
+			return;
+		}
+
 		{
 			// VERIFY CRC needs to be in this code block.  Please to not pull TheGameLogic->update() inside this block.
 			VERIFY_CRC

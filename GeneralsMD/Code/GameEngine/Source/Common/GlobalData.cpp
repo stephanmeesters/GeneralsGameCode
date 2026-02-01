@@ -980,6 +980,7 @@ GlobalData::GlobalData()
 
 	m_buildMapCache = FALSE;
 	m_initialFile.clear();
+	m_initialSaveGame.clear();
 	m_pendingFile.clear();
 
 	m_simulateReplays.clear();
