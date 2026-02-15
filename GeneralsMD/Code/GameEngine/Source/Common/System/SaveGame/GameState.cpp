@@ -1206,17 +1206,21 @@ void GameState::populateSaveGameListbox( GameWindow *listbox, SaveLoadLayoutType
 		// setup time buffer for local region time format
 		UnicodeString displayTimeBuffer = getUnicodeTimeBuffer(systemTime);
 
-		// description string
-		UnicodeString displayLabel = saveGameInfo->description;
-		if( displayLabel.isEmpty() == TRUE )
-		{
-			Bool exists = FALSE;
+			// description string
+			UnicodeString displayLabel = saveGameInfo->description;
+			if( displayLabel.isEmpty() == TRUE )
+			{
+				Bool exists = FALSE;
 
-			displayLabel = TheGameText->fetch( saveGameInfo->mapLabel, &exists );
-			if( exists == FALSE )
-				displayLabel.format( L"%S", saveGameInfo->mapLabel.str() );
+				displayLabel = TheGameText->fetch( saveGameInfo->mapLabel, &exists );
+				if( exists == FALSE )
+					displayLabel.format( L"%S", saveGameInfo->mapLabel.str() );
 
-		}
+			}
+
+			UnicodeString displayLabelWithFilename;
+			displayLabelWithFilename.format( L"%ls (%S)", displayLabel.str(), info->filename.str() );
+			displayLabel = displayLabelWithFilename;
 
 		// pick color for text (we alternate it each game)
 		Color color;
@@ -1290,18 +1294,18 @@ void GameState::iterateSaveFiles( IterateSaveFileCallback callback, void *userDa
 		{
 
 			// see if there is a ".sav" at end of this filename
-			Char *c = strrchr( item.cFileName, '.' );
-			if( c && stricmp( c, ".sav" ) == 0 )
-			{
+				Char *c = strrchr( item.cFileName, '.' );
+				if( c && stricmp( c, ".sav" ) == 0 )
+				{
 
 				// construction asciistring filename
 				AsciiString filename;
 				filename.set( item.cFileName );
 
-				// call the callback
-				callback( filename, userData );
+					// call the callback
+					callback( filename, userData );
 
-			}
+				}
 
 		}
 
