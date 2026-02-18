@@ -810,7 +810,7 @@ void MetaMap::generateMetaMap()
 		MetaMapRec *map = getMetaMapRec(GameMessage::MSG_META_INCREASE_MAX_RENDER_FPS);
 		if (map->m_key == MK_NONE)
 		{
-			map->m_key = MK_KPPLUS;
+			map->m_key = MK_EQUAL;
 			map->m_transition = DOWN;
 			map->m_modState = CTRL;
 			map->m_usableIn = COMMANDUSABLE_EVERYWHERE;
@@ -821,7 +821,7 @@ void MetaMap::generateMetaMap()
 		MetaMapRec *map = getMetaMapRec(GameMessage::MSG_META_DECREASE_MAX_RENDER_FPS);
 		if (map->m_key == MK_NONE)
 		{
-			map->m_key = MK_KPMINUS;
+			map->m_key = MK_MINUS;
 			map->m_transition = DOWN;
 			map->m_modState = CTRL;
 			map->m_usableIn = COMMANDUSABLE_EVERYWHERE;
@@ -832,7 +832,7 @@ void MetaMap::generateMetaMap()
 		MetaMapRec *map = getMetaMapRec(GameMessage::MSG_META_INCREASE_LOGIC_TIME_SCALE);
 		if (map->m_key == MK_NONE)
 		{
-			map->m_key = MK_KPPLUS;
+			map->m_key = MK_EQUAL;
 			map->m_transition = DOWN;
 			map->m_modState = SHIFT_CTRL;
 			map->m_usableIn = COMMANDUSABLE_EVERYWHERE;
@@ -843,7 +843,7 @@ void MetaMap::generateMetaMap()
 		MetaMapRec *map = getMetaMapRec(GameMessage::MSG_META_DECREASE_LOGIC_TIME_SCALE);
 		if (map->m_key == MK_NONE)
 		{
-			map->m_key = MK_KPMINUS;
+			map->m_key = MK_MINUS;
 			map->m_transition = DOWN;
 			map->m_modState = SHIFT_CTRL;
 			map->m_usableIn = COMMANDUSABLE_EVERYWHERE;
