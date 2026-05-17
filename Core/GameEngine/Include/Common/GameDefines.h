@@ -23,8 +23,20 @@
 // Note: Retail compatibility must not be broken before this project officially does.
 // Use RETAIL_COMPATIBLE_CRC and RETAIL_COMPATIBLE_XFER_SAVE to guard breaking changes.
 
+#ifndef RETAIL_COMPATIBLE_CRC
+#define RETAIL_COMPATIBLE_CRC (1) // Game is expected to be CRC compatible with retail Generals 1.08, Zero Hour 1.04
+#endif
+
+#ifndef RETAIL_COMPATIBLE_XFER_SAVE
+#define RETAIL_COMPATIBLE_XFER_SAVE (1) // Game is expected to be Xfer Save compatible with retail Generals 1.08, Zero Hour 1.04
+#endif
+
+#if RETAIL_COMPATIBLE_CRC || !defined(PRESERVE_RETAIL_BEHAVIOR)
+#define PRESERVE_RETAIL_BEHAVIOR (1) // Retain specific behavior present in retail Generals 1.08 and Zero Hour 1.04. Should only be used in this file.
+#endif
+
 #ifndef PRESERVE_BUILDING_RESUMPTION_DELAY
-#define PRESERVE_BUILDING_RESUMPTION_DELAY (0) // The fix for this unfavorable behavior was approved by the Game Design Committee.
+#define PRESERVE_BUILDING_RESUMPTION_DELAY PRESERVE_RETAIL_BEHAVIOR // The fix for this unfavorable behavior was approved by the Game Design Committee.
 #endif
 
 #ifndef PRESERVE_CHINOOK_PASSENGER_DUMPING
@@ -36,11 +48,11 @@
 #endif
 
 #ifndef PRESERVE_MULTI_CRATE_PICKUP
-#define PRESERVE_MULTI_CRATE_PICKUP (0) // The fix for this unfavorable behavior was approved by the Game Design Committee.
+#define PRESERVE_MULTI_CRATE_PICKUP PRESERVE_RETAIL_BEHAVIOR // The fix for this unfavorable behavior was approved by the Game Design Committee.
 #endif
 
 #ifndef PRESERVE_NO_XP_FROM_FLAME_KILLS
-#define PRESERVE_NO_XP_FROM_FLAME_KILLS (0) // The fix for this unfavorable behavior was approved by the Game Design Committee.
+#define PRESERVE_NO_XP_FROM_FLAME_KILLS PRESERVE_RETAIL_BEHAVIOR // The fix for this unfavorable behavior was approved by the Game Design Committee.
 #endif
 
 #ifndef PRESERVE_NO_XP_FROM_OCL_KILLS
@@ -68,7 +80,7 @@
 #endif
 
 #ifndef PRESERVE_STRUCTURE_STEALTH_DURING_REPAIR
-#define PRESERVE_STRUCTURE_STEALTH_DURING_REPAIR (0) // The fix for this unfavorable behavior was approved by the Game Design Committee.
+#define PRESERVE_STRUCTURE_STEALTH_DURING_REPAIR PRESERVE_RETAIL_BEHAVIOR // The fix for this unfavorable behavior was approved by the Game Design Committee.
 #endif
 
 #ifndef PRESERVE_TUNNEL_HEAL_STACKING
@@ -76,19 +88,11 @@
 #endif
 
 #ifndef PRESERVE_UNRELIABLE_FIRESTORMS
-#define PRESERVE_UNRELIABLE_FIRESTORMS (0) // The fix for this unfavorable behavior was approved by the Game Design Committee.
+#define PRESERVE_UNRELIABLE_FIRESTORMS PRESERVE_RETAIL_BEHAVIOR // The fix for this unfavorable behavior was approved by the Game Design Committee.
 #endif
 
 #ifndef PRESERVE_RETAIL_SCRIPTED_CAMERA
 #define PRESERVE_RETAIL_SCRIPTED_CAMERA (1) // Retain scripted camera behavior present in retail Generals 1.08 and Zero Hour 1.04
-#endif
-
-#ifndef RETAIL_COMPATIBLE_CRC
-#define RETAIL_COMPATIBLE_CRC (1) // Game is expected to be CRC compatible with retail Generals 1.08, Zero Hour 1.04
-#endif
-
-#ifndef RETAIL_COMPATIBLE_XFER_SAVE
-#define RETAIL_COMPATIBLE_XFER_SAVE (1) // Game is expected to be Xfer Save compatible with retail Generals 1.08, Zero Hour 1.04
 #endif
 
 // This is here to easily toggle between the retail compatible with fixed pathfinding fallback and pure fixed pathfinding mode
@@ -123,7 +127,7 @@
 #endif
 
 #ifndef ALLOW_MONEY_PER_MINUTE_FOR_PLAYER
-#define ALLOW_MONEY_PER_MINUTE_FOR_PLAYER (0) // When enabled, a money-per-minute stat is calculated and displayed in-game
+#define ALLOW_MONEY_PER_MINUTE_FOR_PLAYER PRESERVE_RETAIL_BEHAVIOR // When enabled, a money-per-minute stat is calculated and displayed in-game
 #endif
 
 // Previously the configurable shroud sat behind #if defined(RTS_DEBUG)
