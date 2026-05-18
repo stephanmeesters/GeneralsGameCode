@@ -253,7 +253,7 @@ void TransitionDamageFX::onDelete()
 /** Given an FXLoc info struct, return the effect position that we are supposed to use.
 	* The position is local to to the object */
 //-------------------------------------------------------------------------------------------------
-static Coord3D getLocalEffectPos( const FXLocInfo *locInfo, Drawable *draw )
+static Coord3D getLocalEffectPos( const FXLocInfo *locInfo, Drawable *draw, Bool useGameLogicRandom = TRUE)
 {
 
 	DEBUG_ASSERTCRASH( locInfo, ("getLocalEffectPos: locInfo is null") );
@@ -290,7 +290,7 @@ static Coord3D getLocalEffectPos( const FXLocInfo *locInfo, Drawable *draw )
 				return locInfo->loc;
 
 			// pick one of the bone positions
-			Int pick = GameLogicRandomValue( 0, boneCount - 1 );
+			Int pick = useGameLogicRandom ? GameLogicRandomValue( 0, boneCount - 1 ) : GameClientRandomValue( 0, boneCount - 1 );
 			return positions[ pick ];
 
 		}
@@ -387,14 +387,12 @@ void TransitionDamageFX::onBodyDamageStateChange( const DamageInfo* damageInfo,
 				if( lastDamageInfo == nullptr ||
 						getDamageTypeFlag( modData->m_damageParticleTypes, lastDamageInfo->in.m_damageType ) )
 				{
-
 					// create a new particle system based on the template provided
 					ParticleSystem* pSystem = TheParticleSystemManager->createParticleSystem( pSystemT );
 					if( pSystem )
 					{
-
 						// get the what is the position we're going to played the effect at
-						pos = getLocalEffectPos( &modData->m_particleSystem[ newState ][ i ].locInfo, draw );
+						pos = getLocalEffectPos( &modData->m_particleSystem[ newState ][ i ].locInfo, draw, FALSE);
 
 						//
 						// set position on system given any bone position provided, the bone position is
@@ -409,12 +407,24 @@ void TransitionDamageFX::onBodyDamageStateChange( const DamageInfo* damageInfo,
 
 						// save the id of this particle system so we can remove it later if it still exists
 						m_particleSystemID[ newState ][ i ] = pSystem->getSystemID();
-
 					}
-
 				}
 
 			}
+
+#ifdef RETAIL_COMPATIBLE_CRC
+			// TheSuperHackers @fix stephanmeesters 18/05/2026 Fix issue where the creation of a certain particle system
+			// would influence game logic CRC due to the incorrect usage of game logic RNG. This code block is required to
+			// forward the game logic RNG and keep things consistent.
+			if(pSystemT) // todo: add || TheParticleSystemManager->isDummy()
+			{
+				if( lastDamageInfo == nullptr ||
+					getDamageTypeFlag( modData->m_damageParticleTypes, lastDamageInfo->in.m_damageType ) )
+				{
+					static_cast<void>(getLocalEffectPos(&modData->m_particleSystem[newState][i].locInfo, draw));
+				}
+			}
+#endif
 
 		}
 

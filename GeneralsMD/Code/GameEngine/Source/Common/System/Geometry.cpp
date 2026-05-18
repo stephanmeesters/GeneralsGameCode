@@ -376,7 +376,7 @@ Bool GeometryInfo::isPointInFootprint(const Coord3D& geomCenter, const Coord3D& 
 }
 
 //=============================================================================
-void GeometryInfo::makeRandomOffsetWithinFootprint(Coord3D& pt) const
+void GeometryInfo::makeGameLogicRandomOffsetWithinFootprint(Coord3D& pt) const
 {
 	switch(m_type)
 	{
@@ -416,14 +416,54 @@ void GeometryInfo::makeRandomOffsetWithinFootprint(Coord3D& pt) const
 }
 
 //=============================================================================
-void GeometryInfo::makeRandomOffsetOnPerimeter(Coord3D& pt) const
+void GeometryInfo::makeGameClientRandomOffsetWithinFootprint(Coord3D& pt) const
 {
 	switch(m_type)
 	{
 		case GEOMETRY_SPHERE:
 		case GEOMETRY_CYLINDER:
 		{
-			DEBUG_CRASH( ("GeometryInfo::makeRandomOffsetOnPerimeter() not implemented for SPHERE or CYLINDER extents. Using position.") );
+#if 1
+			// this is a better technique than the more obvious radius-and-angle
+			// one, below, because the latter tends to clump more towards the center.
+			Real maxDistSqr = sqr(m_majorRadius);
+			Real distSqr;
+			do
+			{
+				pt.x = GameClientRandomValueReal(-m_majorRadius, m_majorRadius);
+				pt.y = GameClientRandomValueReal(-m_majorRadius, m_majorRadius);
+				pt.z = 0.0f;
+				distSqr = sqr(pt.x) + sqr(pt.y);
+			} while (distSqr > maxDistSqr);
+#else
+			Real radius = GameClientRandomValueReal(0.0f, m_boundingCircleRadius);
+			Real angle = GameClientRandomValueReal(-PI, PI);
+			pt.x = radius * Cos(angle);
+			pt.y = radius * Sin(angle);
+			pt.z = 0.0f;
+#endif
+			break;
+		}
+
+		case GEOMETRY_BOX:
+		{
+			pt.x = GameClientRandomValueReal(-m_majorRadius, m_majorRadius);
+			pt.y = GameClientRandomValueReal(-m_minorRadius, m_minorRadius);
+			pt.z = 0.0f;
+			break;
+		}
+	};
+}
+
+//=============================================================================
+void GeometryInfo::makeGameLogicRandomOffsetOnPerimeter(Coord3D& pt) const
+{
+	switch(m_type)
+	{
+		case GEOMETRY_SPHERE:
+		case GEOMETRY_CYLINDER:
+		{
+			DEBUG_CRASH( ("GeometryInfo::makeGameLogicRandomOffsetOnPerimeter() not implemented for SPHERE or CYLINDER extents. Using position.") );
 
 			//Kris: Did not have time nor need to support non-box extents. I added this feature for script placement
 			//      of boobytraps.
@@ -452,6 +492,53 @@ void GeometryInfo::makeRandomOffsetOnPerimeter(Coord3D& pt) const
 
 				//Min or max the x axis value
 				if( GameLogicRandomValueReal( 0.0f, 1.0f ) < 0.5f )
+					pt.x = -m_majorRadius;
+				else
+					pt.x = m_majorRadius;
+			}
+			pt.z = 0.0f;
+			break;
+		}
+	};
+}
+
+//=============================================================================
+void GeometryInfo::makeGameClientRandomOffsetOnPerimeter(Coord3D& pt) const
+{
+	switch(m_type)
+	{
+		case GEOMETRY_SPHERE:
+		case GEOMETRY_CYLINDER:
+		{
+			DEBUG_CRASH( ("GeometryInfo::makeGameClientRandomOffsetOnPerimeter() not implemented for SPHERE or CYLINDER extents. Using position.") );
+
+			//Kris: Did not have time nor need to support non-box extents. I added this feature for script placement
+			//      of boobytraps.
+			pt.x = 0.0f;
+			pt.y = 0.0f;
+			break;
+		}
+
+		case GEOMETRY_BOX:
+		{
+			if( GameClientRandomValueReal( 0.0f, 1.0f ) < 0.5f )
+			{
+				//Pick random point on x axis.
+				pt.x = GameClientRandomValueReal(-m_majorRadius, m_majorRadius);
+
+				//Min or max the y axis value
+				if( GameClientRandomValueReal( 0.0f, 1.0f ) < 0.5f )
+					pt.y = -m_minorRadius;
+				else
+					pt.y = m_minorRadius;
+			}
+			else
+			{
+				//Pick random point on y axis.
+				pt.y = GameClientRandomValueReal(-m_minorRadius, m_minorRadius);
+
+				//Min or max the x axis value
+				if( GameClientRandomValueReal( 0.0f, 1.0f ) < 0.5f )
 					pt.x = -m_majorRadius;
 				else
 					pt.x = m_majorRadius;
