@@ -5,5 +5,7 @@
       "zlib",
       "ffmpeg",
       "stb"
+      "sdl3",
+      "sdl3-image"
     ]
   }
