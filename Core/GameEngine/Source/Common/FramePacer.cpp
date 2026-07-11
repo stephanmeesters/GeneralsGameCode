@@ -35,11 +35,14 @@ FramePacer::FramePacer()
 	// Set the time slice size to 1 ms.
 	timeBeginPeriod(1);
 
-	m_maxFPS = BaseFps;
+	// Use the high-refresh default before GlobalData has been loaded. This is
+	// also the startup default applied by GameEngine::init().
+	m_maxFPS = 120;
 	m_logicTimeScaleFPS = LOGICFRAMES_PER_SECOND;
-	m_updateTime = 1.0f / (Real)BaseFps; // initialized to something to avoid division by zero on first use
+	m_updateTime = 1.0f / (Real)120; // initialized to something to avoid division by zero on first use
 	m_enableFpsLimit = FALSE;
-	m_enableLogicTimeScale = FALSE;
+	// Decouple the historic 30 Hz simulation from the higher render rate.
+	m_enableLogicTimeScale = TRUE;
 	m_isTimeFrozen = FALSE;
 	m_isGameHalted = FALSE;
 }

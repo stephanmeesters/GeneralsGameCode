@@ -632,9 +632,9 @@ GlobalData::GlobalData()
 	m_useTreeSway = TRUE;
 	m_useDrawModuleLOD = FALSE;
 	m_useHeatEffects = TRUE;
-	m_useFpsLimit = FALSE;
+	m_useFpsLimit = TRUE;
 	m_dumpAssetUsage = FALSE;
-	m_framesPerSecondLimit = 0;
+	m_framesPerSecondLimit = 120;
 	m_chipSetType = 0;
 	m_headless = FALSE;
 	m_windowed = 0;

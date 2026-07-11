@@ -391,13 +391,17 @@ void GameEngine::init()
 		DEBUG_ASSERTCRASH(TheWritableGlobalData,("TheWritableGlobalData expected to be created"));
 		initSubsystem(TheWritableGlobalData, "TheWritableGlobalData", TheWritableGlobalData, &xferCRC, "Data\\INI\\Default\\GameData", "Data\\INI\\GameData");
 		TheWritableGlobalData->parseCustomDefinition();
-
-
-
 	#if defined(RTS_DEBUG)
 		// If we're in Debug, load the Debug settings as well.
 		ini.loadFileDirectory( "Data\\INI\\GameDataDebug", INI_LOAD_OVERWRITE, nullptr );
 	#endif
+
+		// The shipped GameData sets the historic render limit of 30 FPS. Promote
+		// that legacy default before command-line overrides are parsed below.
+		if (TheWritableGlobalData->m_framesPerSecondLimit == BaseFps)
+		{
+			TheWritableGlobalData->m_framesPerSecondLimit = 120;
+		}
 
 		// special-case: parse command-line parameters after loading global data
 		CommandLine::parseCommandLineForEngineInit();

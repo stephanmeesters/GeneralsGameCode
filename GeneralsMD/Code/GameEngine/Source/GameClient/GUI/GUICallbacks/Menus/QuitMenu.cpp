@@ -196,7 +196,9 @@ static void restartMissionMenu()
 
 	Int rankPointsStartedWith = TheGameLogic->getRankPointsToAddAtGameStart();// must write down before reset
 	GameDifficulty diff = TheScriptEngine->getGlobalDifficulty();
-	Int fps = TheFramePacer->getFramesPerSecondLimit();
+	Int fps = TheFramePacer->isLogicTimeScaleEnabled()
+		? TheFramePacer->getLogicTimeScaleFps()
+		: TheFramePacer->getFramesPerSecondLimit();
 
 	TheGameLogic->clearGameData(FALSE);
 	TheGameEngine->setQuitting(FALSE);
