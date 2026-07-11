@@ -59,10 +59,19 @@
 #include "GameLogic/GameLogic.h"  ///< @todo for demo, remove
 #include "GameClient/Mouse.h"
 #include "GameClient/IMEManager.h"
-#include "Win32Device/GameClient/Win32Mouse.h"
-#include "Win32Device/Common/Win32GameEngine.h"
 #include "Common/version.h"
 #include "BuildVersion.h"
+
+#if RTS_SDL3_ENABLE
+#include <SDL3/SDL.h>
+#include "SDL3Device/Common/SDL3GameEngine.h"
+#include "GameClient/Keyboard.h"
+SDL_Window* TheSDL3Window = nullptr;
+#else
+#include "Win32Device/Common/Win32GameEngine.h"
+#include "Win32Device/GameClient/Win32Mouse.h"
+#endif
+
 #include "GeneratedVersion.h"
 #include "resource.h"
 #ifdef RTS_ENABLE_CRASHDUMP
@@ -85,6 +94,9 @@ static Bool gDoPaint = true;
 static Bool isWinMainActive = false;
 
 static HBITMAP gLoadScreenBitmap = nullptr;
+#if RTS_SDL3_ENABLE
+static SDL_Surface* gLoadScreenSurface = nullptr;
+#endif
 
 //#define DEBUG_WINDOWS_MESSAGES
 
@@ -844,6 +856,9 @@ Int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,
  		// [SKB: Jun 24 2003 @ 1:50pm] :
 		// Force to be loaded from a file, not a resource so same exe can be used in germany and retail.
  		gLoadScreenBitmap = (HBITMAP)LoadImage(hInstance, "Install_Final.bmp",	IMAGE_BITMAP, 0, 0, LR_SHARED|LR_LOADFROMFILE);
+#if RTS_SDL3_ENABLE
+		gLoadScreenSurface = SDL_LoadBMP("Install_Final.bmp");
+#endif
 
 		CommandLine::parseCommandLineForStartup();
 
@@ -852,18 +867,74 @@ Int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,
 		MiniDumper::initMiniDumper(TheGlobalData->getPath_UserData());
 #endif
 		// register windows class and create application window
+#if RTS_SDL3_ENABLE
+		if (!TheGlobalData->m_headless)
+		{
+			if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD))
+			{
+				DEBUG_LOG(("SDL_Init failed: %s", SDL_GetError()));
+				return exitcode;
+			}
+
+			Uint32 flags = SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE;
+			if (!TheGlobalData->m_windowed) flags |= SDL_WINDOW_FULLSCREEN;
+
+			TheSDL3Window = SDL_CreateWindow("Command & Conquer Generals", 800, 600, flags);
+			if (!TheSDL3Window)
+			{
+				DEBUG_LOG(("SDL_CreateWindow failed: %s", SDL_GetError()));
+				return exitcode;
+			}
+
+			SDL_PropertiesID props = SDL_GetWindowProperties(TheSDL3Window);
+			ApplicationHWnd = (HWND)SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+
+			Int startWidth = TheGlobalData->m_xResolution;
+			Int startHeight = TheGlobalData->m_yResolution;
+			if (startWidth > 0 && startHeight > 0)
+			{
+				SDL_SetWindowSize(TheSDL3Window, startWidth, startHeight);
+			}
+
+			SDL_ShowWindow(TheSDL3Window);
+			isWinMainActive = true;
+
+			if (gLoadScreenSurface != nullptr)
+			{
+				SDL_Surface* screen = SDL_GetWindowSurface(TheSDL3Window);
+				if (screen)
+				{
+					SDL_ClearSurface(screen, 0.0f, 0.0f, 0.0f, 1.0f);
+					float bitmapAspect = 800.0f / 600.0f;
+					int drawWidth = (float)screen->w / screen->h > bitmapAspect ? (int)(screen->h * bitmapAspect) : screen->w;
+					int drawHeight = (float)screen->w / screen->h > bitmapAspect ? screen->h : (int)(screen->w / bitmapAspect);
+					SDL_Rect destRect = { (screen->w - drawWidth) / 2, (screen->h - drawHeight) / 2, drawWidth, drawHeight };
+					SDL_BlitSurfaceScaled(gLoadScreenSurface, NULL, screen, &destRect, SDL_SCALEMODE_LINEAR);
+					SDL_UpdateWindowSurface(TheSDL3Window);
+				}
+			}
+		}
+#else
 		if(!TheGlobalData->m_headless && initializeAppWindows(hInstance, nCmdShow, TheGlobalData->m_windowed) == false)
 		{
 			return exitcode;
 		}
+#endif
 
 		// save our application instance for future use
 		ApplicationHInstance = hInstance;
 
-		if (gLoadScreenBitmap!=nullptr) {
+#if RTS_SDL3_ENABLE
+		if (gLoadScreenSurface != nullptr) {
+			SDL_DestroySurface(gLoadScreenSurface);
+			gLoadScreenSurface = nullptr;
+		}
+#else
+		if (gLoadScreenBitmap != nullptr) {
 			::DeleteObject(gLoadScreenBitmap);
 			gLoadScreenBitmap = nullptr;
 		}
+#endif
 
 
 		// BGC - initialize COM
@@ -937,6 +1008,11 @@ Int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,
 //=============================================================================
 GameEngine *CreateGameEngine()
 {
+#if RTS_SDL3_ENABLE
+	SDL3GameEngine *engine = NEW SDL3GameEngine;
+	engine->setIsActive(isWinMainActive);
+	return engine;
+#else
 	Win32GameEngine *engine;
 
 	engine = NEW Win32GameEngine;
@@ -945,5 +1021,5 @@ GameEngine *CreateGameEngine()
 	engine->setIsActive(isWinMainActive);
 
 	return engine;
-
+#endif
 }

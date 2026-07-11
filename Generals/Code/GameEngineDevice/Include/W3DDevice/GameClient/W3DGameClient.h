@@ -46,14 +46,18 @@
 #include "W3DDevice/GameClient/W3DGameFont.h"
 #include "W3DDevice/GameClient/W3DDisplayStringManager.h"
 #include "VideoDevice/Bink/BinkVideoPlayer.h"
+#if RTS_SDL3_ENABLE
+#include "SDL3Device/GameClient/SDL3Input.h"
+extern SDL_Window* TheSDL3Window;
+#else
+#include "W3DDevice/GameClient/W3DMouse.h"
 #include "Win32Device/GameClient/Win32DIKeyboard.h"
 #include "Win32Device/GameClient/Win32DIMouse.h"
 #include "Win32Device/GameClient/Win32Mouse.h"
-#include "W3DDevice/GameClient/W3DMouse.h"
+extern Win32Mouse *TheWin32Mouse;
+#endif
 
 class ThingTemplate;
-
-extern Win32Mouse *TheWin32Mouse;
 
 ///////////////////////////////////////////////////////////////////////////////
 // PROTOTYPES /////////////////////////////////////////////////////////////////
@@ -115,11 +119,22 @@ protected:
 
 };
 
-inline Keyboard *W3DGameClient::createKeyboard() { return NEW DirectInputKeyboard; }
+inline Keyboard *W3DGameClient::createKeyboard()
+{
+#if RTS_SDL3_ENABLE
+	return NEW SDL3Keyboard;
+#else
+	return NEW DirectInputKeyboard;
+#endif
+}
 inline Mouse *W3DGameClient::createMouse()
 {
+#if RTS_SDL3_ENABLE
+	return NEW SDL3Mouse(TheSDL3Window);
+#else
 	//return new DirectInputMouse;
 	Win32Mouse * mouse = NEW W3DMouse;
 	TheWin32Mouse = mouse;   ///< global cheat for the WndProc()
 	return mouse;
+#endif
 }
