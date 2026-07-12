@@ -677,6 +677,10 @@ SDL3InputManager::SDL3InputManager(SDL_Window* window)
 	, m_gamepad(nullptr)
 	, m_precisionMode(FALSE)
 	, m_lastUpdateTime(0)
+	, m_cursorVelocityX(0.0f)
+	, m_cursorVelocityY(0.0f)
+	, m_cursorRemainderX(0.0f)
+	, m_cursorRemainderY(0.0f)
 	, m_isQuitting(FALSE)
 {
 	memset(m_mouseEvents, 0, sizeof(m_mouseEvents));
@@ -839,6 +843,10 @@ void SDL3InputManager::closeGamepad()
 		SDL_CloseGamepad(m_gamepad);
 		m_gamepad = nullptr;
 	}
+	m_cursorVelocityX = 0.0f;
+	m_cursorVelocityY = 0.0f;
+	m_cursorRemainderX = 0.0f;
+	m_cursorRemainderY = 0.0f;
 }
 
 void SDL3InputManager::virtualPulseKey(SDL_Scancode scancode, bool down)
@@ -898,9 +906,20 @@ void SDL3InputManager::processGamepadInput()
 	Uint64 now = SDL_GetTicks();
 	float deltaTime = (now - m_lastUpdateTime) / 1000.0f;
 	m_lastUpdateTime = now;
+	// Do not turn a debugger pause or window stall into a large cursor jump.
+	if (deltaTime > 0.1f)
+		deltaTime = 0.1f;
 
 	const float DEADZONE = DEFAULT_DEADZONE;
-	const float CURSOR_SPEED = DEFAULT_CURSOR_SPEED;
+	float resolutionScale = 1.0f;
+	int windowWidth = 0;
+	int windowHeight = 0;
+	if (m_window && SDL_GetWindowSizeInPixels(m_window, &windowWidth, &windowHeight) && windowHeight > 0)
+		resolutionScale = windowHeight / DESIGNED_WINDOW_HEIGHT;
+
+	const float CURSOR_SPEED = DEFAULT_CURSOR_SPEED * resolutionScale;
+	const float CURSOR_ACCELERATION = DEFAULT_CURSOR_ACCELERATION * resolutionScale;
+	const float CURSOR_DECELERATION = DEFAULT_CURSOR_DECELERATION * resolutionScale;
 
 	// 1. TRIGGERS (Modifiers & Precision)
 	bool ltPressed = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) > TRIGGER_THRESHOLD;
@@ -920,23 +939,61 @@ void SDL3InputManager::processGamepadInput()
 	// 2. STICKS (Movement & Panning)
 	float lx = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_LEFTX) / AXIS_MAX;
 	float ly = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_LEFTY) / AXIS_MAX;
+	float stickMagnitude = sqrtf(lx * lx + ly * ly);
+	if (stickMagnitude > 1.0f)
+		stickMagnitude = 1.0f;
 
-	if (SDL_fabsf(lx) > DEADZONE || SDL_fabsf(ly) > DEADZONE)
+	float targetVelocityX = 0.0f;
+	float targetVelocityY = 0.0f;
+	if (stickMagnitude > DEADZONE)
 	{
 		float speed = CURSOR_SPEED;
 		if (m_precisionMode)
 			speed *= 0.3f;
 
+		// Radially remove the deadzone, then use a smoothstep response curve. This
+		// gives fine control near center while retaining full speed at the rim.
+		float response = (stickMagnitude - DEADZONE) / (1.0f - DEADZONE);
+		response = response * response * (3.0f - 2.0f * response);
+		targetVelocityX = (lx / stickMagnitude) * speed * response;
+		targetVelocityY = (ly / stickMagnitude) * speed * response;
+	}
+
+	// Approach the requested velocity rather than changing speed instantly.
+	// Releasing the stick decelerates more quickly so the cursor still stops crisply.
+	float velocityDeltaX = targetVelocityX - m_cursorVelocityX;
+	float velocityDeltaY = targetVelocityY - m_cursorVelocityY;
+	float velocityDeltaLength = sqrtf(velocityDeltaX * velocityDeltaX + velocityDeltaY * velocityDeltaY);
+	float acceleration = stickMagnitude > DEADZONE ? CURSOR_ACCELERATION : CURSOR_DECELERATION;
+	float maxVelocityChange = acceleration * deltaTime;
+	if (velocityDeltaLength > maxVelocityChange && velocityDeltaLength > 0.0f)
+	{
+		float changeScale = maxVelocityChange / velocityDeltaLength;
+		velocityDeltaX *= changeScale;
+		velocityDeltaY *= changeScale;
+	}
+	m_cursorVelocityX += velocityDeltaX;
+	m_cursorVelocityY += velocityDeltaY;
+
+	m_cursorRemainderX += m_cursorVelocityX * deltaTime;
+	m_cursorRemainderY += m_cursorVelocityY * deltaTime;
+	int cursorDeltaX = (int)m_cursorRemainderX;
+	int cursorDeltaY = (int)m_cursorRemainderY;
+	m_cursorRemainderX -= cursorDeltaX;
+	m_cursorRemainderY -= cursorDeltaY;
+
+	if (cursorDeltaX != 0 || cursorDeltaY != 0)
+	{
 		SDL_Event motionEvent;
 		memset(&motionEvent, 0, sizeof(motionEvent));
 		motionEvent.type = SDL_EVENT_MOUSE_MOTION;
-		motionEvent.motion.xrel = lx * speed * deltaTime;
-		motionEvent.motion.yrel = ly * speed * deltaTime;
+		motionEvent.motion.xrel = (float)cursorDeltaX;
+		motionEvent.motion.yrel = (float)cursorDeltaY;
 
 		float mx, my;
 		SDL_GetMouseState(&mx, &my);
-		motionEvent.motion.x = mx + motionEvent.motion.xrel;
-		motionEvent.motion.y = my + motionEvent.motion.yrel;
+		motionEvent.motion.x = mx + cursorDeltaX;
+		motionEvent.motion.y = my + cursorDeltaY;
 
 		if (m_window)
 		{
