@@ -179,7 +179,6 @@ private:
 	// Gamepad state
 	GamepadState m_state;
 
-	Bool m_precisionMode;
 	Uint64 m_lastUpdateTime;
 	float m_cursorVelocityX;
 	float m_cursorVelocityY;

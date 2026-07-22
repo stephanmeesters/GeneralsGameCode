@@ -675,7 +675,6 @@ SDL3InputManager::SDL3InputManager(SDL_Window* window)
 	, m_keyNextFree(0)
 	, m_keyNextGet(0)
 	, m_gamepad(nullptr)
-	, m_precisionMode(FALSE)
 	, m_lastUpdateTime(0)
 	, m_cursorVelocityX(0.0f)
 	, m_cursorVelocityY(0.0f)
@@ -838,6 +837,13 @@ void SDL3InputManager::openFirstGamepad()
 
 void SDL3InputManager::closeGamepad()
 {
+	if (m_state.ltDown)
+		virtualPulseKey(SDL_SCANCODE_KP_2, false);
+	if (m_state.rtDown)
+		virtualPulseKey(SDL_SCANCODE_KP_8, false);
+	m_state.ltDown = false;
+	m_state.rtDown = false;
+
 	if (m_gamepad)
 	{
 		SDL_CloseGamepad(m_gamepad);
@@ -921,19 +927,19 @@ void SDL3InputManager::processGamepadInput()
 	const float CURSOR_ACCELERATION = DEFAULT_CURSOR_ACCELERATION * resolutionScale;
 	const float CURSOR_DECELERATION = DEFAULT_CURSOR_DECELERATION * resolutionScale;
 
-	// 1. TRIGGERS (Modifiers & Precision)
+	// 1. TRIGGERS (Camera zoom)
 	bool ltPressed = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) > TRIGGER_THRESHOLD;
 	if (ltPressed != m_state.ltDown)
 	{
 		m_state.ltDown = ltPressed;
-		m_precisionMode = m_state.ltDown;
+		virtualPulseKey(SDL_SCANCODE_KP_2, m_state.ltDown);
 	}
 
 	bool rtPressed = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) > TRIGGER_THRESHOLD;
 	if (rtPressed != m_state.rtDown)
 	{
 		m_state.rtDown = rtPressed;
-		virtualPulseKey(SDL_SCANCODE_LCTRL, m_state.rtDown);
+		virtualPulseKey(SDL_SCANCODE_KP_8, m_state.rtDown);
 	}
 
 	// 2. STICKS (Movement & Panning)
@@ -948,8 +954,6 @@ void SDL3InputManager::processGamepadInput()
 	if (stickMagnitude > DEADZONE)
 	{
 		float speed = CURSOR_SPEED;
-		if (m_precisionMode)
-			speed *= 0.3f;
 
 		// Radially remove the deadzone, then use a smoothstep response curve. This
 		// gives fine control near center while retaining full speed at the rim.
