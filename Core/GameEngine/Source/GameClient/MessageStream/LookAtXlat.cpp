@@ -114,6 +114,9 @@ void LookAtTranslator::stopScrolling()
 //-----------------------------------------------------------------------------
 Bool LookAtTranslator::canScrollAtScreenEdge() const
 {
+	if (m_screenEdgeScrollSuppressed)
+		return false;
+
 	if (!TheMouse->isCursorCaptured())
 		return false;
 
@@ -140,8 +143,9 @@ LookAtTranslator::LookAtTranslator() :
 	m_isChangingFOV(false),
 	m_middleButtonDownTimeMsec(0),
 	m_lastPlaneID(INVALID_DRAWABLE_ID),
-	m_lastMouseMoveTimeMsec(0),
-	m_scrollType(SCROLL_NONE)
+	m_scrollType(SCROLL_NONE),
+	m_screenEdgeScrollSuppressed(false),
+	m_lastMouseMoveTimeMsec(0)
 {
 	m_anchor.x = m_anchor.y = 0;
 	m_currentPos.x = m_currentPos.y = 0;
@@ -188,6 +192,14 @@ void LookAtTranslator::setCurrentPos( const ICoord2D& pos )
 void LookAtTranslator::setScreenEdgeScrollMode(ScreenEdgeScrollMode mode)
 {
 	m_screenEdgeScrollMode = mode;
+}
+
+void LookAtTranslator::setScreenEdgeScrollSuppressed(Bool suppressed)
+{
+	m_screenEdgeScrollSuppressed = suppressed;
+
+	if (suppressed && m_isScrolling && m_scrollType == SCROLL_SCREENEDGE)
+		stopScrolling();
 }
 
 //-----------------------------------------------------------------------------

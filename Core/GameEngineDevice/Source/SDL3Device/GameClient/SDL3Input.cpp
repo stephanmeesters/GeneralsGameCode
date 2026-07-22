@@ -36,6 +36,7 @@
 #include "Common/MessageStream.h"
 #include "GameClient/Display.h"
 #include "GameClient/InGameUI.h"
+#include "GameClient/LookAtXlat.h"
 #include "GameLogic/GameLogic.h"
 #include "SDL3Device/Common/SDL3GameEngine.h"
 #include "SDL3Device/GameClient/SDL3Cursor.h"
@@ -675,6 +676,10 @@ SDL3InputManager::SDL3InputManager(SDL_Window* window)
 	, m_keyNextFree(0)
 	, m_keyNextGet(0)
 	, m_gamepad(nullptr)
+	, m_lastInputDevice(INPUT_DEVICE_MOUSE_KEYBOARD)
+	, m_hasPendingControllerWarp(FALSE)
+	, m_pendingControllerWarpX(0.0f)
+	, m_pendingControllerWarpY(0.0f)
 	, m_lastUpdateTime(0)
 	, m_cursorVelocityX(0.0f)
 	, m_cursorVelocityY(0.0f)
@@ -743,16 +748,31 @@ void SDL3InputManager::update()
 				break;
 
 			case SDL_EVENT_MOUSE_MOTION:
+			{
+				const Bool isControllerWarp = m_hasPendingControllerWarp
+					&& SDL_fabsf(event.motion.x - m_pendingControllerWarpX) < 0.5f
+					&& SDL_fabsf(event.motion.y - m_pendingControllerWarpY) < 0.5f;
+				m_hasPendingControllerWarp = FALSE;
+				if (!isControllerWarp)
+					setLastInputDevice(INPUT_DEVICE_MOUSE_KEYBOARD);
+				addMouseSDLEvent(event);
+				break;
+			}
 			case SDL_EVENT_MOUSE_BUTTON_DOWN:
 			case SDL_EVENT_MOUSE_BUTTON_UP:
 			case SDL_EVENT_MOUSE_WHEEL:
+				m_hasPendingControllerWarp = FALSE;
+				setLastInputDevice(INPUT_DEVICE_MOUSE_KEYBOARD);
 				addMouseSDLEvent(event);
 				break;
 
 			case SDL_EVENT_KEY_DOWN:
 			case SDL_EVENT_KEY_UP:
 				if (!event.key.repeat)
+				{
+					setLastInputDevice(INPUT_DEVICE_MOUSE_KEYBOARD);
 					addKeyboardSDLEvent(event);
+				}
 				break;
 
 			case SDL_EVENT_TEXT_INPUT:
@@ -853,6 +873,14 @@ void SDL3InputManager::closeGamepad()
 	m_cursorVelocityY = 0.0f;
 	m_cursorRemainderX = 0.0f;
 	m_cursorRemainderY = 0.0f;
+	setLastInputDevice(INPUT_DEVICE_MOUSE_KEYBOARD);
+}
+
+void SDL3InputManager::setLastInputDevice(InputDevice inputDevice)
+{
+	m_lastInputDevice = inputDevice;
+	if (TheLookAtTranslator)
+		TheLookAtTranslator->setScreenEdgeScrollSuppressed(m_lastInputDevice == INPUT_DEVICE_GAMEPAD);
 }
 
 void SDL3InputManager::virtualPulseKey(SDL_Scancode scancode, bool down)
@@ -927,15 +955,29 @@ void SDL3InputManager::processGamepadInput()
 	const float CURSOR_ACCELERATION = DEFAULT_CURSOR_ACCELERATION * resolutionScale;
 	const float CURSOR_DECELERATION = DEFAULT_CURSOR_DECELERATION * resolutionScale;
 
-	// 1. TRIGGERS (Camera zoom)
+	float lx = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_LEFTX) / AXIS_MAX;
+	float ly = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_LEFTY) / AXIS_MAX;
+	float rx = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_RIGHTX) / AXIS_MAX;
+	float ry = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_RIGHTY) / AXIS_MAX;
+	float stickMagnitude = sqrtf(lx * lx + ly * ly);
+	if (stickMagnitude > 1.0f)
+		stickMagnitude = 1.0f;
+
 	bool ltPressed = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) > TRIGGER_THRESHOLD;
+	bool rtPressed = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) > TRIGGER_THRESHOLD;
+	bool gamepadUsed = stickMagnitude > DEADZONE || SDL_fabsf(rx) > DEADZONE || SDL_fabsf(ry) > DEADZONE || ltPressed || rtPressed;
+	for (int button = 0; button < SDL_GAMEPAD_BUTTON_COUNT && !gamepadUsed; ++button)
+		gamepadUsed = SDL_GetGamepadButton(m_gamepad, (SDL_GamepadButton)button);
+	if (gamepadUsed)
+		setLastInputDevice(INPUT_DEVICE_GAMEPAD);
+
+	// 1. TRIGGERS (Camera zoom)
 	if (ltPressed != m_state.ltDown)
 	{
 		m_state.ltDown = ltPressed;
 		virtualPulseKey(SDL_SCANCODE_KP_2, m_state.ltDown);
 	}
 
-	bool rtPressed = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) > TRIGGER_THRESHOLD;
 	if (rtPressed != m_state.rtDown)
 	{
 		m_state.rtDown = rtPressed;
@@ -943,12 +985,6 @@ void SDL3InputManager::processGamepadInput()
 	}
 
 	// 2. STICKS (Movement & Panning)
-	float lx = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_LEFTX) / AXIS_MAX;
-	float ly = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_LEFTY) / AXIS_MAX;
-	float stickMagnitude = sqrtf(lx * lx + ly * ly);
-	if (stickMagnitude > 1.0f)
-		stickMagnitude = 1.0f;
-
 	float targetVelocityX = 0.0f;
 	float targetVelocityY = 0.0f;
 	if (stickMagnitude > DEADZONE)
@@ -1006,10 +1042,9 @@ void SDL3InputManager::processGamepadInput()
 
 		addMouseSDLEvent(motionEvent);
 		SDL_WarpMouseInWindow(m_window, motionEvent.motion.x, motionEvent.motion.y);
+		SDL_GetMouseState(&m_pendingControllerWarpX, &m_pendingControllerWarpY);
+		m_hasPendingControllerWarp = TRUE;
 	}
-
-	float rx = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_RIGHTX) / AXIS_MAX;
-	float ry = SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_RIGHTY) / AXIS_MAX;
 
 	handleGamepadButton(
 		SDL_GAMEPAD_BUTTON_INVALID,

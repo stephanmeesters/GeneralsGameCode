@@ -136,6 +136,12 @@ public:
 	static constexpr float DEFAULT_CURSOR_DECELERATION = 14400.0f;
 
 private:
+	enum InputDevice
+	{
+		INPUT_DEVICE_MOUSE_KEYBOARD,
+		INPUT_DEVICE_GAMEPAD
+	};
+
 	struct GamepadState
 	{
 		bool buttonState[SDL_GAMEPAD_BUTTON_COUNT];
@@ -154,6 +160,7 @@ private:
 	// Gamepad management
 	void openFirstGamepad();
 	void closeGamepad();
+	void setLastInputDevice(InputDevice inputDevice);
 
 	SDL_Window* m_window;
 	SDL_Gamepad* m_gamepad;
@@ -178,6 +185,10 @@ private:
 
 	// Gamepad state
 	GamepadState m_state;
+	InputDevice m_lastInputDevice;
+	Bool m_hasPendingControllerWarp;
+	float m_pendingControllerWarpX;
+	float m_pendingControllerWarpY;
 
 	Uint64 m_lastUpdateTime;
 	float m_cursorVelocityX;
