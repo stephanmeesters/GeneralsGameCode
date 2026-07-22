@@ -53,7 +53,7 @@ public:
 	Bool hasMouseMovedRecently();
 	void setCurrentPos( const ICoord2D& pos );
 	void setScreenEdgeScrollMode(ScreenEdgeScrollMode mode);
-	void setScreenEdgeScrollSuppressed(Bool suppressed);
+	void setControllerInputActive(Bool active);
 
 	void resetModes(); //Used when disabling input, so when we reenable it we aren't stuck in a mode.
 
@@ -83,12 +83,13 @@ private:
 	ViewLocation m_viewLocation[ MAX_VIEW_LOCS ];
 	ScrollType m_scrollType;
 	ScreenEdgeScrollMode m_screenEdgeScrollMode;
-	Bool m_screenEdgeScrollSuppressed;
+	Bool m_controllerInputActive;
 	UnsignedInt m_lastMouseMoveTimeMsec;				// real-time in milliseconds when mouse last moved
 
 	void setScrolling( ScrollType scrollType );
 	void stopScrolling();
 	Bool canScrollAtScreenEdge() const;
+	Real getControllerScrollScale() const;
 };
 
 extern LookAtTranslator *TheLookAtTranslator;

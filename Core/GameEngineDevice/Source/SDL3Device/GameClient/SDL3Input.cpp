@@ -880,7 +880,7 @@ void SDL3InputManager::setLastInputDevice(InputDevice inputDevice)
 {
 	m_lastInputDevice = inputDevice;
 	if (TheLookAtTranslator)
-		TheLookAtTranslator->setScreenEdgeScrollSuppressed(m_lastInputDevice == INPUT_DEVICE_GAMEPAD);
+		TheLookAtTranslator->setControllerInputActive(m_lastInputDevice == INPUT_DEVICE_GAMEPAD);
 }
 
 void SDL3InputManager::virtualPulseKey(SDL_Scancode scancode, bool down)
