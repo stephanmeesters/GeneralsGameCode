@@ -617,7 +617,7 @@ public:
 	UnsignedInt getVolumeParticleDepth() const { return m_volumeParticleDepth; }
 
 	Bool shouldBillboard() const { return !m_isGroundAligned; }
-	Bool isTerrainConforming() { return m_template->getIsTerrainConforming(); }
+	Bool isTerrainConforming() const { return m_template->getIsTerrainConforming(); }
 
 	ParticleShaderType getShaderType() const { return m_shaderType; }
 
