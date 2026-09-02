@@ -218,11 +218,16 @@ void W3DParticleSystemManager::doParticles(RenderInfoClass &rinfo)
 		RefCountPtr<TextureClass> texture;
 		texture.Assign_No_Add_Ref(W3DDisplay::m_assetManager->Get_Texture(sys->getParticleTypeName().str()));
 
+		const TerrainParticleRenderMode terrainRenderMode = getTerrainParticleRenderMode();
+		const Bool isTerrainConforming = terrainRenderMode != TERRAIN_PARTICLE_RENDER_OFF &&
+		                                 !sys->shouldBillboard() &&
+		                                 !sys->isUsingVolumeParticles() &&
+		                                 sys->isTerrainConforming();
 		const Bool canBatch = sys->isUsingParticles();
 		const Bool batchDone = texture.Peek() != m_batchTexture.Peek() ||
 		                       sys->getShaderType() != m_batchShaderType ||
 		                       sys->shouldBillboard() != m_batchBillboard ||
-		                       m_batchIsConforming != sys->isTerrainConforming();
+		                       m_batchIsConforming != isTerrainConforming;
 		if (!canBatch || batchDone)
 		{
 			flushParticleBatch(rinfo, pointCount);
@@ -231,7 +236,7 @@ void W3DParticleSystemManager::doParticles(RenderInfoClass &rinfo)
 		// setup a new particle batch texture if prior batch was flushed.
 		if (canBatch && m_batchTexture == nullptr)
 		{
-			initializeBatch(sys, texture, bbox);
+			initializeBatch(sys, texture, bbox, isTerrainConforming);
 		}
 
 		Int startCount = pointCount;
@@ -286,7 +291,7 @@ void W3DParticleSystemManager::doParticles(RenderInfoClass &rinfo)
 				// This prevents particles being dropped. Bank the stats first as the flush resets count to 0.
 				m_onScreenParticleCount += (pointCount - startCount);
 				flushParticleBatch(rinfo, pointCount);
-				initializeBatch(sys, texture, bbox);
+				initializeBatch(sys, texture, bbox, isTerrainConforming);
 				startCount = 0;
 			}
 		}
@@ -382,6 +387,11 @@ void W3DParticleSystemManager::doParticles(RenderInfoClass &rinfo)
 		/// @todo lorenzen sez: this should be debug only:
 		//add particle count to total
 		m_onScreenParticleCount += (pointCount - startCount);
+		if (terrainRenderMode == TERRAIN_PARTICLE_RENDER_NON_BATCHED && isTerrainConforming)
+		{
+			// Match the pre-batching renderer by drawing each conforming particle system separately.
+			flushParticleBatch(rinfo, pointCount);
+		}
 
 	/*
 		// draw the wind vector for this particle system on the screen
@@ -420,12 +430,15 @@ void W3DParticleSystemManager::doParticles(RenderInfoClass &rinfo)
 	}
 }
 
-void W3DParticleSystemManager::initializeBatch(ParticleSystem* system, const RefCountPtr<TextureClass>& texture, const AABoxClass& bbox)
+void W3DParticleSystemManager::initializeBatch(ParticleSystem* system,
+	                                             const RefCountPtr<TextureClass>& texture,
+	                                             const AABoxClass& bbox,
+	                                             Bool isTerrainConforming)
 {
 	m_batchTexture = texture;
 	m_batchShaderType = system->getShaderType();
 	m_batchBillboard = system->shouldBillboard();
-	m_batchIsConforming = !system->shouldBillboard() && !system->isUsingVolumeParticles() && system->isTerrainConforming();
+	m_batchIsConforming = isTerrainConforming;
 	m_batchBoundingBox = bbox;
 }
 

@@ -754,6 +754,13 @@ class ParticleSystemManager : public SubsystemInterface,
 {
 
 public:
+	enum TerrainParticleRenderMode
+	{
+		TERRAIN_PARTICLE_RENDER_OFF,
+		TERRAIN_PARTICLE_RENDER_BATCHED,
+		TERRAIN_PARTICLE_RENDER_NON_BATCHED,
+		TERRAIN_PARTICLE_RENDER_MODE_COUNT
+	};
 
 	typedef std::list<ParticleSystem*> ParticleSystemList;
 	typedef ParticleSystemList::iterator ParticleSystemListIt;
@@ -813,6 +820,8 @@ public:
 	UnsignedInt getParticleCount() const { return m_particleCount; }
 
 	UnsignedInt getFieldParticleCount()     const { return m_fieldParticleCount; }
+	TerrainParticleRenderMode getTerrainParticleRenderMode() const { return m_terrainParticleRenderMode; }
+	TerrainParticleRenderMode cycleTerrainParticleRenderMode();
 
 	UnsignedInt getParticleSystemCount() const { return m_particleSystemCount; }
 
@@ -844,6 +853,7 @@ protected:
 
 	UnsignedInt m_particleCount;
 	UnsignedInt m_fieldParticleCount; ///< this does not need to be xfered, since it is evaluated every frame
+	TerrainParticleRenderMode m_terrainParticleRenderMode; ///< runtime selection for terrain-conforming particle rendering
 	UnsignedInt m_particleSystemCount;
 	Int m_onScreenParticleCount;                ///< number of particles displayed on screen per frame
 	UnsignedInt m_lastLogicFrameUpdate;

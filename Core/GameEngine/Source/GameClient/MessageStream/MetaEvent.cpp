@@ -191,6 +191,8 @@ static const LookupListRec GameMessageMetaTypeNames[] =
 	{ "STEP_FRAME_ALT",														GameMessage::MSG_META_STEP_FRAME_ALT },
 	{ "DEMO_INSTANT_QUIT",												GameMessage::MSG_META_DEMO_INSTANT_QUIT },
 
+	{ "CYCLE_TERRAIN_PARTICLE_RENDER_MODE", GameMessage::MSG_META_CYCLE_TERRAIN_PARTICLE_RENDER_MODE },
+
 #if defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)//may be defined in GameCommon.h
 	{ "CHEAT_RUNSCRIPT1",								        	GameMessage::MSG_CHEAT_RUNSCRIPT1 },
 	{ "CHEAT_RUNSCRIPT2",								        	GameMessage::MSG_CHEAT_RUNSCRIPT2 },
@@ -913,6 +915,17 @@ void MetaMap::generateMetaMap()
 			map->m_transition = DOWN;
 			map->m_modState = SHIFT; // Requires modifier to avoid key conflicts as a player.
 			map->m_usableIn = COMMANDUSABLE_EVERYWHERE;
+		}
+	}
+	{
+		// Is useful for Generals and Zero Hour.
+		MetaMapRec *map = getMetaMapRec(GameMessage::MSG_META_CYCLE_TERRAIN_PARTICLE_RENDER_MODE);
+		if (map->m_key == MK_NONE)
+		{
+			map->m_key = MK_O;
+			map->m_transition = DOWN;
+			map->m_modState = ALT;
+			map->m_usableIn = COMMANDUSABLE_GAME;
 		}
 	}
 	{

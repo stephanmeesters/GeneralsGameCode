@@ -3559,6 +3559,36 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 			break;
 		}
 
+		case GameMessage::MSG_META_CYCLE_TERRAIN_PARTICLE_RENDER_MODE:
+		{
+			if (TheParticleSystemManager)
+			{
+				const ParticleSystemManager::TerrainParticleRenderMode mode =
+				        TheParticleSystemManager->cycleTerrainParticleRenderMode();
+				if (TheInGameUI)
+				{
+					switch (mode)
+					{
+						case ParticleSystemManager::TERRAIN_PARTICLE_RENDER_OFF:
+							TheInGameUI->messageNoFormat(TheGameText->FETCH_OR_SUBSTITUTE(
+							        "GUI:TerrainParticleRenderModeOff", L"Terrain-conforming particles: off"));
+							break;
+						case ParticleSystemManager::TERRAIN_PARTICLE_RENDER_BATCHED:
+							TheInGameUI->messageNoFormat(TheGameText->FETCH_OR_SUBSTITUTE(
+							        "GUI:TerrainParticleRenderModeBatched", L"Terrain-conforming particles: batched"));
+							break;
+						case ParticleSystemManager::TERRAIN_PARTICLE_RENDER_NON_BATCHED:
+						default:
+							TheInGameUI->messageNoFormat(TheGameText->FETCH_OR_SUBSTITUTE(
+							        "GUI:TerrainParticleRenderModeNonBatched", L"Terrain-conforming particles: non-batched"));
+							break;
+					}
+				}
+			}
+			disp = DESTROY_MESSAGE;
+			break;
+		}
+
 #if defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)//may be defined in GameCommon.h
     case GameMessage::MSG_CHEAT_RUNSCRIPT1:
     case GameMessage::MSG_CHEAT_RUNSCRIPT2:

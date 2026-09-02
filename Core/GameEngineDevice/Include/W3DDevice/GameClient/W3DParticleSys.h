@@ -51,7 +51,10 @@ public:
 	virtual Int getOnScreenParticleCount() override { return m_onScreenParticleCount; }
 
 private:
-	void initializeBatch(ParticleSystem* system, const RefCountPtr<TextureClass>& texture, const AABoxClass& bbox);
+	void initializeBatch(ParticleSystem* system,
+	                     const RefCountPtr<TextureClass>& texture,
+	                     const AABoxClass& bbox,
+	                     Bool isTerrainConforming);
 	void flushParticleBatch(RenderInfoClass& rinfo, UnsignedInt& pointCount);
 
 	enum { MAX_POINTS_PER_GROUP = 512 };

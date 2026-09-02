@@ -2930,6 +2930,7 @@ ParticleSystemManager::ParticleSystemManager()
 	m_lastLogicFrameUpdate = 0;
 	m_particleCount = 0;
 	m_fieldParticleCount = 0;
+	m_terrainParticleRenderMode = TERRAIN_PARTICLE_RENDER_BATCHED;
 	m_particleSystemCount = 0;
 
 	for( Int i = 0; i < NUM_PARTICLE_PRIORITIES; ++i )
@@ -2940,6 +2941,27 @@ ParticleSystemManager::ParticleSystemManager()
 
 	}
 
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+ParticleSystemManager::TerrainParticleRenderMode ParticleSystemManager::cycleTerrainParticleRenderMode()
+{
+	switch (m_terrainParticleRenderMode)
+	{
+		case TERRAIN_PARTICLE_RENDER_OFF:
+			m_terrainParticleRenderMode = TERRAIN_PARTICLE_RENDER_BATCHED;
+			break;
+		case TERRAIN_PARTICLE_RENDER_BATCHED:
+			m_terrainParticleRenderMode = TERRAIN_PARTICLE_RENDER_NON_BATCHED;
+			break;
+		case TERRAIN_PARTICLE_RENDER_NON_BATCHED:
+		default:
+			m_terrainParticleRenderMode = TERRAIN_PARTICLE_RENDER_OFF;
+			break;
+	}
+
+	return m_terrainParticleRenderMode;
 }
 
 // ------------------------------------------------------------------------------------------------
