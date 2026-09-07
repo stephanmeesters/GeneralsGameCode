@@ -2936,6 +2936,8 @@ ParticleSystem *ParticleSystemTemplate::createSlaveSystem( Bool createSlaves ) c
 ParticleSystemManager::ParticleSystemManager()
 {
 
+	m_conformingSystemsTail = m_allParticleSystemList.end();
+	m_groundAlignedSystemsTail = m_allParticleSystemList.end();
 	m_uniqueSystemID = INVALID_PARTICLE_SYSTEM_ID;
 
 	m_onScreenParticleCount = 0;
@@ -3309,7 +3311,25 @@ void ParticleSystemManager::removeParticle( Particle *particleToRemove)
 void ParticleSystemManager::friend_addParticleSystem( ParticleSystem *particleSystemToAdd )
 {
 	DEBUG_ASSERTCRASH(particleSystemToAdd != nullptr, ("ParticleSystemManager::friend_addParticleSystem: ParticleSystem is null"));
-	m_allParticleSystemList.push_back(particleSystemToAdd);
+	// TheSuperHackers @info stephanmeesters 07/09/2026
+	// Keep conforming and ground-aligned systems first for batching, preserving order within each group.
+	// Track group tails so other systems can append without changing them.
+	if (particleSystemToAdd->isUsingParticles() && !particleSystemToAdd->shouldBillboard())
+	{
+		ParticleSystemListIt& tail = particleSystemToAdd->isTerrainConforming() ? m_conformingSystemsTail : m_groundAlignedSystemsTail;
+		ParticleSystemListIt position = tail;
+		if (position == m_allParticleSystemList.end())
+			position = m_conformingSystemsTail;
+		if (position == m_allParticleSystemList.end())
+			position = m_allParticleSystemList.begin();
+		else
+			++position;
+		tail = m_allParticleSystemList.insert(position, particleSystemToAdd);
+	}
+	else
+	{
+		m_allParticleSystemList.push_back(particleSystemToAdd);
+	}
 	m_systemMap[particleSystemToAdd->getSystemID()] = particleSystemToAdd;
 	++m_particleSystemCount;
 }
@@ -3322,6 +3342,18 @@ void ParticleSystemManager::friend_removeParticleSystem( ParticleSystem *particl
 	ParticleSystemListIt it = std::find(m_allParticleSystemList.begin(), m_allParticleSystemList.end(), particleSystemToRemove);
 	if (it != m_allParticleSystemList.end()) {
 		m_systemMap.erase((*it)->getSystemID());
+		if (it == m_conformingSystemsTail || it == m_groundAlignedSystemsTail)
+		{
+			ParticleSystemListIt previous = it;
+			if (previous == m_allParticleSystemList.begin())
+				previous = m_allParticleSystemList.end();
+			else
+				--previous;
+			if (it == m_groundAlignedSystemsTail)
+				m_groundAlignedSystemsTail = previous == m_conformingSystemsTail ? m_allParticleSystemList.end() : previous;
+			else
+				m_conformingSystemsTail = previous;
+		}
 		m_allParticleSystemList.erase(it);
 		--m_particleSystemCount;
 	} else {

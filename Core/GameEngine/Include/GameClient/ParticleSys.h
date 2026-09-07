@@ -852,6 +852,8 @@ protected:
 	ParticleSystemID m_uniqueSystemID;					///< unique system ID to assign to each system created
 
 	ParticleSystemList m_allParticleSystemList;
+	ParticleSystemListIt m_conformingSystemsTail; ///< last conforming system, or end if none
+	ParticleSystemListIt m_groundAlignedSystemsTail; ///< last non-conforming ground system, or end if none
 
 	UnsignedInt m_particleCount;
 	UnsignedInt m_fieldParticleCount; ///< this does not need to be xfered, since it is evaluated every frame
