@@ -1181,6 +1181,8 @@ void NGMP_OnlineServices_LobbyInterface::JoinLobby(LobbyEntry lobbyInfo, std::st
 						if (TheNGMPGame != nullptr)
 						{
 							NetworkLog(ELogVerbosity::LOG_RELEASE, "NGMP_OnlineServices_LobbyInterface::JoinLobby - Safety check - Expected NGMPGame to be null by now, it wasn't so forcefully destroying");
+							if (TheGameInfo == TheNGMPGame)
+								TheGameInfo = nullptr;
 							delete TheNGMPGame;
 							TheNGMPGame = nullptr;
 						}
@@ -1286,6 +1288,8 @@ void NGMP_OnlineServices_LobbyInterface::LeaveCurrentLobby()
 
 	if (TheNGMPGame != nullptr)
 	{
+		if (TheGameInfo == TheNGMPGame)
+			TheGameInfo = nullptr;
 		delete TheNGMPGame;
 		TheNGMPGame = nullptr;
 	}
@@ -1325,6 +1329,8 @@ void NGMP_OnlineServices_LobbyInterface::ResetForMatchmakingRequeue()
 
 	if (TheNGMPGame != nullptr)
 	{
+		if (TheGameInfo == TheNGMPGame)
+			TheGameInfo = nullptr;
 		delete TheNGMPGame;
 		TheNGMPGame = nullptr;
 	}
@@ -1443,6 +1449,8 @@ void NGMP_OnlineServices_LobbyInterface::CreateLobby(UnicodeString strLobbyName,
 							if (TheNGMPGame != nullptr)
 							{
 								NetworkLog(ELogVerbosity::LOG_RELEASE, "NGMP_OnlineServices_LobbyInterface::JoinLobby - Safety check - Expected NGMPGame to be null by now, it wasn't so forcefully destroying");
+								if (TheGameInfo == TheNGMPGame)
+									TheGameInfo = nullptr;
 								delete TheNGMPGame;
 								TheNGMPGame = nullptr;
 							}
