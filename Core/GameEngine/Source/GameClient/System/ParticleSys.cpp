@@ -1161,11 +1161,52 @@ void ParticleSystemInfo::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 void ParticleSystemInfo::loadPostProcess()
 {
-	validate();
+	validate("");
 }
 
+static Bool forceTerrainConforming(const AsciiString &templateName)
+{
+	static const char *const templateNames[] = {
+		"AnthraxFieldLarge",
+		"AnthraxFieldMedium",
+		"AnthraxFieldSmall",
+		"AnthraxGammaPuddleContinuous",
+		"AnthraxGammaPuddleLarge",
+		"AnthraxPuddle",
+		"AnthraxPuddleContinuous",
+		"AnthraxPuddleLarge",
+		"CleanupPuddle",
+		"GC_Chem_AnthraxFieldGammaLarge",
+		"GC_Chem_AnthraxFieldGammaMedium",
+		"GC_Chem_AnthraxGammaFieldLarge",
+		"GC_Chem_AnthraxGammaFieldMedium",
+		"GC_Chem_AnthraxGammaFieldSmall",
+		"GC_Chem_ToxinPuddle",
+		"NukeRadiationInitial",
+		"PoisonFieldLarge",
+		"PoisonFieldMedium",
+		"PoisonFieldSmall",
+		"RadiationFieldLarge",
+		"RadiationFieldMedium",
+		"RadiationFieldSmall",
+		"ToxinPuddle",
+		"ToxinPuddleContinuous",
+		"ToxinPuddleLarge",
+		"ToxinTankPuddle",
+	};
+
+	for (Int i = 0; i < ARRAY_SIZE(templateNames); ++i)
+	{
+		if (templateName == templateNames[i])
+			return TRUE;
+	}
+
+	return FALSE;
+}
+
+
 // ------------------------------------------------------------------------------------------------
-void ParticleSystemInfo::validate()
+void ParticleSystemInfo::validate(const AsciiString&name)
 {
 	// TheSuperHackers @info Initialize all volume particles that lack ini configuration to the optimum depth of 6
 	// In retail, volume particle depth was not configurable through ini and was hard coded to a particle depth of 6
@@ -1189,6 +1230,9 @@ void ParticleSystemInfo::validate()
 #endif
 
 	validateAlphaKeyframes(m_alphaKey, ARRAY_SIZE(m_alphaKey));
+
+	if (m_particleAlignment == PARTICLE_ALIGNMENT_XYPLANAR && forceTerrainConforming(name))
+		m_particleAlignment = PARTICLE_ALIGNMENT_CONFORMING;
 
 #if !ENABLE_TERRAIN_CONFORMING_PARTICLES
 	if (m_particleAlignment == PARTICLE_ALIGNMENT_CONFORMING)
@@ -3094,7 +3138,7 @@ ParticleSystemTemplate::~ParticleSystemTemplate()
 // ------------------------------------------------------------------------------------------------
 void ParticleSystemTemplate::validate()
 {
-	ParticleSystemInfo::validate();
+	ParticleSystemInfo::validate(m_name);
 }
 
 // ------------------------------------------------------------------------------------------------

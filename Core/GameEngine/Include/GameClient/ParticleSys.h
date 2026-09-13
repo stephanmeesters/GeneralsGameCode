@@ -274,7 +274,7 @@ public:
 	virtual void xfer( Xfer *xfer ) override;
 	virtual void loadPostProcess() override;
 
-	void validate();
+	void validate(const AsciiString&name);
 
 	Bool m_isOneShot;														///< if true, destroy system after one burst has occurred
 
