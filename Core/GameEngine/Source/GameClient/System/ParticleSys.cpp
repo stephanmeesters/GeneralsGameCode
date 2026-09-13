@@ -3173,6 +3173,7 @@ ParticleSystemManager::ParticleSystemManager()
 
 	m_particleCount = 0;
 	m_fieldParticleCount = 0;
+	m_terrainParticleRenderMode = TERRAIN_PARTICLE_CONFORMING;
 	m_particleSystemCount = 0;
 
 	for( Int i = 0; i < NUM_PARTICLE_PRIORITIES; ++i )
@@ -3186,6 +3187,21 @@ ParticleSystemManager::ParticleSystemManager()
 }
 
 // ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+ParticleSystemManager::TerrainParticleRenderMode ParticleSystemManager::cycleTerrainParticleRenderMode()
+{
+	switch (m_terrainParticleRenderMode)
+	{
+		case TERRAIN_PARTICLE_CONFORMING:
+			m_terrainParticleRenderMode = TERRAIN_PARTICLE_GROUND_ALIGNED;
+			break;
+		default:
+			m_terrainParticleRenderMode = TERRAIN_PARTICLE_CONFORMING;
+			break;
+	}
+	return m_terrainParticleRenderMode;
+}
+
 // ------------------------------------------------------------------------------------------------
 ParticleSystemManager::~ParticleSystemManager()
 {
