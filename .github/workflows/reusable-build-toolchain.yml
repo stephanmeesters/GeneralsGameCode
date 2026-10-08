@@ -124,7 +124,7 @@ jobs:
         if: startsWith(inputs.preset, 'win32')
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
         with:
-          arch: x86
+          arch: amd64_x86
 
       - name: Setup vcpkg
         if: contains(inputs.preset, 'vcpkg')
