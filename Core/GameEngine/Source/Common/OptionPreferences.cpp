@@ -170,6 +170,14 @@ Bool OptionPreferences::getObserverNotificationMilestone(void)
 	return FALSE;
 }
 
+Int OptionPreferences::getObserverProductionScale() const
+{
+	OptionPreferences::const_iterator it = find("ObserverProductionScale");
+	Int scale = it == end() ? TheGlobalData->m_observerProductionScale : atoi(it->second.str());
+	// Zero explicitly disables production UI; enabled scales retain their normal range.
+	return scale == 0 ? 0 : clamp(50, scale, 200);
+}
+
 Int OptionPreferences::getObserverStatsFontSize(void)
 {
     OptionPreferences::const_iterator it = find("ObserverStatsFontSize");

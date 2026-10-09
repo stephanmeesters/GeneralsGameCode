@@ -41,6 +41,7 @@
 #include "Common/UnicodeString.h"
 #include "GameClient/DisplayString.h"
 #include "GameClient/Mouse.h"
+#include "GameClient/ObserverProductionOverlay.h"
 #include "GameClient/RadiusDecal.h"
 #include "GameClient/View.h"
 #include "GameNetwork/NetworkDefs.h"
@@ -371,6 +372,8 @@ public:  // ********************************************************************
 		m_observerNotificationsHidden = !m_observerNotificationsHidden;
 	}
 
+	ObserverProductionOverlay& getObserverProduction() { return m_observerProduction; }
+
 	// Inherited from subsystem interface -----------------------------------------------------------
 	virtual	void init() override;															///< Initialize the in-game user interface
 	virtual void update() override;														///< Update the UI by calling preDraw(), draw(), and postDraw()
@@ -621,7 +624,9 @@ private:
 	void drawGameTime();
 	void drawPlayerInfoList();
 	void drawObserverStats(Int &x, Int &y);
+	Bool isObserverHudVisible();
 	Bool m_observerStatsHidden = false;   // hide/show observer overlay
+	ObserverProductionOverlay m_observerProduction;
 
 public:
 	void registerWindowLayout(WindowLayout* layout); // register a layout for updates

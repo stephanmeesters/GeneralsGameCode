@@ -1017,6 +1017,7 @@ GlobalData::GlobalData()
 	m_observerNotificationSpecialPowerUsage = TRUE;
 	m_observerNotificationSpecialPowerPurchase = TRUE;
 	m_observerNotificationMilestone = TRUE;
+	m_observerProductionScale = 100;
 
 	m_showMoneyPerMinute = FALSE;
 	m_allowMoneyPerMinuteForPlayer = FALSE;
@@ -1333,6 +1334,7 @@ void GlobalData::parseGameDataDefinition( INI* ini )
 	TheWritableGlobalData->m_observerNotificationSpecialPowerUsage = optionPref.getObserverNotificationSpecialPowerUsage();
 	TheWritableGlobalData->m_observerNotificationSpecialPowerPurchase = optionPref.getObserverNotificationSpecialPowerPurchase();
 	TheWritableGlobalData->m_observerNotificationMilestone = optionPref.getObserverNotificationMilestone();
+	TheWritableGlobalData->m_observerProductionScale = optionPref.getObserverProductionScale();
 	TheWritableGlobalData->m_antiAliasLevel = optionPref.getAntiAliasing();
 
 #if !defined(GENERALS_ONLINE_DISABLE_TEXTURE_FILTERING_AND_AA)

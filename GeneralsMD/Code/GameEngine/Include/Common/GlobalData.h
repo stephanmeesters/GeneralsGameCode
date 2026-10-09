@@ -466,6 +466,7 @@ public:
 	Bool m_observerNotificationSpecialPowerUsage;
 	Bool m_observerNotificationSpecialPowerPurchase;
 	Bool m_observerNotificationMilestone;
+	Int m_observerProductionScale;
 	Real m_shakeSubtleIntensity;			///< Intensity for shaking a camera with SHAKE_SUBTLE
 	Real m_shakeNormalIntensity;			///< Intensity for shaking a camera with SHAKE_NORMAL
 	Real m_shakeStrongIntensity;			///< Intensity for shaking a camera with SHAKE_STRONG

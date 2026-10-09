@@ -2320,6 +2320,7 @@ void InGameUI::reset()
 	m_windowLayouts.clear();
 
 	m_observerStatsHidden = false;
+	m_observerProduction.reset();
 	m_observerNotifications.clear();
 	m_observerMilestones.clear();
 
@@ -3897,8 +3898,12 @@ void InGameUI::postWindowDraw()
 	if (m_observerStatsPointSize > 0)
 		drawObserverStats(hudOffsetX, hudOffsetY);
 
+	Int productionBottom = isObserverHudVisible() && !m_observerStatsHidden ? m_observerProduction.draw() : 0;
 	if (m_observerNotificationPointSize > 0)
-		drawObserverNotifications(hudOffsetX, hudOffsetY);
+	{
+		Int notificationTop = IsGameTextRightToLeft() ? 0 : productionBottom;
+		drawObserverNotifications(hudOffsetX, notificationTop);
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -6297,12 +6302,7 @@ static UnicodeString formatPowerAction(const AsciiString& powerNameAscii)
 
 void InGameUI::drawObserverNotifications(Int& x, Int& y)
 {
-	if (!TheGameLogic || !TheInGameUI->getInputEnabled() || TheGameLogic->isIntroMoviePlaying() || TheGameLogic->isLoadingMap() ||
-		TheInGameUI->isQuitMenuVisible() || TheGameLogic->getFrame() <= 1 || m_observerNotificationsHidden)
-		return;
-
-	Player* localPlayer = ThePlayerList->getLocalPlayer();
-	if (!localPlayer || !localPlayer->isPlayerObserver())
+	if (!isObserverHudVisible() || m_observerNotificationsHidden)
 		return;
 
 	if ((TheGameLogic->getFrame() % LOGICFRAMES_PER_SECOND) == 0)
@@ -6332,6 +6332,7 @@ void InGameUI::drawObserverNotifications(Int& x, Int& y)
 	Int padX = Int(NOTIF_PADDING_X * scale);
 	Int padY = Int(NOTIF_PADDING_Y * scale);
 	Int boxSpacing = Int(NOTIF_BOX_SPACING * scale);
+	baseY = max(baseY, y + boxSpacing);
 
 	Color bgColor = TheWindowManager->winMakeColor(0, 0, 0, 90);
 	Color borderColor = TheWindowManager->winMakeColor(255, 255, 255, 90);
@@ -6383,6 +6384,27 @@ void InGameUI::drawObserverNotifications(Int& x, Int& y)
 	}
 }
 
+static Player* findSlotPlayer(Int slotIndex)
+{
+	const GameSlot* slot = TheGameInfo ? TheGameInfo->getConstSlot(slotIndex) : nullptr;
+	if (!slot || !slot->isOccupied() || !ThePlayerList || !TheNameKeyGenerator)
+		return nullptr;
+
+	AsciiString name;
+	name.format("player%d", slotIndex);
+	return ThePlayerList->findPlayerWithNameKey(TheNameKeyGenerator->nameToKey(name));
+}
+
+Bool InGameUI::isObserverHudVisible()
+{
+	if (!TheGameLogic || !ThePlayerList || !getInputEnabled() || TheGameLogic->isIntroMoviePlaying() ||
+		TheGameLogic->isLoadingMap() || isQuitMenuVisible() || TheGameLogic->getFrame() <= 1)
+		return false;
+
+	Player* localPlayer = ThePlayerList->getLocalPlayer();
+	return localPlayer && localPlayer->isPlayerObserver();
+}
+
 void InGameUI::checkObserverMilestones(UnsignedInt currentFrame)
 {
 	if (!TheGlobalData->m_observerNotificationMilestone)
@@ -6391,18 +6413,8 @@ void InGameUI::checkObserverMilestones(UnsignedInt currentFrame)
 	if (m_observerMilestones.size() < (size_t)MAX_SLOTS)
 		m_observerMilestones.resize(MAX_SLOTS);
 
-	if (!ThePlayerList || !TheNameKeyGenerator)
-		return;
-
 	for (Int slotIndex = 0; slotIndex < MAX_SLOTS; ++slotIndex) {
-		const GameSlot* slot = TheGameInfo ? TheGameInfo->getConstSlot(slotIndex) : nullptr;
-		if (!slot || !slot->isOccupied())
-			continue;
-
-		AsciiString nameKeyStr;
-		nameKeyStr.format("player%d", slotIndex);
-
-		Player* p = ThePlayerList->findPlayerWithNameKey(TheNameKeyGenerator->nameToKey(nameKeyStr));
+		Player* p = findSlotPlayer(slotIndex);
 
 		if (!p || !p->isPlayerActive() || p->isPlayerObserver())
 			continue;
@@ -6595,24 +6607,8 @@ void InGameUI::drawObserverStats(Int & x, Int & y)
 
 		for (Int slotIndex = 0; slotIndex < MAX_SLOTS; ++slotIndex)
 		{
-			const GameSlot* slot = TheGameInfo ? TheGameInfo->getConstSlot(slotIndex) : nullptr;
-			if (!slot || !slot->isOccupied())
-			{
-				m_mapOverlayPlayerData[slotIndex].isPresent = false;
-				continue;
-			}
-
-			AsciiString nameKeyStr;
-			nameKeyStr.format("player%d", slotIndex);
-			const NameKeyType key = TheNameKeyGenerator->nameToKey(nameKeyStr);
-			Player* p = ThePlayerList->findPlayerWithNameKey(key);
-			if (!p || !p->isPlayerActive())
-			{
-				m_mapOverlayPlayerData[slotIndex].isPresent = false;
-				continue;
-			}
-
-			if (p->isPlayerObserver())
+			Player* p = findSlotPlayer(slotIndex);
+			if (!p || !p->isPlayerActive() || p->isPlayerObserver())
 			{
 				m_mapOverlayPlayerData[slotIndex].isPresent = false;
 				continue;
@@ -6632,7 +6628,7 @@ void InGameUI::drawObserverStats(Int & x, Int & y)
 				name = tmp;
 			}
 
-			Int team = slot->getTeamNumber();
+			Int team = TheGameInfo->getConstSlot(slotIndex)->getTeamNumber();
 
 			// Gather stats
 			Money* money = p->getMoney();

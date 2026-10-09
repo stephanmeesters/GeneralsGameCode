@@ -158,6 +158,9 @@ static const LookupListRec GameMessageMetaTypeNames[] =
 	{ "DECREASE_LOGIC_TIME_SCALE",								GameMessage::MSG_META_DECREASE_LOGIC_TIME_SCALE },
 	{ "TOGGLE_LOWER_DETAILS",											GameMessage::MSG_META_TOGGLE_LOWER_DETAILS },
 	{ "TOGGLE_CONTROL_BAR",												GameMessage::MSG_META_TOGGLE_CONTROL_BAR },
+	{ "INCREASE_OBSERVER_PRODUCTION_SCALE", 			GameMessage::MSG_META_INCREASE_OBSERVER_PRODUCTION_SCALE },
+	{ "DECREASE_OBSERVER_PRODUCTION_SCALE", 			GameMessage::MSG_META_DECREASE_OBSERVER_PRODUCTION_SCALE },
+	{ "TOGGLE_OBSERVER_PRODUCTION", 							GameMessage::MSG_META_TOGGLE_OBSERVER_PRODUCTION },
 	{ "TOGGLE_PLAYER_OBSERVER",										GameMessage::MSG_META_TOGGLE_PLAYER_OBSERVER },
 	{ "INCREASE_OBSERVER_STATS_FONT",                           GameMessage::MSG_META_INCREASE_OBSERVER_STATS_FONT },
 	{ "DECREASE_OBSERVER_STATS_FONT",                           GameMessage::MSG_META_DECREASE_OBSERVER_STATS_FONT },
@@ -818,6 +821,38 @@ void MetaMap::generateMetaMap()
 {
 	// TheSuperHackers @info A default mapping for MSG_META_SELECT_ALL_AIRCRAFT would be useful for Generals
 	// but is not recommended, because it will cause key mapping conflicts with original game languages.
+
+	{
+		MetaMapRec* map = getMetaMapRec(GameMessage::MSG_META_INCREASE_OBSERVER_PRODUCTION_SCALE);
+		if (map->m_key == MK_NONE)
+		{
+			map->m_key = MK_UP;
+			map->m_transition = DOWN;
+			map->m_modState = SHIFT_CTRL;
+			map->m_usableIn = COMMANDUSABLE_GAME;
+		}
+	}
+	{
+		MetaMapRec* map = getMetaMapRec(GameMessage::MSG_META_DECREASE_OBSERVER_PRODUCTION_SCALE);
+		if (map->m_key == MK_NONE)
+		{
+			map->m_key = MK_DOWN;
+			map->m_transition = DOWN;
+			map->m_modState = SHIFT_CTRL;
+			map->m_usableIn = COMMANDUSABLE_GAME;
+		}
+	}
+
+	{
+		MetaMapRec* map = getMetaMapRec(GameMessage::MSG_META_TOGGLE_OBSERVER_PRODUCTION);
+		if (map->m_key == MK_NONE)
+		{
+			map->m_key = MK_F9;
+			map->m_transition = DOWN;
+			map->m_modState = SHIFT;
+			map->m_usableIn = COMMANDUSABLE_GAME;
+		}
+	}
 
 	{
 		MetaMapRec* map = TheMetaMap->getMetaMapRec(GameMessage::MSG_META_INCREASE_OBSERVER_NOTIFICATION_FONT);

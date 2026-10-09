@@ -217,6 +217,18 @@ static void writeObserverFontSizePref(const char* prefKey, Int fontSize)
 	optPref.write();
 }
 
+static void changeObserverProductionScale(Int delta)
+{
+	Player* localPlayer = ThePlayerList->getLocalPlayer();
+	if (TheShell->isShellActive() || !localPlayer || !localPlayer->isPlayerObserver())
+		return;
+	Int scale = clamp(50, TheWritableGlobalData->m_observerProductionScale + delta, 200);
+	if (scale == TheWritableGlobalData->m_observerProductionScale)
+		return;
+	TheWritableGlobalData->m_observerProductionScale = scale;
+	writeObserverFontSizePref("ObserverProductionScale", scale);
+}
+
 static bool changeObserverNotificationFontSize(ObserverFontSizeChange change)
 {
 	const Int fontSize = applyObserverFontSizeChange(TheWritableGlobalData->m_observerNotificationFontSize, change);
@@ -3486,6 +3498,27 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 		}
 
 		//-----------------------------------------------------------------------------------------
+		case GameMessage::MSG_META_INCREASE_OBSERVER_PRODUCTION_SCALE:
+		{
+			changeObserverProductionScale(10);
+			disp = DESTROY_MESSAGE;
+			break;
+		}
+
+		case GameMessage::MSG_META_DECREASE_OBSERVER_PRODUCTION_SCALE:
+		{
+			changeObserverProductionScale(-10);
+			disp = DESTROY_MESSAGE;
+			break;
+		}
+
+		case GameMessage::MSG_META_TOGGLE_OBSERVER_PRODUCTION:
+		{
+			TheInGameUI->getObserverProduction().toggle();
+			disp = DESTROY_MESSAGE;
+			break;
+		}
+
 		case GameMessage::MSG_META_TOGGLE_PLAYER_OBSERVER:
 		{
 			if (Player *lookAtPlayer = TheControlBar->getObserverLookAtPlayer())

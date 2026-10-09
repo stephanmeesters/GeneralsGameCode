@@ -139,4 +139,6 @@ public:
     Int getObserverNotificationFontSize(void);
 	Bool getObserverNotificationSpecialPowerUsage(void);
 	Bool getObserverNotificationSpecialPowerPurchase(void);
-	Bool getObserverNotificationMilestone(void);};
+	Bool getObserverNotificationMilestone(void);
+	Int getObserverProductionScale() const;
+};

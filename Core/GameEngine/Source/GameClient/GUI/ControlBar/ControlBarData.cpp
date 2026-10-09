@@ -222,7 +222,7 @@ namespace
 	}
 
 	// What W3DGadgetPushButtonImageDrawOne() draws for a push button, from its status, state and PushButtonData.
-	void readButton( GameWindow *win, Bool shown, ControlBarButtonData &data )
+	void readButton( GameWindow *win, Bool shown, ControlBarButtonData &data, Bool hasCommand = TRUE )
 	{
 		data.clear();
 		if( win == nullptr || !BitIsSet( win->winGetStyle(), GWS_PUSH_BUTTON ) )
@@ -248,7 +248,9 @@ namespace
 				data.clockInverse = pData->drawClock == INVERSE_CLOCK;
 				pData->drawClock = NO_CLOCK; // the logic sets it again every frame it applies
 			}
-			data.command = (const CommandButton *)pData->userData;
+			// Observer buttons store a Player*, rather than a CommandButton*.
+			if( hasCommand )
+				data.command = (const CommandButton *)pData->userData;
 		}
 
 		if( data.command )
@@ -516,7 +518,7 @@ void ControlBar::fillData( ControlBarData &data )
 		{
 			const ControlBarButtonId id = { CBB_OBSERVER, i };
 			GameWindow *button = getButtonWindow( id );
-			readButton( button, i < CB_OBSERVER_PLAYERS ? data.observerListShown : data.observerInfoShown, data.observerButtons[ i ] );
+			readButton( button, i < CB_OBSERVER_PLAYERS ? data.observerListShown : data.observerInfoShown, data.observerButtons[ i ], FALSE );
 			if( i == CB_OBSERVER_PLAYERS || button == nullptr )
 				continue;
 			GameWindow *text = TheWindowManager->winGetWindowFromId( list, buttonKeys().observerText[ i ] );
