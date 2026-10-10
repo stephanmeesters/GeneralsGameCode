@@ -98,6 +98,7 @@ private:
 
 	Rml::Vector<RowModel> m_rows;
 	RowModel m_selected; ///< the selected row for the details card, valid when m_hasSelection
+	bool m_opening = false;
 	bool m_hasSelection = false;
 	Rml::Vector<PlayerModel> m_selectedPlayers;
 	unsigned int m_shownVersion = 0;

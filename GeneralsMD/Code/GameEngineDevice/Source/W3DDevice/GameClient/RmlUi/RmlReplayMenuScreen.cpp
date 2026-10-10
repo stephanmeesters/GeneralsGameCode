@@ -179,14 +179,17 @@ void RmlReplayMenuScreen::refresh()
 
 void RmlReplayMenuScreen::open()
 {
-	if (!TheRmlUiManager)
+	if (!TheRmlUiManager || m_opening)
 		return;
 
 	load(TheRmlUiManager->getContext());
 	if (!m_document)
 		return;
 
+	// showShellMap() can bring this layout forward and re-enter open().
+	m_opening = true;
 	ReplayMenuActions::open(&closeDocument);
+	m_opening = false;
 	refresh();
 
 	m_hq.refresh(m_modelHandle, true);
