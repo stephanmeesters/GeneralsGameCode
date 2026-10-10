@@ -128,6 +128,9 @@ void RmlMainMenuScreen::show()
 	if (!m_document || m_inShellMapChange)
 		return;
 
+	// The intro stops rendering until the main menu takes over, as in MainMenuInit().
+	TheWritableGlobalData->m_breakTheMovie = FALSE;
+
 	// Mirrors MainMenuInit()'s TheShell->showShellMap(TRUE)/TheMouse->setVisibility(TRUE); both
 	// are no-ops if the shell map is already running (see Shell::showShellMap).
 	if (TheShell)
