@@ -90,6 +90,13 @@ public:
 	virtual void draw( Int x, Int y, Color color, Color dropColor ) = 0;  ///< render text
 	virtual void draw( Int x, Int y, Color color, Color dropColor, Int xDrop, Int yDrop ) = 0;  ///< render text with the drop shadow being at the offsets passed in
 	virtual void getSize( Int *width, Int *height ) = 0;  ///< get render size
+	// Visible pixel bounds for single-line text, relative to the draw position.
+	virtual IRegion2D getVisibleBounds()
+	{
+		IRegion2D bounds = {};
+		getSize(&bounds.hi.x, &bounds.hi.y);
+		return bounds;
+	}
 	virtual Int getWidth( Int charPos = -1 ) = 0; ///< get text with up to charPos characters, 1- = all characters
 
 	virtual void setUseHotkey( Bool useHotkey, Color hotKeyColor ) = 0;

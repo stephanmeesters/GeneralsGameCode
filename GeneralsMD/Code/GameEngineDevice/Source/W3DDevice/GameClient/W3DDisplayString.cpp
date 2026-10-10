@@ -46,7 +46,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES ////////////////////////////////////////////////////////////
+#include <limits.h>
 #include <stdlib.h>
+#include <vector>
 
 // USER INCLUDES //////////////////////////////////////////////////////////////
 #include "GameClient/Display.h"
@@ -260,6 +262,39 @@ void W3DDisplayString::getSize( Int *width, Int *height )
 	if( height )
 		*height = m_size.y;
 
+}
+
+// W3DDisplayString::getVisibleBounds =========================================
+/** Box around the glyph pixels that draw() actually covers, relative to the
+	* draw position. Unlike getSize(), it excludes each glyph cell's empty margins.
+	* Single line only; zero when nothing is visible. */
+//=============================================================================
+IRegion2D W3DDisplayString::getVisibleBounds()
+{
+	FontCharsClass *font = m_textRenderer.Peek_Font();
+	IRegion2D bounds = { { INT_MAX, INT_MAX }, { INT_MIN, INT_MIN } };
+	Int cursor = 0;
+	for (const WideChar *ch = m_textString.str(); font && *ch; ++ch)
+	{
+		const Int width = font->Get_Char_Width(*ch);
+		const Int height = font->Get_Char_Height();
+		std::vector<uint16> glyph(width * height, 0);
+		font->Blit_Char(*ch, glyph.data(), width * sizeof(uint16), 0, 0);
+		for (Int y = 0; y < height; ++y)
+			for (Int x = 0; x < width; ++x)
+				if (glyph[y * width + x] & 0xF000) // alpha of the ARGB4444 pixel
+				{
+					bounds.lo.x = min(bounds.lo.x, cursor + x);
+					bounds.lo.y = min(bounds.lo.y, y);
+					bounds.hi.x = max(bounds.hi.x, cursor + x + 1);
+					bounds.hi.y = max(bounds.hi.y, y + 1);
+				}
+		cursor += font->Get_Char_Spacing(*ch);
+	}
+
+	if (bounds.lo.x > bounds.hi.x)
+		bounds.zero();
+	return bounds;
 }
 
 // DisplayString::appendChar ==================================================

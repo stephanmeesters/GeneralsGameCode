@@ -78,6 +78,7 @@ public:
 	virtual void draw( Int x, Int y, Color color, Color dropColor ) override;  ///< render text
 	virtual void draw( Int x, Int y, Color color, Color dropColor, Int xDrop, Int yDrop ) override;  ///< render text with the drop shadow being at the offsets passed in
 	virtual void getSize( Int *width, Int *height ) override;		///< get render size
+	virtual IRegion2D getVisibleBounds() override;
 	virtual Int	getWidth( Int charPos = -1) override;
 	virtual void setWordWrap( Int wordWrap ) override;						///< set the word wrap width
 	virtual void setWordWrapCentered( Bool isCentered ) override; ///< If this is set to true, the text on a new line is centered
