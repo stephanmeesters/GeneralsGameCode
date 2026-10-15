@@ -1,0 +1,111 @@
+# Particle render test
+
+A hardcoded 960×720 scene with ten overlapping particles: five alpha and five
+additive, at distinct depths. Uses the game's `PointGroupClass`, sprite shader
+presets, camera, and `SortingRendererClass`. Particle simulation, INI parsing and
+the game particle manager are not needed for this geometry/blending test.
+
+Each particle uses a different real DDS texture read directly from a supplied
+`.big` archive, with its mipmaps and the existing separate blend modes. The scene
+needs no INI files. It does not yet implement an atlas or the proposed unified
+premultiplied-alpha mode.
+
+## Assets and launch
+
+With no arguments, the test checks only `Textures.big` and `TexturesZH.big`
+in the **current working directory** (not necessarily the executable directory).
+It loads whichever are present, with `TexturesZH.big` overriding duplicate entries
+from `Textures.big`. It does not scan audio, maps, language or other archives.
+Some scene textures are inherited from Generals, so `TexturesZH.big` alone may
+not contain all ten required textures.
+For example:
+
+```bat
+cd /d D:\generalsv-weekly
+D:\path\to\ParticleRenderTestZH.exe
+```
+
+Alternatively, pass one or more explicit archive paths, quoted when they contain
+spaces. Explicit arguments replace automatic discovery and retain their command-line
+order; later arguments override earlier ones. For example:
+
+```bat
+ParticleRenderTestZH.exe "D:\generalsv-weekly\Textures.big" "D:\generalszh-weekly\TexturesZH.big"
+```
+
+These ten sources were all found in Generals' `Textures.big`, so that archive alone
+is sufficient for this scene. A Zero Hour-only `TexturesZH.big` does not contain
+all inherited Generals textures. Use the executable's configuration suffix if set.
+
+| Alpha particles | Additive particles |
+|---|---|
+| `EXSmokNew1.dds` | `EXexplo03.dds` |
+| `EXSmokePuf07.dds` | `EXFire01.dds` |
+| `EXCloud01.dds` | `EXLnzFlar2.dds` |
+| `EXCloud02.dds` | `EXFireball03.dds` |
+| `EXWater04.dds` | `EXSpark01.dds` |
+
+Entries are under `Art\Textures` inside the archives. Missing entries or failed
+texture decoding produce an error instead of silently displaying a placeholder.
+The mode assignments above define this test scene; they are not loaded from the
+original systems' INI definitions.
+
+`BigTextureFileFactory` is a tool-only adapter for `BIGF`/`BIG4` archives. It
+indexes their directories and returns bounded `RawFileClass`-derived views of each entry
+to the existing W3D texture loader. Each reader has its own handle; the archives
+are read directly without disk extraction. Offsets and sizes must fit the
+engine's signed 32-bit file interface. The adapter implements entry-relative seeking
+locally because this checkout's raw-file seek returns status instead of position.
+DDS headers are validated before loading, so an invalid entry cannot silently
+fall through to TGA decoding. This is explicit archive precedence,
+not a recreation of the game's full filesystem/mod discovery rules.
+
+## Build
+
+Enable `RTS_BUILD_ZEROHOUR_TOOLS` and/or `RTS_BUILD_GENERALS_TOOLS` in a Windows
+configuration. Targets:
+
+- `z_particlerendertest`: `ParticleRenderTestZH` (plus configuration suffix).
+- `g_particlerendertest`: `ParticleRenderTestV` (plus configuration suffix).
+
+For example, from an x86 Visual Studio developer prompt:
+
+```bat
+cmake --preset win32-profile
+cmake --build --preset win32-profile --target z_particlerendertest g_particlerendertest
+```
+
+The normal tool dependencies, DirectX 8 runtime and supplied game archives are required. No MFC UI is
+used by this executable. The window has a fixed client size; it can be minimized.
+
+## Controls and visual checks
+
+- **F** toggles the frame limiter (initially on); turn it off for throughput comparisons.
+- **S** toggles production triangle sorting (initially on).
+- **R** reverses particle submission order.
+- **B** switches between dark and gray backgrounds.
+- **Esc** closes the test.
+
+With sorting on, reversing submission should preserve the image: all particles
+have distinct depths. With sorting off, reversal should visibly change overlapping
+alpha/additive results. Keep the camera and particles static for reproducible
+comparisons. The title bar shows FPS, average frame time, actual DX8 draw calls per frame,
+triangle count, and the current controls. FPS/frame time update twice per second
+and include presentation and the optional 16 ms sleep. Minimized/device-recovery
+periods reset the sampling interval. Uncapped mode removes the sleep; presentation
+can still be limited by the driver or display synchronization.
+
+Draw calls come from `DX8Wrapper::Get_Last_Frame_Statistics().draw_calls` after
+`End_Render`, rather than the general debug counter that also counts sorting
+submissions.
+
+The scene intentionally makes ten separate point-group submissions so the sorter
+receives multiple interleaving nodes. This is a small correctness fixture with basic rendering statistics, not a
+representative performance benchmark. It is a starting point for comparing the existing blend modes
+with a future unified blend implementation.
+
+## Diagnostic log
+
+Logging-enabled builds write `ParticleRenderTest-DebugLogFile*.txt` next to the
+executable, recording texture dimensions/mip counts and first-frame draw counts.
+Debug initialization and shutdown bracket the renderer and archive adapter.
