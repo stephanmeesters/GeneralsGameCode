@@ -66,6 +66,8 @@ const unsigned BATCH_CAPACITY = 512;
 bool captureReference = false;
 const char WINDOW_CLASS[] = "GeneralsParticleRenderTest";
 
+bool premultiplied = false;
+std::string premultipliedError;
 bool sorting = true;
 bool reverseSubmission = false;
 bool lightBackground = false;
@@ -174,11 +176,12 @@ void Update_Comparison_Label(const char* detail = nullptr)
 
 void Update_Title(HWND window)
 {
-	char title[256];
+	char title[384];
 	snprintf(title, sizeof(title),
-		"Scene %d: %u particles | %s | %.1f FPS | %.2f ms | %u draws | %d triangles | A: add batching %s | F: %s | S: sorting %s | R: %s | B: bg | C: capture | V: compare | Esc",
+		"Scene %d: %u particles | %s | %.1f FPS | %.2f ms | %u draws | %d triangles | P: premul %s | A: add batching %s | F: %s | S: sorting %s | R: %s | B: bg | C: capture | V: compare | Esc",
 		selectedScene + 1, selectedScene == 0 ? static_cast<unsigned>(PARTICLE_COUNT) : STRESS_PARTICLE_COUNT,
 		Comparison_Name(), displayedFps, displayedFrameMs, displayedDraws, displayedTriangles,
+		premultiplied ? "ON" : "OFF",
 		SortingRendererClass::Is_Additive_Batching_Enabled() ? "ON" : "OFF",
 		frameLimiter ? "limited" : "uncapped", sorting ? "ON" : "OFF", reverseSubmission ? "reversed" : "original");
 	SetWindowTextA(GetAncestor(window, GA_ROOT), title);
@@ -196,6 +199,10 @@ LRESULT CALLBACK Window_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
 		case 'R': reverseSubmission = !reverseSubmission; break;
 		case 'B': lightBackground = !lightBackground; break;
 		case 'F': frameLimiter = !frameLimiter; break;
+		case 'P':
+			if (premultipliedError.empty()) premultiplied = !premultiplied;
+			else MessageBoxA(GetAncestor(window, GA_ROOT), premultipliedError.c_str(), "Premultiplied blending unavailable", MB_OK | MB_ICONERROR);
+			break;
 		case 'A':
 			SortingRendererClass::Enable_Additive_Batching(!SortingRendererClass::Is_Additive_Batching_Enabled());
 			break;
@@ -204,7 +211,7 @@ LRESULT CALLBACK Window_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
 		case '1': selectedScene = 0; break;
 		case '2': selectedScene = 1; break;
 		}
-		if (wparam == 'S' || wparam == 'R' || wparam == 'B' || wparam == 'C' || wparam == 'V' || wparam == 'A' || wparam == '1' || wparam == '2') {
+		if (wparam == 'S' || wparam == 'R' || wparam == 'B' || wparam == 'C' || wparam == 'V' || wparam == 'A' || wparam == 'P' || wparam == '1' || wparam == '2') {
 			comparisonRequested = true;
 			comparisonState = comparisonEnabled ? COMPARISON_PENDING : COMPARISON_PAUSED;
 			Update_Comparison_Label();
@@ -387,6 +394,48 @@ struct ComparisonReadback
 	IDirect3DSurface8* surface;
 };
 
+// Tool-only PS 1.1 experiment. Keep original textures (and their mip/filter
+// behavior); premultiply the sampled color, rather than rewriting the assets.
+// v0.a = particle alpha for OVER, zero for ADD. A zero-alpha OVER particle
+// also has zero vertex RGB so that the ADD branch still emits zero.
+class UnifiedParticleShader
+{
+public:
+	UnifiedParticleShader() : handle(0) {}
+	~UnifiedParticleShader()
+	{
+		DX8Wrapper::Set_Pixel_Shader(0);
+		if (handle) DX8Wrapper::_Get_D3D_Device8()->DeletePixelShader(handle);
+	}
+	bool Init(std::string& error)
+	{
+		const char source[] =
+			"ps.1.1\n"
+			"def c0, 0, 0, 0, 0.5\n"
+			"tex t0\n"
+			"mul r1, t0, v0\n"             // original modulated RGB/alpha
+			"mul r0.rgb, r1, r1.a\n"       // premultiply OVER
+			"add r0.a, v0.a, c0.a\n"       // CND tests r0.a > 0.5
+			"cnd r0.rgb, r0.a, r0, r1\n"   // OVER or unattenuated ADD RGB
+			"mul r0.a, t0.a, v0.a\n";      // ADD outputs zero alpha
+		ID3DXBuffer* bytecode = nullptr;
+		ID3DXBuffer* diagnostics = nullptr;
+		HRESULT result = D3DXAssembleShader(source, strlen(source), 0, nullptr, &bytecode, &diagnostics);
+		if (FAILED(result)) {
+			error = diagnostics ? static_cast<const char*>(diagnostics->GetBufferPointer()) : "Could not assemble particle PS 1.1 shader.";
+		} else {
+			result = DX8Wrapper::_Get_D3D_Device8()->CreatePixelShader(static_cast<const DWORD*>(bytecode->GetBufferPointer()), &handle);
+			if (FAILED(result)) error = "The premultiplied experiment requires DirectX 8 pixel shader 1.1 support.";
+		}
+		if (diagnostics) diagnostics->Release();
+		if (bytecode) bytecode->Release();
+		return SUCCEEDED(result);
+	}
+	DWORD Get_Handle() const { return handle; }
+private:
+	DWORD handle;
+};
+
 bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& error)
 {
 	RefCountPtr<TextureClass> textures[PARTICLE_COUNT];
@@ -414,6 +463,10 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 	}
 
 	DEBUG_LOG(("Particle test: all %d archive textures loaded", PARTICLE_COUNT));
+	UnifiedParticleShader unifiedShader;
+	if (!unifiedShader.Init(premultipliedError)) {
+		DEBUG_LOG(("Particle test: premultiplied experiment unavailable: %s", premultipliedError.c_str()));
+	}
 	CameraClass camera;
 	camera.Set_Clip_Planes(0.1f, 100.0f);
 	camera.Set_Aspect_Ratio(static_cast<float>(WINDOW_WIDTH) / WINDOW_HEIGHT);
@@ -478,13 +531,21 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 			continue;
 		}
 		camera.Apply();
+		// Pixel shader binding is immediate, outside the deferred sorting state.
+		// Every submission in this tool frame uses the same experiment setting.
+		DX8Wrapper::Set_Pixel_Shader(premultiplied ? unifiedShader.Get_Handle() : 0);
 		unsigned count = 0;
 		unsigned batchTexture = 0;
 		bool batchAdditive = false;
 		auto flushBatch = [&]() {
 			if (count == 0) return;
 			group.Set_Texture(textures[batchTexture].Peek());
-			group.Set_Shader(batchAdditive ? ShaderClass::_PresetAdditiveSpriteShader : ShaderClass::_PresetAlphaSpriteShader);
+			ShaderClass shader = batchAdditive ? ShaderClass::_PresetAdditiveSpriteShader : ShaderClass::_PresetAlphaSpriteShader;
+			if (premultiplied) {
+				shader = ShaderClass::_PresetAlphaSpriteShader;
+				shader.Set_Src_Blend_Func(ShaderClass::SRCBLEND_ONE);
+			}
+			group.Set_Shader(shader);
 			group.Set_Arrays(positions.Peek(), colors.Peek(), nullptr, sizes.Peek(), nullptr, nullptr, count);
 			group.Render(renderInfo);
 			count = 0;
@@ -494,13 +555,19 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 			const unsigned index = reverseSubmission ? particleCount - 1 - i : i;
 			const TestParticle& particle = selectedScene == 0 ? PARTICLES[index] : stressParticles[stressOrder[index]];
 			if (count == BATCH_CAPACITY || (count > 0 &&
-				(particle.textureIndex != batchTexture || particle.additive != batchAdditive))) flushBatch();
+				(particle.textureIndex != batchTexture || (!premultiplied && particle.additive != batchAdditive)))) flushBatch();
 			if (count == 0) {
 				batchTexture = particle.textureIndex;
 				batchAdditive = particle.additive;
 			}
 			positions->Get_Array()[count].Set(particle.x, particle.y, particle.z);
-			colors->Get_Array()[count].Set(particle.red, particle.green, particle.blue, particle.alpha);
+			// Match the alpha quantization used by PointGroup, including fades
+			// that round down to zero before reaching the pixel shader.
+			const bool invisibleOver = premultiplied && !particle.additive &&
+				(DX8Wrapper::Convert_Color_Clamp(Vector4(0, 0, 0, particle.alpha)) & 0xFF000000u) == 0;
+			colors->Get_Array()[count].Set(
+				invisibleOver ? 0.0f : particle.red, invisibleOver ? 0.0f : particle.green, invisibleOver ? 0.0f : particle.blue,
+				premultiplied && particle.additive ? 0.0f : particle.alpha);
 			sizes->Get_Array()[count] = particle.size;
 			++count;
 		}
@@ -511,6 +578,7 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 		const bool comparing = comparisonEnabled && (comparisonRequested || capturing ||
 			static_cast<double>(comparisonTime.QuadPart - lastComparison.QuadPart) / frequency.QuadPart >= 0.5);
 		if (WW3D::End_Render(!(capturing || comparing)) != WW3D_ERROR_OK) return false;
+		DX8Wrapper::Set_Pixel_Shader(0);
 		if (capturing) {
 			captureReference = false;
 			const bool saved = Save_Reference(error);

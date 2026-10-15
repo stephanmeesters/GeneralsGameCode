@@ -7,8 +7,8 @@ the game particle manager are not needed for this geometry/blending test.
 
 Each particle uses a different real DDS texture read directly from a supplied
 `.big` archive, with its mipmaps and the existing separate blend modes. The scene
-needs no INI files. It does not yet implement an atlas or the proposed unified
-premultiplied-alpha mode.
+needs no INI files. P toggles an experimental unified premultiplied-alpha mode.
+There is no texture atlas yet.
 
 ## Assets and launch
 
@@ -125,6 +125,7 @@ the particle statistics. FPS includes the comparison application's normal overhe
 - **1** / **2** switch between the ten-particle scene and the fixed-seed 4,000-particle scene.
 - **V** toggles live RGB comparison (initially on).
 - **C** saves the current live image as the new persistent reference.
+- **P** toggles unified premultiplied-alpha blending (initially off).
 - **A** toggles Ronin's additive-run batching (initially on) for draw-count comparisons.
 - **F** toggles the frame limiter (initially on); turn it off for throughput comparisons.
 - **S** toggles production triangle sorting (initially on).
@@ -148,7 +149,7 @@ submissions.
 The original scene makes ten separate point-group submissions so the sorter
 receives multiple interleaving nodes. This is a small correctness fixture with basic rendering statistics, not a
 representative performance benchmark. It is a starting point for comparing the existing blend modes
-with a future unified blend implementation.
+with the experimental unified blend implementation.
 
 ## Diagnostic log
 
@@ -169,3 +170,59 @@ This reduces repeated node switches; it does not merge different nodes by render
 state, create an atlas, or combine alpha and additive into a shared blend mode.
 Compare against the existing saved images without recapturing them. Small RGB
 rounding differences, if any, remain visible in the exact-pixel comparison.
+
+## Unified premultiplied-alpha experiment
+
+Press **P** to switch the live scene between the original blend modes and a
+shared `ONE / INV_SRC_ALPHA` mode. The saved reference is unchanged. This path
+is confined to this test executable; game particle materials are unchanged.
+It requires DX8 pixel shader 1.1 support. If unavailable, P reports the failure
+and the original rendering path remains usable.
+
+Let `C = texture.rgb * vertex.rgb` and `a = texture.a * vertex.a`:
+
+| Particle | Original RGB blend | Experiment shader output `(RGB, alpha)` | Shared blend result |
+|---|---|---|---|
+| Alpha | `C*a + destination*(1-a)` | `(C*a, a)` | `C*a + destination*(1-a)` |
+| Additive | `C + destination` | `(C, 0)` | `C + destination` |
+
+For the experiment, additive vertices carry zero alpha; their original alpha
+was ignored by the original `ONE / ONE` material. Zero-alpha OVER vertices also
+carry zero RGB to distinguish an invisible particle from additive emission.
+The PS 1.1 program premultiplies after sampling the original texture, preserving
+the existing mipmaps and texture-filtering behavior without texture conversion.
+This tests blending equivalence, rather than prefiltered premultiplied assets.
+The backbuffer alpha channel is outside this RGB comparison.
+
+Both modes now share one shader and blend state. Submission batches split only
+at texture changes and the 512-particle capacity. The sorter still preserves
+depth order and emits draws on node changes. Unified OVER is not commutative:
+Ronin's additive regrouping does not classify the shared material as additive,
+so A has no regrouping effect while P is enabled. Mixed-mode batching can thus
+save some draws while losing the original additive-run regrouping opportunity.
+Texture changes and capacity boundaries still limit batching; this experiment
+does not promise one draw for all particles.
+
+Compare scene 2 with P off/on, keeping S enabled. Use V and F to disable readback
+and the sleep limiter for throughput measurements. Exact RGB comparison stays
+strict: finite-precision differences between the fixed-function and programmable
+paths are displayed as DIFFERENT, including the maximum channel delta.
+
+Initial bequiet measurements for the fixed-seed 4,000-particle scene:
+
+| Path | GPU draws/frame |
+|---|---:|
+| Original modes, additive regrouping off | 3,809 |
+| Original modes, additive regrouping on | 3,713 |
+| Unified premultiplied mode | 3,597 |
+
+That is 116 fewer draws (3.1%) than the Ronin path, or 5.6% below pure depth
+sorting. Scene 1 still needs ten draws because each particle has a different
+texture. The initial unified stress-scene comparison differed in 161,448 of
+691,200 pixels, with a maximum RGB delta of 3/255. The programmable and
+fixed-function paths are therefore not bit-identical; small precision changes
+can accumulate through overlapping particles. References were preserved and the
+original path still matches exactly. Brief uncapped samples fluctuated enough
+that they do not establish a reliable FPS improvement.
+
+PS 1.1 conditional selection follows [Microsoft's CND instruction documentation](https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/cnd---ps).
