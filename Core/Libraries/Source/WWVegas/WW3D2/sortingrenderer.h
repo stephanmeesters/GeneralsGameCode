@@ -26,6 +26,7 @@ class SphereClass;
 class SortingRendererClass
 {
 	static bool _EnableTriangleDraw;
+	static bool _EnableAdditiveBatching;
 
 	static void Flush_Sorting_Pool();
 	static void Insert_To_Sorted_List(SortingNodeStruct* state);
@@ -49,6 +50,10 @@ public:
 	static void Deinit();
 
 	static void SetMinVertexBufferSize( unsigned val );
+
+	// Group only consecutive additive triangles; never cross other blend modes.
+	static void Enable_Additive_Batching(bool enable) { _EnableAdditiveBatching = enable; }
+	static bool Is_Additive_Batching_Enabled() { return _EnableAdditiveBatching; }
 
 	static void _Enable_Triangle_Draw(bool enable) { _EnableTriangleDraw=enable; }
 	static bool _Is_Triangle_Draw_Enabled() { return _EnableTriangleDraw; }

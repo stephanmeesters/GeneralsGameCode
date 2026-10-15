@@ -125,6 +125,7 @@ the particle statistics. FPS includes the comparison application's normal overhe
 - **1** / **2** switch between the ten-particle scene and the fixed-seed 4,000-particle scene.
 - **V** toggles live RGB comparison (initially on).
 - **C** saves the current live image as the new persistent reference.
+- **A** toggles Ronin's additive-run batching (initially on) for draw-count comparisons.
 - **F** toggles the frame limiter (initially on); turn it off for throughput comparisons.
 - **S** toggles production triangle sorting (initially on).
 - **R** reverses particle submission order.
@@ -154,3 +155,17 @@ with a future unified blend implementation.
 Logging-enabled builds write `ParticleRenderTest-DebugLogFile*.txt` next to the
 executable, recording texture dimensions/mip counts and first-frame draw counts.
 Debug initialization and shutdown bracket the renderer and archive adapter.
+
+## Additive sorting optimization
+
+The sorter ports Ronin's additive-run regrouping (`d4578f76f`, with the independent
+correctness predicate from `28ddcc23b`). After depth sorting, each uninterrupted
+run of additive triangles is stably grouped by original node ID. Alpha, multiply
+and depth-writing nodes remain barriers. Both `ONE/ONE` and `SRC_ALPHA/ONE` are
+eligible when depth writes are disabled. Shader classification does not depend
+on diagnostic draw categories. Press A to compare against pure depth order.
+
+This reduces repeated node switches; it does not merge different nodes by render
+state, create an atlas, or combine alpha and additive into a shared blend mode.
+Compare against the existing saved images without recapturing them. Small RGB
+rounding differences, if any, remain visible in the exact-pixel comparison.

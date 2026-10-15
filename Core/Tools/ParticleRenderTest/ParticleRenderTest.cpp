@@ -13,6 +13,7 @@
 #include "WW3D2/ddsfile.h"
 #include "WW3D2/dx8wrapper.h"
 #include "WW3D2/statistics.h"
+#include "WW3D2/sortingrenderer.h"
 #include "WW3D2/pointgr.h"
 #include "WW3D2/rinfo.h"
 #include "WW3D2/texture.h"
@@ -175,9 +176,10 @@ void Update_Title(HWND window)
 {
 	char title[256];
 	snprintf(title, sizeof(title),
-		"Scene %d: %u particles | %s | %.1f FPS | %.2f ms | %u draws | %d triangles | F: %s | S: sorting %s | R: %s | B: bg | C: capture | V: compare | Esc",
+		"Scene %d: %u particles | %s | %.1f FPS | %.2f ms | %u draws | %d triangles | A: add batching %s | F: %s | S: sorting %s | R: %s | B: bg | C: capture | V: compare | Esc",
 		selectedScene + 1, selectedScene == 0 ? static_cast<unsigned>(PARTICLE_COUNT) : STRESS_PARTICLE_COUNT,
 		Comparison_Name(), displayedFps, displayedFrameMs, displayedDraws, displayedTriangles,
+		SortingRendererClass::Is_Additive_Batching_Enabled() ? "ON" : "OFF",
 		frameLimiter ? "limited" : "uncapped", sorting ? "ON" : "OFF", reverseSubmission ? "reversed" : "original");
 	SetWindowTextA(GetAncestor(window, GA_ROOT), title);
 }
@@ -194,12 +196,15 @@ LRESULT CALLBACK Window_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
 		case 'R': reverseSubmission = !reverseSubmission; break;
 		case 'B': lightBackground = !lightBackground; break;
 		case 'F': frameLimiter = !frameLimiter; break;
+		case 'A':
+			SortingRendererClass::Enable_Additive_Batching(!SortingRendererClass::Is_Additive_Batching_Enabled());
+			break;
 		case 'C': captureReference = true; break;
 		case 'V': comparisonEnabled = !comparisonEnabled; break;
 		case '1': selectedScene = 0; break;
 		case '2': selectedScene = 1; break;
 		}
-		if (wparam == 'S' || wparam == 'R' || wparam == 'B' || wparam == 'C' || wparam == 'V' || wparam == '1' || wparam == '2') {
+		if (wparam == 'S' || wparam == 'R' || wparam == 'B' || wparam == 'C' || wparam == 'V' || wparam == 'A' || wparam == '1' || wparam == '2') {
 			comparisonRequested = true;
 			comparisonState = comparisonEnabled ? COMPARISON_PENDING : COMPARISON_PAUSED;
 			Update_Comparison_Label();

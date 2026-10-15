@@ -53,6 +53,7 @@
 
 
 bool SortingRendererClass::_EnableTriangleDraw=true;
+bool SortingRendererClass::_EnableAdditiveBatching=true;
 static unsigned DEFAULT_SORTING_POLY_COUNT = 16384;	// (count * 3) must be less than 65536
 static unsigned DEFAULT_SORTING_VERTEX_COUNT = 32768;	// count must be less than 65536
 
@@ -411,6 +412,31 @@ static void Apply_Render_State(RenderStateStruct& render_state)
 
 // ----------------------------------------------------------------------------
 
+// Ronin @perf 09/08/2026 Ported from GeneralsRonin: is this node's blend ORDER-INDEPENDENT? Additive (ONE/ONE and
+// SRC_ALPHA/ONE) is commutative, so those triangles may be reordered relative to each other. A DEPTH
+// WRITE is never commutative and disqualifies a node regardless of blend mode. Reads ShaderClass ONLY,
+// deliberately NOT the [DRAW] diagnostic enum: a correctness decision must not depend on instrumentation,
+// and this way the batching ports to trees that have no Debug_Statistics draw buckets.
+static bool Sorted_Node_Is_Order_Independent(const ShaderClass& shader)
+{
+	const ShaderClass::SrcBlendFuncType src = shader.Get_Src_Blend_Func();
+	const ShaderClass::DstBlendFuncType dst = shader.Get_Dst_Blend_Func();
+	const bool additive = (dst == ShaderClass::DSTBLEND_ONE &&
+		(src == ShaderClass::SRCBLEND_ONE || src == ShaderClass::SRCBLEND_SRC_ALPHA));
+	return additive && (shader.Get_Depth_Mask() == ShaderClass::DEPTH_WRITE_DISABLE);
+}
+
+// Which pooled nodes are additive (commutative)? Rebuilt every flush. File-scope so the 4KB stays off
+// the stack, matching how overlapping_nodes[] is held.
+static bool node_is_additive[MAX_OVERLAPPING_NODES];
+
+// Group an additive run by node. stable_sort keeps each node's triangles in their existing relative
+// depth order, which costs nothing and keeps the result deterministic frame to frame.
+static bool Additive_Node_Less(const TempIndexStruct& a, const TempIndexStruct& b)
+{
+	return a.idx < b.idx;
+}
+
 void SortingRendererClass::Flush_Sorting_Pool()
 {
 	if (!overlapping_node_count) return;
@@ -516,6 +542,36 @@ void SortingRendererClass::Flush_Sorting_Pool()
 	}
 
 	Sort(tis, tis + overlapping_polygon_count);
+
+	// Ronin @perf 09/08/2026 Ported from GeneralsRonin: additive blending (ONE/ONE, SRC_ALPHA/ONE) is COMMUTATIVE, so
+	// those triangles need no depth order relative to EACH OTHER. The z-sort above interleaves nodes and
+	// the draw loop below emits a draw on every node CHANGE — that is why ~740 particles cost ~470 draws.
+	// Within each maximal run of CONSECUTIVE additive triangles, re-sort by node so every node in that run
+	// collapses to ONE draw. A run ENDS at any non-additive triangle, so nothing is reordered across an
+	// alpha triangle: additive commutes with additive, NOT with alpha-over. Depth order between runs is
+	// untouched -> the image is unchanged. Enable_Additive_Batching(false) restores pure depth order for A/B testing.
+	if (_EnableAdditiveBatching) {
+		for (unsigned n = 0; n < overlapping_node_count; ++n) {
+			node_is_additive[n] = Sorted_Node_Is_Order_Independent(overlapping_nodes[n]->sorting_state.shader);
+		}
+
+		unsigned run_start = 0;
+		while (run_start < overlapping_polygon_count) {
+			if (!node_is_additive[tis[run_start].idx]) {
+				++run_start;
+				continue;
+			}
+			unsigned run_end = run_start + 1;
+			while (run_end < overlapping_polygon_count && node_is_additive[tis[run_end].idx]) {
+				++run_end;
+			}
+			if (run_end - run_start > 1) {
+				std::stable_sort(tis + run_start, tis + run_end, Additive_Node_Less);
+			}
+			run_start = run_end;
+		}
+	}
+
 
 	// TheSuperHackers @fix stephanmeesters 10/06/2026
 	// Split rendering into chunks to prevent a crash when exceeding the 16-bit index buffer limit.
