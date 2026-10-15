@@ -78,12 +78,30 @@ cmake --build --preset win32-profile --target z_particlerendertest g_particleren
 The normal tool dependencies, DirectX 8 runtime and supplied game archives are required. No MFC UI is
 used by this executable. The window has a fixed client size; it can be minimized.
 
+## Scenes
+
+- **1**: the original ten overlapping particles.
+- **2**: 4,000 static randomized particles, using seed **`0x5EED1234`**.
+
+The stress scene randomizes positions, sizes, colors, alpha, blend modes and the
+choice among the ten loaded textures. Its explicit xorshift32 generator runs once
+at startup; frame rate and scene switching do not consume random values. Depths
+are stratified with seeded jitter to avoid equal-depth ordering ambiguity.
+
+Stress-scene submissions are grouped into texture/blend batches of up to 512
+particles, then the production triangle sorter orders all particles together.
+This avoids exhausting the sorter's 4,096-node table. With sorting disabled,
+rendering follows batch order. The 4,000 quads generate 16,000 vertices and 8,000
+triangles. Both scenes use the same existing texture-loading and rendering paths.
+
 ## Saved reference
 
 The comparison window displays a frozen screenshot on the left and the live scene
 on the right, at identical resolutions. The reference is stored as
 `ParticleRenderTest-reference.bmp` next to the executable and survives restarts
-and code edits. If the file is absent, the first rendered frame becomes the
+and code edits. Scene 2 uses its own file,
+`ParticleRenderTest-reference-4000-5EED1234.bmp`, in the same directory.
+Switching scenes loads the corresponding reference. If its file is absent, the first rendered frame becomes the
 reference. An existing reference is never replaced automatically.
 
 The live label and title report **MATCH** or **DIFFERENT**, the number of differing
@@ -104,6 +122,7 @@ the particle statistics. FPS includes the comparison application's normal overhe
 
 ## Controls and visual checks
 
+- **1** / **2** switch between the ten-particle scene and the fixed-seed 4,000-particle scene.
 - **V** toggles live RGB comparison (initially on).
 - **C** saves the current live image as the new persistent reference.
 - **F** toggles the frame limiter (initially on); turn it off for throughput comparisons.
@@ -125,7 +144,7 @@ Draw calls come from `DX8Wrapper::Get_Last_Frame_Statistics().draw_calls` after
 `End_Render`, rather than the general debug counter that also counts sorting
 submissions.
 
-The scene intentionally makes ten separate point-group submissions so the sorter
+The original scene makes ten separate point-group submissions so the sorter
 receives multiple interleaving nodes. This is a small correctness fixture with basic rendering statistics, not a
 representative performance benchmark. It is a starting point for comparing the existing blend modes
 with a future unified blend implementation.

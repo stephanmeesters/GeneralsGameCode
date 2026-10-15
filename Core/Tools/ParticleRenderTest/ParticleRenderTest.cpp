@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
+#include <algorithm>
 
 namespace
 {
@@ -48,6 +49,7 @@ const int WINDOW_HEIGHT = 720;
 const int LABEL_HEIGHT = 24;
 HWND referenceWindow = nullptr;
 HWND liveLabel = nullptr;
+HWND referenceLabel = nullptr;
 std::vector<unsigned int> referencePixels;
 enum ComparisonState { COMPARISON_PENDING, COMPARISON_MATCH, COMPARISON_DIFFERENT, COMPARISON_ERROR, COMPARISON_PAUSED };
 ComparisonState comparisonState = COMPARISON_PENDING;
@@ -55,6 +57,11 @@ bool comparisonEnabled = true;
 bool comparisonRequested = true;
 HBITMAP referenceBitmap = nullptr;
 std::string referencePath;
+std::string referenceDirectory;
+int selectedScene = 0;
+const unsigned STRESS_PARTICLE_COUNT = 4000;
+const unsigned STRESS_SEED = 0x5EED1234u;
+const unsigned BATCH_CAPACITY = 512;
 bool captureReference = false;
 const char WINDOW_CLASS[] = "GeneralsParticleRenderTest";
 
@@ -73,23 +80,76 @@ struct TestParticle
 	float red, green, blue, alpha;
 	bool additive;
 	const char* texture;
+	unsigned textureIndex;
+	float size;
 };
 
 // Distinct depths and alternating modes make additive/alpha ordering visible.
 // The deliberately scrambled submission order exercises the real triangle sorter.
 const TestParticle PARTICLES[] = {
-	{ -0.9f,  0.4f, -8.0f, 0.90f, 0.15f, 0.10f, 0.65f, false, "Art/Textures/EXSmokNew1.dds" },
-	{  0.7f,  0.2f, -6.0f, 0.10f, 0.35f, 0.80f, 1.00f, true, "Art/Textures/EXexplo03.dds" },
-	{  0.2f, -0.5f, -9.0f, 0.10f, 0.75f, 0.30f, 0.65f, false, "Art/Textures/EXSmokePuf07.dds" },
-	{ -0.5f, -0.2f, -5.0f, 0.65f, 0.20f, 0.05f, 1.00f, true, "Art/Textures/EXFire01.dds" },
-	{  0.8f,  0.5f, -7.0f, 0.50f, 0.15f, 0.75f, 0.65f, false, "Art/Textures/EXCloud01.dds" },
-	{ -0.1f,  0.6f, -9.5f, 0.10f, 0.40f, 0.65f, 1.00f, true, "Art/Textures/EXLnzFlar2.dds" },
-	{ -0.6f, -0.6f, -5.5f, 0.10f, 0.55f, 0.65f, 0.65f, false, "Art/Textures/EXCloud02.dds" },
-	{  0.4f, -0.3f, -7.5f, 0.55f, 0.35f, 0.05f, 1.00f, true, "Art/Textures/EXFireball03.dds" },
-	{  0.0f,  0.0f, -4.5f, 0.75f, 0.20f, 0.40f, 0.55f, false, "Art/Textures/EXWater04.dds" },
-	{ -0.3f,  0.0f, -6.5f, 0.15f, 0.55f, 0.10f, 1.00f, true, "Art/Textures/EXSpark01.dds" },
+	{ -0.9f,  0.4f, -8.0f, 0.90f, 0.15f, 0.10f, 0.65f, false, "Art/Textures/EXSmokNew1.dds", 0, 1.4f },
+	{  0.7f,  0.2f, -6.0f, 0.10f, 0.35f, 0.80f, 1.00f, true, "Art/Textures/EXexplo03.dds", 1, 1.4f },
+	{  0.2f, -0.5f, -9.0f, 0.10f, 0.75f, 0.30f, 0.65f, false, "Art/Textures/EXSmokePuf07.dds", 2, 1.4f },
+	{ -0.5f, -0.2f, -5.0f, 0.65f, 0.20f, 0.05f, 1.00f, true, "Art/Textures/EXFire01.dds", 3, 1.4f },
+	{  0.8f,  0.5f, -7.0f, 0.50f, 0.15f, 0.75f, 0.65f, false, "Art/Textures/EXCloud01.dds", 4, 1.4f },
+	{ -0.1f,  0.6f, -9.5f, 0.10f, 0.40f, 0.65f, 1.00f, true, "Art/Textures/EXLnzFlar2.dds", 5, 1.4f },
+	{ -0.6f, -0.6f, -5.5f, 0.10f, 0.55f, 0.65f, 0.65f, false, "Art/Textures/EXCloud02.dds", 6, 1.4f },
+	{  0.4f, -0.3f, -7.5f, 0.55f, 0.35f, 0.05f, 1.00f, true, "Art/Textures/EXFireball03.dds", 7, 1.4f },
+	{  0.0f,  0.0f, -4.5f, 0.75f, 0.20f, 0.40f, 0.55f, false, "Art/Textures/EXWater04.dds", 8, 1.4f },
+	{ -0.3f,  0.0f, -6.5f, 0.15f, 0.55f, 0.10f, 1.00f, true, "Art/Textures/EXSpark01.dds", 9, 1.4f },
 };
 const int PARTICLE_COUNT = sizeof(PARTICLES) / sizeof(PARTICLES[0]);
+
+// Explicit xorshift32 and 24-bit conversion keep the scene reproducible
+// independently of the C library's rand() or STL distribution implementation.
+class SceneRandom
+{
+public:
+	SceneRandom() : state(STRESS_SEED) {}
+	unsigned Next()
+	{
+		state ^= state << 13;
+		state ^= state >> 17;
+		state ^= state << 5;
+		return state;
+	}
+	float Unit() { return static_cast<float>(Next() >> 8) / 16777216.0f; }
+private:
+	unsigned state;
+};
+
+void Build_Stress_Scene(std::vector<TestParticle>& particles, std::vector<unsigned>& order)
+{
+	SceneRandom random;
+	particles.reserve(STRESS_PARTICLE_COUNT);
+	order.reserve(STRESS_PARTICLE_COUNT);
+	for (unsigned i = 0; i < STRESS_PARTICLE_COUNT; ++i) {
+		TestParticle particle = PARTICLES[random.Next() % PARTICLE_COUNT];
+		// Stratify depth to guarantee distinct values, with seeded jitter.
+		const float depth = 6.0f + 18.0f * (i + random.Unit() * 0.5f) / STRESS_PARTICLE_COUNT;
+		particle.x = (random.Unit() * 2.0f - 1.0f) * depth * 0.42f;
+		particle.y = (random.Unit() * 2.0f - 1.0f) * depth * 0.30f;
+		particle.z = -depth;
+		particle.red = 0.15f + random.Unit() * 0.60f;
+		particle.green = 0.15f + random.Unit() * 0.60f;
+		particle.blue = 0.15f + random.Unit() * 0.60f;
+		particle.alpha = 0.15f + random.Unit() * 0.50f;
+		particle.additive = (random.Next() & 1) != 0;
+		particle.size = depth * (0.008f + random.Unit() * 0.018f);
+		particles.push_back(particle);
+		order.push_back(i);
+	}
+	// Bound the sorting node count. The real triangle sorter restores global
+	// depth order across these texture/mode batches before issuing GPU draws.
+	std::stable_sort(order.begin(), order.end(), [&particles](unsigned a, unsigned b) {
+		const TestParticle& left = particles[a];
+		const TestParticle& right = particles[b];
+		const unsigned leftKey = left.textureIndex * 2 + (left.additive ? 1 : 0);
+		const unsigned rightKey = right.textureIndex * 2 + (right.additive ? 1 : 0);
+		return leftKey < rightKey;
+	});
+	DEBUG_LOG(("Particle test: generated %u particles with seed 0x%08X", STRESS_PARTICLE_COUNT, STRESS_SEED));
+}
 
 const char* Comparison_Name()
 {
@@ -115,7 +175,8 @@ void Update_Title(HWND window)
 {
 	char title[256];
 	snprintf(title, sizeof(title),
-		"Particle test | %s | %.1f FPS | %.2f ms | %u draws | %d triangles | F: %s | S: sorting %s | R: %s | B: bg | C: capture | V: compare | Esc",
+		"Scene %d: %u particles | %s | %.1f FPS | %.2f ms | %u draws | %d triangles | F: %s | S: sorting %s | R: %s | B: bg | C: capture | V: compare | Esc",
+		selectedScene + 1, selectedScene == 0 ? static_cast<unsigned>(PARTICLE_COUNT) : STRESS_PARTICLE_COUNT,
 		Comparison_Name(), displayedFps, displayedFrameMs, displayedDraws, displayedTriangles,
 		frameLimiter ? "limited" : "uncapped", sorting ? "ON" : "OFF", reverseSubmission ? "reversed" : "original");
 	SetWindowTextA(GetAncestor(window, GA_ROOT), title);
@@ -135,8 +196,10 @@ LRESULT CALLBACK Window_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
 		case 'F': frameLimiter = !frameLimiter; break;
 		case 'C': captureReference = true; break;
 		case 'V': comparisonEnabled = !comparisonEnabled; break;
+		case '1': selectedScene = 0; break;
+		case '2': selectedScene = 1; break;
 		}
-		if (wparam == 'S' || wparam == 'R' || wparam == 'B' || wparam == 'C' || wparam == 'V') {
+		if (wparam == 'S' || wparam == 'R' || wparam == 'B' || wparam == 'C' || wparam == 'V' || wparam == '1' || wparam == '2') {
 			comparisonRequested = true;
 			comparisonState = comparisonEnabled ? COMPARISON_PENDING : COMPARISON_PAUSED;
 			Update_Comparison_Label();
@@ -208,6 +271,32 @@ bool Load_Reference(const char* path, HBITMAP& bitmap, std::vector<unsigned int>
 		error = "Could not read RGB pixels from the reference bitmap.";
 		return false;
 	}
+	return true;
+}
+
+bool Select_Scene_Reference(std::string& error)
+{
+	referencePath = referenceDirectory + (selectedScene == 0 ? "ParticleRenderTest-reference.bmp" :
+		"ParticleRenderTest-reference-4000-5EED1234.bmp");
+	HBITMAP replacement = nullptr;
+	std::vector<unsigned int> pixels;
+	const DWORD attributes = GetFileAttributesA(referencePath.c_str());
+	if (attributes != INVALID_FILE_ATTRIBUTES) {
+		if (!Load_Reference(referencePath.c_str(), replacement, pixels, error)) return false;
+	} else if (GetLastError() != ERROR_FILE_NOT_FOUND) {
+		error = std::string("Could not access reference image: ") + referencePath;
+		return false;
+	}
+	if (referenceBitmap) DeleteObject(referenceBitmap);
+	referenceBitmap = replacement;
+	referencePixels.swap(pixels);
+	captureReference = referenceBitmap == nullptr;
+	comparisonRequested = true;
+	comparisonState = comparisonEnabled ? COMPARISON_PENDING : COMPARISON_PAUSED;
+	Update_Comparison_Label();
+	SetWindowTextA(referenceLabel, selectedScene == 0 ? "REFERENCE: scene 1, 10 particles (C replaces it)" :
+		"REFERENCE: scene 2, 4000 particles, seed 0x5EED1234 (C replaces it)");
+	InvalidateRect(referenceWindow, nullptr, FALSE);
 	return true;
 }
 
@@ -327,14 +416,21 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 	RenderInfoClass renderInfo(camera);
 
 	RefCountPtr<ShareBufferClass<Vector3> > positions;
-	positions.Assign_No_Add_Ref(new ShareBufferClass<Vector3>(1, "ParticleRenderTest positions"));
+	positions.Assign_No_Add_Ref(new ShareBufferClass<Vector3>(BATCH_CAPACITY, "ParticleRenderTest positions"));
+	RefCountPtr<ShareBufferClass<Vector4> > colors;
+	colors.Assign_No_Add_Ref(new ShareBufferClass<Vector4>(BATCH_CAPACITY, "ParticleRenderTest colors"));
+	RefCountPtr<ShareBufferClass<float> > sizes;
+	sizes.Assign_No_Add_Ref(new ShareBufferClass<float>(BATCH_CAPACITY, "ParticleRenderTest sizes"));
+	std::vector<TestParticle> stressParticles;
+	std::vector<unsigned> stressOrder;
+	Build_Stress_Scene(stressParticles, stressOrder);
+	int activeScene = selectedScene;
 	PointGroupClass group;
 	group.Set_Point_Mode(PointGroupClass::QUADS);
 	group.Set_Billboard(true);
 	group.Set_Flag(PointGroupClass::TRANSFORM, true);
 	group.Set_Point_Size(1.4f);
 	group.Set_Point_Frame(0);
-	group.Set_Arrays(positions.Peek(), nullptr, nullptr, nullptr, nullptr, nullptr, 1);
 
 	LARGE_INTEGER frequency, sampleStart;
 	if (!QueryPerformanceFrequency(&frequency)) {
@@ -358,6 +454,14 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 			sampleFrames = 0;
 			continue;
 		}
+		if (activeScene != selectedScene) {
+			if (!Select_Scene_Reference(error)) return false;
+			activeScene = selectedScene;
+			displayedDraws = 0;
+			displayedTriangles = 0;
+			QueryPerformanceCounter(&sampleStart);
+			sampleFrames = 0;
+		}
 		WW3D::Enable_Sorting(sorting);
 		const float background = lightBackground ? 0.35f : 0.035f;
 		if (WW3D::Begin_Render(true, true, Vector3(background, background, background)) != WW3D_ERROR_OK) {
@@ -369,18 +473,33 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 			continue;
 		}
 		camera.Apply();
-		for (int i = 0; i < PARTICLE_COUNT; ++i) {
-			const int index = reverseSubmission ? PARTICLE_COUNT - 1 - i : i;
-			const TestParticle& particle = PARTICLES[index];
-			group.Set_Texture(textures[index].Peek());
-			positions->Get_Array()[0].Set(particle.x, particle.y, particle.z);
-			group.Set_Point_Color(Vector3(particle.red, particle.green, particle.blue));
-			group.Set_Point_Alpha(particle.alpha);
-			group.Set_Shader(particle.additive ? ShaderClass::_PresetAdditiveSpriteShader
-				: ShaderClass::_PresetAlphaSpriteShader);
-			// Each call captures one node; End_Render flushes all ten together.
+		unsigned count = 0;
+		unsigned batchTexture = 0;
+		bool batchAdditive = false;
+		auto flushBatch = [&]() {
+			if (count == 0) return;
+			group.Set_Texture(textures[batchTexture].Peek());
+			group.Set_Shader(batchAdditive ? ShaderClass::_PresetAdditiveSpriteShader : ShaderClass::_PresetAlphaSpriteShader);
+			group.Set_Arrays(positions.Peek(), colors.Peek(), nullptr, sizes.Peek(), nullptr, nullptr, count);
 			group.Render(renderInfo);
+			count = 0;
+		};
+		const unsigned particleCount = selectedScene == 0 ? static_cast<unsigned>(PARTICLE_COUNT) : STRESS_PARTICLE_COUNT;
+		for (unsigned i = 0; i < particleCount; ++i) {
+			const unsigned index = reverseSubmission ? particleCount - 1 - i : i;
+			const TestParticle& particle = selectedScene == 0 ? PARTICLES[index] : stressParticles[stressOrder[index]];
+			if (count == BATCH_CAPACITY || (count > 0 &&
+				(particle.textureIndex != batchTexture || particle.additive != batchAdditive))) flushBatch();
+			if (count == 0) {
+				batchTexture = particle.textureIndex;
+				batchAdditive = particle.additive;
+			}
+			positions->Get_Array()[count].Set(particle.x, particle.y, particle.z);
+			colors->Get_Array()[count].Set(particle.red, particle.green, particle.blue, particle.alpha);
+			sizes->Get_Array()[count] = particle.size;
+			++count;
 		}
+		flushBatch();
 		const bool capturing = captureReference;
 		LARGE_INTEGER comparisonTime;
 		QueryPerformanceCounter(&comparisonTime);
@@ -502,7 +621,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int show)
 		0, LABEL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT, window, nullptr, instance, nullptr);
 	HWND liveWindow = CreateWindowA(WINDOW_CLASS, "Live rendering", childStyle,
 		WINDOW_WIDTH, LABEL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT, window, nullptr, instance, nullptr);
-	CreateWindowA("STATIC", "SAVED REFERENCE  (C replaces it)", WS_CHILD | WS_VISIBLE | SS_CENTER,
+	referenceLabel = CreateWindowA("STATIC", "SAVED REFERENCE  (C replaces it)", WS_CHILD | WS_VISIBLE | SS_CENTER,
 		0, 0, WINDOW_WIDTH, LABEL_HEIGHT, window, nullptr, instance, nullptr);
 	liveLabel = CreateWindowA("STATIC", "LIVE RENDERING", WS_CHILD | WS_VISIBLE | SS_CENTER,
 		WINDOW_WIDTH, 0, WINDOW_WIDTH, LABEL_HEIGHT, window, nullptr, instance, nullptr);
@@ -511,14 +630,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int show)
 	bool success = referenceWindow && liveWindow && pathLength > 0 && pathLength < sizeof(executable);
 	if (success) {
 		const char* separator = strrchr(executable, '\\');
-		referencePath.assign(executable, separator ? separator - executable + 1 : 0);
-		referencePath += "ParticleRenderTest-reference.bmp";
-		const DWORD attributes = GetFileAttributesA(referencePath.c_str());
-		if (attributes == INVALID_FILE_ATTRIBUTES) {
-			captureReference = true;
-		} else {
-			success = Load_Reference(referencePath.c_str(), referenceBitmap, referencePixels, error);
-		}
+		referenceDirectory.assign(executable, separator ? separator - executable + 1 : 0);
+		success = Select_Scene_Reference(error);
 	}
 	Update_Title(window);
 	ShowWindow(window, show);
