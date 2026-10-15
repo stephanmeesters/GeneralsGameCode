@@ -2,6 +2,8 @@ add_library(corei_particlerendertest INTERFACE)
 
 target_sources(corei_particlerendertest INTERFACE
     "${CMAKE_CURRENT_SOURCE_DIR}/ParticleRenderTest.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ParticleAtlas.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ParticleAtlas.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/BigTextureFileFactory.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/BigTextureFileFactory.h"
 )

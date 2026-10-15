@@ -20,6 +20,7 @@
 #include "WW3D2/ww3d.h"
 #include "WWMath/wwmath.h"
 #include "BigTextureFileFactory.h"
+#include "ParticleAtlas.h"
 #include <d3d8.h>
 #include <d3dx8.h>
 #include <string.h>
@@ -66,6 +67,12 @@ const unsigned BATCH_CAPACITY = 512;
 bool captureReference = false;
 const char WINDOW_CLASS[] = "GeneralsParticleRenderTest";
 
+bool atlasEnabled = false;
+bool isolatedEnabled = false;
+bool mipStress = false;
+unsigned forcedMip = 0;
+bool trilinear = false;
+std::string atlasError;
 bool premultiplied = false;
 std::string premultipliedError;
 bool sorting = true;
@@ -176,11 +183,12 @@ void Update_Comparison_Label(const char* detail = nullptr)
 
 void Update_Title(HWND window)
 {
-	char title[384];
+	char title[512];
 	snprintf(title, sizeof(title),
-		"Scene %d: %u particles | %s | %.1f FPS | %.2f ms | %u draws | %d triangles | P: premul %s | A: add batching %s | F: %s | S: sorting %s | R: %s | B: bg | C: capture | V: compare | Esc",
+		"Scene %d: %u particles | %s | %.1f FPS | %.2f ms | %u draws | %d triangles | T: atlas %s | I: converted %s | M: distant %s | L: mip >=%u | H: %s | P: premul %s | A: add batching %s | F: %s | S: sorting %s | R: %s | B: bg | C: capture | V: compare | Esc",
 		selectedScene + 1, selectedScene == 0 ? static_cast<unsigned>(PARTICLE_COUNT) : STRESS_PARTICLE_COUNT,
 		Comparison_Name(), displayedFps, displayedFrameMs, displayedDraws, displayedTriangles,
+		atlasEnabled ? "ON" : "OFF", isolatedEnabled ? "ON" : "OFF", mipStress ? "ON" : "OFF", forcedMip, trilinear ? "trilinear" : "bilinear",
 		premultiplied ? "ON" : "OFF",
 		SortingRendererClass::Is_Additive_Batching_Enabled() ? "ON" : "OFF",
 		frameLimiter ? "limited" : "uncapped", sorting ? "ON" : "OFF", reverseSubmission ? "reversed" : "original");
@@ -199,8 +207,22 @@ LRESULT CALLBACK Window_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
 		case 'R': reverseSubmission = !reverseSubmission; break;
 		case 'B': lightBackground = !lightBackground; break;
 		case 'F': frameLimiter = !frameLimiter; break;
+		case 'H':
+			trilinear = !trilinear;
+			WW3D::Set_Texture_Filter(trilinear ? TextureFilterClass::TEXTURE_FILTER_TRILINEAR : TextureFilterClass::TEXTURE_FILTER_BILINEAR);
+			break;
+		case 'L': forcedMip = (forcedMip + 1) % 7; break;
+		case 'M': mipStress = !mipStress; break;
+		case 'T':
+		case 'I':
+			if (atlasError.empty()) {
+				if (wparam == 'T') { atlasEnabled = !atlasEnabled; isolatedEnabled = false; }
+				else { isolatedEnabled = !isolatedEnabled; atlasEnabled = false; }
+				premultiplied = false;
+			} else MessageBoxA(GetAncestor(window, GA_ROOT), atlasError.c_str(), "Atlas unavailable", MB_OK | MB_ICONERROR);
+			break;
 		case 'P':
-			if (premultipliedError.empty()) premultiplied = !premultiplied;
+			if (premultipliedError.empty()) { premultiplied = !premultiplied; atlasEnabled = isolatedEnabled = false; }
 			else MessageBoxA(GetAncestor(window, GA_ROOT), premultipliedError.c_str(), "Premultiplied blending unavailable", MB_OK | MB_ICONERROR);
 			break;
 		case 'A':
@@ -211,7 +233,7 @@ LRESULT CALLBACK Window_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
 		case '1': selectedScene = 0; break;
 		case '2': selectedScene = 1; break;
 		}
-		if (wparam == 'S' || wparam == 'R' || wparam == 'B' || wparam == 'C' || wparam == 'V' || wparam == 'A' || wparam == 'P' || wparam == '1' || wparam == '2') {
+		if (wparam == 'S' || wparam == 'R' || wparam == 'B' || wparam == 'C' || wparam == 'V' || wparam == 'A' || wparam == 'P' || wparam == 'T' || wparam == 'I' || wparam == 'M' || wparam == 'L' || wparam == 'H' || wparam == '1' || wparam == '2') {
 			comparisonRequested = true;
 			comparisonState = comparisonEnabled ? COMPARISON_PENDING : COMPARISON_PAUSED;
 			Update_Comparison_Label();
@@ -463,6 +485,12 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 	}
 
 	DEBUG_LOG(("Particle test: all %d archive textures loaded", PARTICLE_COUNT));
+	ParticleAtlas atlas;
+	TextureClass* atlasSources[PARTICLE_COUNT];
+	for (int i = 0; i < PARTICLE_COUNT; ++i) atlasSources[i] = textures[i].Peek();
+	if (!atlas.Init(atlasSources, PARTICLE_COUNT, atlasError)) {
+		DEBUG_LOG(("Particle atlas unavailable: %s", atlasError.c_str()));
+	}
 	UnifiedParticleShader unifiedShader;
 	if (!unifiedShader.Init(premultipliedError)) {
 		DEBUG_LOG(("Particle test: premultiplied experiment unavailable: %s", premultipliedError.c_str()));
@@ -479,9 +507,17 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 	colors.Assign_No_Add_Ref(new ShareBufferClass<Vector4>(BATCH_CAPACITY, "ParticleRenderTest colors"));
 	RefCountPtr<ShareBufferClass<float> > sizes;
 	sizes.Assign_No_Add_Ref(new ShareBufferClass<float>(BATCH_CAPACITY, "ParticleRenderTest sizes"));
+	RefCountPtr<ShareBufferClass<Vector4> > uvRects;
+	uvRects.Assign_No_Add_Ref(new ShareBufferClass<Vector4>(BATCH_CAPACITY, "ParticleRenderTest UV rects"));
 	std::vector<TestParticle> stressParticles;
 	std::vector<unsigned> stressOrder;
 	Build_Stress_Scene(stressParticles, stressOrder);
+	std::vector<unsigned> atlasOrder = stressOrder;
+	// Depth-contiguous chunks prevent identical atlas state from becoming
+	// interleaved nodes in the existing triangle sorter. It still sorts triangles.
+	std::stable_sort(atlasOrder.begin(), atlasOrder.end(), [&stressParticles](unsigned a, unsigned b) {
+		return stressParticles[a].z < stressParticles[b].z;
+	});
 	int activeScene = selectedScene;
 	PointGroupClass group;
 	group.Set_Point_Mode(PointGroupClass::QUADS);
@@ -534,14 +570,18 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 		// Pixel shader binding is immediate, outside the deferred sorting state.
 		// Every submission in this tool frame uses the same experiment setting.
 		DX8Wrapper::Set_Pixel_Shader(premultiplied ? unifiedShader.Get_Handle() : 0);
+		const bool converted = atlasEnabled || isolatedEnabled;
+		group.Set_Texture_UV_Rects(atlasEnabled ? uvRects.Peek() : nullptr);
+		DX8Wrapper::Set_DX8_Texture_Stage_State(0, D3DTSS_MAXMIPLEVEL, converted ? forcedMip : 0);
 		unsigned count = 0;
 		unsigned batchTexture = 0;
 		bool batchAdditive = false;
 		auto flushBatch = [&]() {
 			if (count == 0) return;
-			group.Set_Texture(textures[batchTexture].Peek());
+			group.Set_Texture(atlasEnabled ? atlas.Get_Texture() : isolatedEnabled ?
+				atlas.Get_Isolated(batchTexture, batchAdditive) : textures[batchTexture].Peek());
 			ShaderClass shader = batchAdditive ? ShaderClass::_PresetAdditiveSpriteShader : ShaderClass::_PresetAlphaSpriteShader;
-			if (premultiplied) {
+			if (premultiplied || converted) {
 				shader = ShaderClass::_PresetAlphaSpriteShader;
 				shader.Set_Src_Blend_Func(ShaderClass::SRCBLEND_ONE);
 			}
@@ -553,21 +593,27 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 		const unsigned particleCount = selectedScene == 0 ? static_cast<unsigned>(PARTICLE_COUNT) : STRESS_PARTICLE_COUNT;
 		for (unsigned i = 0; i < particleCount; ++i) {
 			const unsigned index = reverseSubmission ? particleCount - 1 - i : i;
-			const TestParticle& particle = selectedScene == 0 ? PARTICLES[index] : stressParticles[stressOrder[index]];
+			const TestParticle& particle = selectedScene == 0 ? PARTICLES[index] : stressParticles[(atlasEnabled ? atlasOrder : stressOrder)[index]];
 			if (count == BATCH_CAPACITY || (count > 0 &&
-				(particle.textureIndex != batchTexture || (!premultiplied && particle.additive != batchAdditive)))) flushBatch();
+				(!atlasEnabled && (particle.textureIndex != batchTexture || (!premultiplied && particle.additive != batchAdditive))))) flushBatch();
 			if (count == 0) {
 				batchTexture = particle.textureIndex;
 				batchAdditive = particle.additive;
 			}
-			positions->Get_Array()[count].Set(particle.x, particle.y, particle.z);
+			const float distance = mipStress ? 4.0f : 1.0f;
+			positions->Get_Array()[count].Set(particle.x * distance, particle.y * distance, particle.z * distance);
 			// Match the alpha quantization used by PointGroup, including fades
 			// that round down to zero before reaching the pixel shader.
 			const bool invisibleOver = premultiplied && !particle.additive &&
 				(DX8Wrapper::Convert_Color_Clamp(Vector4(0, 0, 0, particle.alpha)) & 0xFF000000u) == 0;
+			// Converted alpha textures already contain texture RGB * texture alpha.
+			// Vertex RGB must also carry the quantized particle alpha; ADD ignores it.
+			const float vertexAlpha = static_cast<float>(DX8Wrapper::Convert_Color_Clamp(Vector4(0, 0, 0, particle.alpha)) >> 24) / 255.0f;
+			const float colorScale = converted && !particle.additive ? vertexAlpha : 1.0f;
 			colors->Get_Array()[count].Set(
-				invisibleOver ? 0.0f : particle.red, invisibleOver ? 0.0f : particle.green, invisibleOver ? 0.0f : particle.blue,
-				premultiplied && particle.additive ? 0.0f : particle.alpha);
+				invisibleOver ? 0.0f : particle.red * colorScale, invisibleOver ? 0.0f : particle.green * colorScale, invisibleOver ? 0.0f : particle.blue * colorScale,
+				(premultiplied || converted) && particle.additive ? 0.0f : particle.alpha);
+			if (atlasEnabled) uvRects->Get_Array()[count] = atlas.Get_Rect(particle.textureIndex, particle.additive);
 			sizes->Get_Array()[count] = particle.size;
 			++count;
 		}

@@ -8,7 +8,7 @@ the game particle manager are not needed for this geometry/blending test.
 Each particle uses a different real DDS texture read directly from a supplied
 `.big` archive, with its mipmaps and the existing separate blend modes. The scene
 needs no INI files. P toggles an experimental unified premultiplied-alpha mode.
-There is no texture atlas yet.
+T toggles the startup-built premultiplied texture atlas described below.
 
 ## Assets and launch
 
@@ -125,6 +125,11 @@ the particle statistics. FPS includes the comparison application's normal overhe
 - **1** / **2** switch between the ten-particle scene and the fixed-seed 4,000-particle scene.
 - **V** toggles live RGB comparison (initially on).
 - **C** saves the current live image as the new persistent reference.
+- **T** toggles the premultiplied texture atlas (initially off).
+- **I** toggles isolated converted textures, for checking the atlas against the same mip data.
+- **M** moves particles four times farther away, keeping their screen centers, to stress minification.
+- **H** switches bilinear/trilinear filtering (initially bilinear).
+- **L** cycles the minimum sampled mip from 0 through 6 for T/I (0 restores automatic LOD).
 - **P** toggles unified premultiplied-alpha blending (initially off).
 - **A** toggles Ronin's additive-run batching (initially on) for draw-count comparisons.
 - **F** toggles the frame limiter (initially on); turn it off for throughput comparisons.
@@ -226,3 +231,134 @@ original path still matches exactly. Brief uncapped samples fluctuated enough
 that they do not establish a reliable FPS improvement.
 
 PS 1.1 conditional selection follows [Microsoft's CND instruction documentation](https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/cnd---ps).
+
+## Premultiplied texture atlas experiment
+
+**T** enables a startup-built atlas, using the existing `PointGroupClass` and
+production sorting renderer. **I** instead uses separate converted textures
+containing exactly the same pixels and mip chains. T, I and P are mutually
+exclusive. Toggle the active mode again to return to the original path. The
+original saved references remain unchanged; C still explicitly replaces them.
+
+For the ten current sources the atlas is **2048 x 1024 ARGB8**, with **20 entries**
+and **7 mip levels** (about 10.67 MiB of texel data, excluding driver overhead).
+Each source has two independent entries, even if both modes use the same source:
+
+- Alpha: RGB is multiplied by source alpha, with source alpha retained.
+- Additive: source RGB is retained, with alpha set to zero.
+
+Entries are decoded from the already-loaded source texture at its native
+resolution. Conversion and uploads happen once at startup. No atlas work or
+texture uploads occur per frame. This is a static atlas experiment, not an
+allocator with dynamic insertion, eviction or repacking. Device size/allocation
+failures leave the original rendering available and report the reason on T/I.
+
+Both entries use `ONE / INV_SRC_ALPHA` with the existing fixed-function texture
+modulation, without a pixel shader. Alpha particles also premultiply their vertex
+RGB by quantized particle alpha; additive vertices retain their RGB. Texture
+alpha already distinguishes additive emission from OVER in this path. Converting
+vertex RGB introduces another 8-bit quantization step compared with the original
+path; exact agreement with the old reference is not expected.
+
+### Mipmap isolation
+
+The atlas never uses automatic whole-atlas mip generation. For each variant:
+
+1. Decode and convert each existing DDS mip independently, preserving its
+   pixels and sampling alignment. Alpha entries multiply each level's RGB by
+   that level's alpha; additive entries retain RGB with zero alpha. Some sources
+   stop at 4x4: only the missing 2x2/1x1 tail is box-filtered from the last
+   converted level. No filter ever combines neighboring entries.
+2. Allocate a **64-pixel gutter on every side**, with content origins and extents
+   aligned to 64 pixels. This makes the rectangle's position and extent integral
+   at all seven retained levels.
+3. Populate every mip's gutters independently. Repeat-addressed sources copy
+   their opposite edge; clamp-addressed sources extend their nearest edge.
+   Corners follow both addressing rules. This preserves local edge filtering
+   without sampling a neighboring entry.
+4. Use only L0..L6. The gutter shrinks to **one texel at L6**. Deeper atlas levels
+   are not allocated, so the sampler clamps there instead of entering levels
+   where entries would merge. A 64-pixel source reaches 1x1; a 256-pixel source
+   stops at 4x4. Extreme minification may consequently alias more than a full
+   per-source chain. A production atlas needs mip classes/pages or another
+   explicit policy for that tail.
+
+The sampler uses the engine's FAST min/mag filter selection (bilinear in this
+configuration), with the existing mip filter. Anisotropic sampling is excluded:
+one final-level gutter texel is sized for bilinear/trilinear footprints. No UV
+half-texel inset is used: UV boundaries map to the content boundaries, and the
+valid per-entry gutters provide the correct edge samples. Test **L** at every
+retained level, and **M** for more severe minification. Compare T against I to
+isolate packing/filtering effects from premultiplication and mip conversion.
+
+### Batching and sorting
+
+`PointGroupClass::Set_Texture_UV_Rects` accepts an optional refcounted array of
+`(u0,v0,u1,v1)` rectangles. The vertex copy applies these after existing animation
+frame coordinates, supports active-point indirection, and leaves the original
+path unchanged when null. The atlas experiment passes one rectangle per particle
+while retaining the existing quad generation and triangle sorter.
+
+Atlas submissions split only at the existing **512-particle capacity**, crossing
+both texture and blend-mode boundaries. The static stress scene caches a depth
+order for these chunks, avoiding interleaved sorting nodes that would undo the
+batching benefit. The production sorter still sorts triangles and preserves
+back-to-front compositing. Dynamic particles would need to refresh that order as
+they move. The ten-particle scene fits in one submission; the 4,000-particle scene
+fits in eight. This does not change production game particle materials or add
+dynamic atlas management to the game.
+
+### Atlas verification on bequiet
+
+Both Generals and Zero Hour test targets build successfully. The Zero Hour test
+was checked with the existing reference files preserved:
+
+| Scene | Original + Ronin | Shader premultiplication | Texture atlas |
+|---|---:|---:|---:|
+| Ten particles | 10 draws | 10 draws | 1 draw |
+| 4,000 particles | 3,713 draws | 3,597 draws | 8 draws |
+
+The stress-scene reduction from the Ronin path is **99.78%**. The eight draws
+correspond to the existing PointGroup limit of 2,048 vertices / 512 quads per
+submission. The static depth-contiguous chunk order is part of this result.
+
+Atlas-versus-isolated converted-texture comparisons reached at most **1/255 RGB
+delta** in all seven retained levels, with both bilinear and trilinear filtering.
+The coarsest level matched exactly. In the normal stress scene, 254 of 691,200
+pixels differed, each by at most 1/255; at four times the distance, only 9 pixels
+differed, again by at most 1/255. Reversed atlas submission matched exactly.
+These checks found no neighboring-entry bleed in the tested scenes/filter modes.
+
+The first implementation regenerated all mips from L0. That caused the reported
+**top-left shift**: the legacy DDS lower levels have a different sampling phase
+from a centered box reduction. For example, rebuilding EXFireball03 L3 moved its
+RGB centroid about 0.43 mip texels left and 0.45 up. The conversion now retains
+and premultiplies the original DDS levels; no geometry or UV offset was added.
+The gutters and depth batching are unchanged. This preserves authored alignment
+rather than compensating for it with a mip-dependent offset.
+
+After the fix, the stress-scene mean absolute channel delta fell from
+2.329/255 to 0.205/255, with maximum delta 16/255; the ten-particle maximum
+was 8/255. Both target builds and the seven-level bilinear/trilinear checks
+passed, and the draw counts remain 1 and 8.
+
+The atlas is still not guaranteed bit-identical to the original path: texture
+and vertex premultiplication round to 8 bits, filtering operates on premultiplied
+colors, and missing mip tails are appended where needed. The original path and
+saved references remain available for strict comparison.
+
+Initial uncapped throughput before the authored-mip alignment fix, on bequiet,
+scene 2, sorting on, comparison readback paused,
+16 ms sleep disabled; six one-second samples per pass:
+
+| Path | Median FPS, pass 1 | Median FPS, pass 2 |
+|---|---:|---:|
+| Original + Ronin | 124.1 | 116.8 |
+| Shader premultiplication | 144.0 | not repeated |
+| Texture atlas | 584.1 | 614.0 |
+
+These are measurements of this static test on one machine, including its cached
+atlas chunk order, different texture sampling/conversion, presentation and tool
+overhead. They establish a strong improvement for this fixture, not a prediction
+of full-game FPS. The test was left in scene 2, atlas enabled, with comparison and
+the sleep limiter restored.

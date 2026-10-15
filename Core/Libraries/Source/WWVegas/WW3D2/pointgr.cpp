@@ -156,6 +156,7 @@ PointGroupClass::PointGroupClass() :
 	PointOrientation(nullptr),
 	PointFrame(nullptr),
 	PointCount(0),
+	TextureUVRects(nullptr),
 	FrameRowColumnCountLog2(0),
 	Texture(nullptr),
 	Flags(0),
@@ -187,6 +188,7 @@ PointGroupClass::PointGroupClass() :
  *========================================================================*/
 PointGroupClass::~PointGroupClass()
 {
+	REF_PTR_RELEASE(TextureUVRects);
 	if (PointLoc) {
 		PointLoc->Release_Ref();
 		PointLoc = nullptr;
@@ -316,6 +318,11 @@ void PointGroupClass::Set_Arrays(
  * HISTORY:                                                               *
  *   11/17/1998 NH  : Created.                                            *
  *========================================================================*/
+void PointGroupClass::Set_Texture_UV_Rects(ShareBufferClass<Vector4>* rects)
+{
+	REF_PTR_SET(TextureUVRects, rects);
+}
+
 void PointGroupClass::Set_Point_Size(float size)
 {
 	DefaultPointSize = size;
@@ -975,7 +982,15 @@ void PointGroupClass::Render(RenderInfoClass &rinfo)
 				else
 					*(unsigned int*)(vb+fvfinfo.Get_Diffuse_Offset())=
 						DX8Wrapper::Convert_Color_Clamp(Vector4(DefaultPointColor[0],DefaultPointColor[1],DefaultPointColor[2],DefaultPointAlpha));
-				*(Vector2*)(vb+fvfinfo.Get_Tex_Offset(0))=VertexUV[i];
+				Vector2 uv = VertexUV[i];
+				if (TextureUVRects) {
+					const int point = i / (PointMode == QUADS ? 4 : 3);
+					const unsigned index = APT ? APT->Get_Array()[point] : point;
+					WWASSERT(index < static_cast<unsigned>(TextureUVRects->Get_Count()));
+					const Vector4& rect = TextureUVRects->Get_Array()[index];
+					uv.Set(rect.X + uv.X * (rect.Z - rect.X), rect.Y + uv.Y * (rect.W - rect.Y));
+				}
+				*(Vector2*)(vb+fvfinfo.Get_Tex_Offset(0))=uv;
 				vb+=fvfinfo.Get_FVF_Size();
 			}
 		}
@@ -1904,7 +1919,15 @@ void PointGroupClass::RenderVolumeParticle(RenderInfoClass &rinfo, unsigned int 
 					else
 						*(unsigned int*)(vb+fvfinfo.Get_Diffuse_Offset())=
 							DX8Wrapper::Convert_Color_Clamp(Vector4(DefaultPointColor[0],DefaultPointColor[1],DefaultPointColor[2],DefaultPointAlpha));
-					*(Vector2*)(vb+fvfinfo.Get_Tex_Offset(0))=VertexUV[i];
+					Vector2 uv = VertexUV[i];
+					if (TextureUVRects) {
+						const int point = i / (PointMode == QUADS ? 4 : 3);
+						const unsigned index = APT ? APT->Get_Array()[point] : point;
+						WWASSERT(index < static_cast<unsigned>(TextureUVRects->Get_Count()));
+						const Vector4& rect = TextureUVRects->Get_Array()[index];
+						uv.Set(rect.X + uv.X * (rect.Z - rect.X), rect.Y + uv.Y * (rect.W - rect.Y));
+					}
+					*(Vector2*)(vb+fvfinfo.Get_Tex_Offset(0))=uv;
 					vb+=fvfinfo.Get_FVF_Size();
 				}
 			}
