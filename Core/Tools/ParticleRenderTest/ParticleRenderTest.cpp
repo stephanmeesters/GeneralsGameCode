@@ -20,6 +20,8 @@
 #include "WWMath/wwmath.h"
 #include "BigTextureFileFactory.h"
 #include <d3d8.h>
+#include <d3dx8.h>
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
@@ -43,6 +45,17 @@ public:
 
 const int WINDOW_WIDTH = 960;
 const int WINDOW_HEIGHT = 720;
+const int LABEL_HEIGHT = 24;
+HWND referenceWindow = nullptr;
+HWND liveLabel = nullptr;
+std::vector<unsigned int> referencePixels;
+enum ComparisonState { COMPARISON_PENDING, COMPARISON_MATCH, COMPARISON_DIFFERENT, COMPARISON_ERROR, COMPARISON_PAUSED };
+ComparisonState comparisonState = COMPARISON_PENDING;
+bool comparisonEnabled = true;
+bool comparisonRequested = true;
+HBITMAP referenceBitmap = nullptr;
+std::string referencePath;
+bool captureReference = false;
 const char WINDOW_CLASS[] = "GeneralsParticleRenderTest";
 
 bool sorting = true;
@@ -78,14 +91,34 @@ const TestParticle PARTICLES[] = {
 };
 const int PARTICLE_COUNT = sizeof(PARTICLES) / sizeof(PARTICLES[0]);
 
+const char* Comparison_Name()
+{
+	switch (comparisonState) {
+	case COMPARISON_MATCH: return "MATCH";
+	case COMPARISON_DIFFERENT: return "DIFFERENT";
+	case COMPARISON_ERROR: return "CHECK FAILED";
+	case COMPARISON_PAUSED: return "CHECK PAUSED";
+	default: return "CHECK PENDING";
+	}
+}
+
+void Update_Comparison_Label(const char* detail = nullptr)
+{
+	if (!liveLabel) return;
+	char label[256];
+	snprintf(label, sizeof(label), "LIVE: %s%s%s", Comparison_Name(), detail ? " | " : "", detail ? detail : "");
+	SetWindowTextA(liveLabel, label);
+	InvalidateRect(liveLabel, nullptr, TRUE);
+}
+
 void Update_Title(HWND window)
 {
 	char title[256];
 	snprintf(title, sizeof(title),
-		"Particle test | %.1f FPS | %.2f ms | %u draws | %d triangles | F: %s | S: sorting %s | R: %s | B: bg | Esc",
-		displayedFps, displayedFrameMs, displayedDraws, displayedTriangles,
+		"Particle test | %s | %.1f FPS | %.2f ms | %u draws | %d triangles | F: %s | S: sorting %s | R: %s | B: bg | C: capture | V: compare | Esc",
+		Comparison_Name(), displayedFps, displayedFrameMs, displayedDraws, displayedTriangles,
 		frameLimiter ? "limited" : "uncapped", sorting ? "ON" : "OFF", reverseSubmission ? "reversed" : "original");
-	SetWindowTextA(window, title);
+	SetWindowTextA(GetAncestor(window, GA_ROOT), title);
 }
 
 LRESULT CALLBACK Window_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
@@ -100,9 +133,41 @@ LRESULT CALLBACK Window_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
 		case 'R': reverseSubmission = !reverseSubmission; break;
 		case 'B': lightBackground = !lightBackground; break;
 		case 'F': frameLimiter = !frameLimiter; break;
+		case 'C': captureReference = true; break;
+		case 'V': comparisonEnabled = !comparisonEnabled; break;
+		}
+		if (wparam == 'S' || wparam == 'R' || wparam == 'B' || wparam == 'C' || wparam == 'V') {
+			comparisonRequested = true;
+			comparisonState = comparisonEnabled ? COMPARISON_PENDING : COMPARISON_PAUSED;
+			Update_Comparison_Label();
 		}
 		Update_Title(window);
 		return 0;
+	case WM_CTLCOLORSTATIC:
+		if (reinterpret_cast<HWND>(lparam) == liveLabel) {
+			HDC dc = reinterpret_cast<HDC>(wparam);
+			SetTextColor(dc, comparisonState == COMPARISON_MATCH ? RGB(0, 120, 0) :
+				comparisonState == COMPARISON_DIFFERENT || comparisonState == COMPARISON_ERROR ? RGB(180, 0, 0) : RGB(0, 0, 0));
+			SetBkColor(dc, GetSysColor(COLOR_BTNFACE));
+			return reinterpret_cast<LRESULT>(GetSysColorBrush(COLOR_BTNFACE));
+		}
+		break;
+	case WM_PAINT:
+		if (window == referenceWindow) {
+			PAINTSTRUCT paint;
+			HDC dc = BeginPaint(window, &paint);
+			FillRect(dc, &paint.rcPaint, static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)));
+			if (referenceBitmap) {
+				HDC memory = CreateCompatibleDC(dc);
+				HGDIOBJ old = SelectObject(memory, referenceBitmap);
+				BitBlt(dc, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, memory, 0, 0, SRCCOPY);
+				SelectObject(memory, old);
+				DeleteDC(memory);
+			}
+			EndPaint(window, &paint);
+			return 0;
+		}
+		break;
 	case WM_CLOSE:
 		// Keep the renderer's HWND alive until graphics resources are released.
 		PostQuitMessage(0);
@@ -112,6 +177,121 @@ LRESULT CALLBACK Window_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
 	}
 	return DefWindowProcA(window, message, wparam, lparam);
 }
+
+bool Load_Reference(const char* path, HBITMAP& bitmap, std::vector<unsigned int>& pixels, std::string& error)
+{
+	bitmap = static_cast<HBITMAP>(LoadImageA(nullptr, path, IMAGE_BITMAP, 0, 0,
+		LR_LOADFROMFILE | LR_CREATEDIBSECTION));
+	BITMAP description = {};
+	if (!bitmap || !GetObject(bitmap, sizeof(description), &description) ||
+		description.bmWidth != WINDOW_WIDTH || description.bmHeight != WINDOW_HEIGHT) {
+		if (bitmap) DeleteObject(bitmap);
+		bitmap = nullptr;
+		error = std::string("Could not load a 960x720 reference bitmap: ") + path;
+		return false;
+	}
+	BITMAPINFO info = {};
+	info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	info.bmiHeader.biWidth = WINDOW_WIDTH;
+	info.bmiHeader.biHeight = -WINDOW_HEIGHT;
+	info.bmiHeader.biPlanes = 1;
+	info.bmiHeader.biBitCount = 32;
+	info.bmiHeader.biCompression = BI_RGB;
+	pixels.resize(WINDOW_WIDTH * WINDOW_HEIGHT);
+	HDC dc = CreateCompatibleDC(nullptr);
+	const int rows = dc ? GetDIBits(dc, bitmap, 0, WINDOW_HEIGHT, &pixels[0], &info, DIB_RGB_COLORS) : 0;
+	if (dc) DeleteDC(dc);
+	if (rows != WINDOW_HEIGHT) {
+		DeleteObject(bitmap);
+		bitmap = nullptr;
+		pixels.clear();
+		error = "Could not read RGB pixels from the reference bitmap.";
+		return false;
+	}
+	return true;
+}
+
+bool Save_Reference(std::string& error)
+{
+	// Capture only this application's rendered backbuffer, before presentation.
+	IDirect3DSurface8* backbuffer = nullptr;
+	HRESULT result = DX8Wrapper::_Get_D3D_Device8()->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &backbuffer);
+	const std::string temporary = referencePath + ".tmp.bmp";
+	if (SUCCEEDED(result)) {
+		result = D3DXSaveSurfaceToFileA(temporary.c_str(), D3DXIFF_BMP, backbuffer, nullptr, nullptr);
+		backbuffer->Release();
+	}
+	if (FAILED(result)) {
+		error = "Could not save the particle reference image.";
+		return false;
+	}
+	HBITMAP replacement = nullptr;
+	std::vector<unsigned int> pixels;
+	if (!Load_Reference(temporary.c_str(), replacement, pixels, error)) {
+		DeleteFileA(temporary.c_str());
+		return false;
+	}
+	if (!MoveFileExA(temporary.c_str(), referencePath.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+		DeleteObject(replacement);
+		DeleteFileA(temporary.c_str());
+		error = std::string("Could not replace reference image: ") + referencePath;
+		return false;
+	}
+	if (referenceBitmap) DeleteObject(referenceBitmap);
+	referenceBitmap = replacement;
+	referencePixels.swap(pixels);
+	comparisonRequested = true;
+	InvalidateRect(referenceWindow, nullptr, FALSE);
+	DEBUG_LOG(("Particle test: reference saved to %s", referencePath.c_str()));
+	return true;
+}
+
+bool Compare_Reference(IDirect3DSurface8*& readback)
+{
+	if (referencePixels.size() != WINDOW_WIDTH * WINDOW_HEIGHT) return false;
+	IDirect3DDevice8* device = DX8Wrapper::_Get_D3D_Device8();
+	if (!readback && FAILED(device->CreateImageSurface(WINDOW_WIDTH, WINDOW_HEIGHT, D3DFMT_A8R8G8B8, &readback))) return false;
+	IDirect3DSurface8* backbuffer = nullptr;
+	if (FAILED(device->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &backbuffer))) return false;
+	const HRESULT copied = D3DXLoadSurfaceFromSurface(readback, nullptr, nullptr, backbuffer,
+		nullptr, nullptr, D3DX_FILTER_NONE, 0);
+	backbuffer->Release();
+	if (FAILED(copied)) return false;
+	D3DLOCKED_RECT locked;
+	if (FAILED(readback->LockRect(&locked, nullptr, D3DLOCK_READONLY))) return false;
+	unsigned differentPixels = 0;
+	unsigned maximumDifference = 0;
+	for (int y = 0; y < WINDOW_HEIGHT; ++y) {
+		const unsigned int* live = reinterpret_cast<const unsigned int*>(
+			static_cast<const unsigned char*>(locked.pBits) + y * locked.Pitch);
+		const unsigned int* reference = &referencePixels[y * WINDOW_WIDTH];
+		for (int x = 0; x < WINDOW_WIDTH; ++x) {
+			// Ignore backbuffer alpha: this fixture compares the visible RGB image.
+			if ((live[x] & 0x00FFFFFFu) == (reference[x] & 0x00FFFFFFu)) continue;
+			++differentPixels;
+			for (int shift = 0; shift < 24; shift += 8) {
+				const int difference = static_cast<int>((live[x] >> shift) & 255) - static_cast<int>((reference[x] >> shift) & 255);
+				const unsigned magnitude = static_cast<unsigned>(difference < 0 ? -difference : difference);
+				if (magnitude > maximumDifference) maximumDifference = magnitude;
+			}
+		}
+	}
+	if (FAILED(readback->UnlockRect())) return false;
+	comparisonState = differentPixels == 0 ? COMPARISON_MATCH : COMPARISON_DIFFERENT;
+	char detail[128];
+	snprintf(detail, sizeof(detail), "%u / %u pixels differ, max RGB delta %u / 255",
+		differentPixels, static_cast<unsigned>(WINDOW_WIDTH * WINDOW_HEIGHT), maximumDifference);
+	Update_Comparison_Label(detail);
+	return true;
+}
+
+// The readback is a system-memory surface, retained between comparisons.
+struct ComparisonReadback
+{
+	ComparisonReadback() : surface(nullptr) {}
+	~ComparisonReadback() { if (surface) surface->Release(); }
+	IDirect3DSurface8* surface;
+};
 
 bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& error)
 {
@@ -163,6 +343,8 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 	}
 	QueryPerformanceCounter(&sampleStart);
 	unsigned sampleFrames = 0;
+	LARGE_INTEGER lastComparison = sampleStart;
+	ComparisonReadback readback;
 	MSG message = {};
 	for (;;) {
 		while (PeekMessage(&message, nullptr, 0, 0, PM_REMOVE)) {
@@ -170,7 +352,7 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 			TranslateMessage(&message);
 			DispatchMessage(&message);
 		}
-		if (IsIconic(window)) {
+		if (IsIconic(GetAncestor(window, GA_ROOT))) {
 			WaitMessage();
 			QueryPerformanceCounter(&sampleStart);
 			sampleFrames = 0;
@@ -199,7 +381,31 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 			// Each call captures one node; End_Render flushes all ten together.
 			group.Render(renderInfo);
 		}
-		if (WW3D::End_Render() != WW3D_ERROR_OK) return false;
+		const bool capturing = captureReference;
+		LARGE_INTEGER comparisonTime;
+		QueryPerformanceCounter(&comparisonTime);
+		const bool comparing = comparisonEnabled && (comparisonRequested || capturing ||
+			static_cast<double>(comparisonTime.QuadPart - lastComparison.QuadPart) / frequency.QuadPart >= 0.5);
+		if (WW3D::End_Render(!(capturing || comparing)) != WW3D_ERROR_OK) return false;
+		if (capturing) {
+			captureReference = false;
+			const bool saved = Save_Reference(error);
+			if (!saved) {
+				MessageBoxA(GetAncestor(window, GA_ROOT), error.c_str(), "Particle reference", MB_OK | MB_ICONERROR);
+				if (!referenceBitmap) return false;
+				error.clear();
+			}
+		}
+		if (comparing) {
+			comparisonRequested = false;
+			lastComparison = comparisonTime;
+			if (!Compare_Reference(readback.surface)) {
+				comparisonState = COMPARISON_ERROR;
+				Update_Comparison_Label("could not read rendered RGB pixels");
+			}
+			Update_Title(window);
+		}
+		if (capturing || comparing) WW3D::Flip_To_Primary();
 		displayedDraws = DX8Wrapper::Get_Last_Frame_Statistics().draw_calls;
 		displayedTriangles = Debug_Statistics::Get_DX8_Polygons();
 		static bool loggedFrame = false;
@@ -281,8 +487,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int show)
 	windowClass.lpszClassName = WINDOW_CLASS;
 	if (!RegisterClassA(&windowClass)) return 1;
 
-	const DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-	RECT bounds = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
+	const DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN;
+	RECT bounds = { 0, 0, WINDOW_WIDTH * 2, WINDOW_HEIGHT + LABEL_HEIGHT };
 	AdjustWindowRect(&bounds, style, FALSE);
 	HWND window = CreateWindowA(WINDOW_CLASS, "Particle render test", style,
 		CW_USEDEFAULT, CW_USEDEFAULT, bounds.right - bounds.left, bounds.bottom - bounds.top,
@@ -291,16 +497,42 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int show)
 		UnregisterClassA(WINDOW_CLASS, instance);
 		return 1;
 	}
+	const DWORD childStyle = WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS;
+	referenceWindow = CreateWindowA(WINDOW_CLASS, "Saved reference", childStyle,
+		0, LABEL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT, window, nullptr, instance, nullptr);
+	HWND liveWindow = CreateWindowA(WINDOW_CLASS, "Live rendering", childStyle,
+		WINDOW_WIDTH, LABEL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT, window, nullptr, instance, nullptr);
+	CreateWindowA("STATIC", "SAVED REFERENCE  (C replaces it)", WS_CHILD | WS_VISIBLE | SS_CENTER,
+		0, 0, WINDOW_WIDTH, LABEL_HEIGHT, window, nullptr, instance, nullptr);
+	liveLabel = CreateWindowA("STATIC", "LIVE RENDERING", WS_CHILD | WS_VISIBLE | SS_CENTER,
+		WINDOW_WIDTH, 0, WINDOW_WIDTH, LABEL_HEIGHT, window, nullptr, instance, nullptr);
+	char executable[MAX_PATH];
+	const DWORD pathLength = GetModuleFileNameA(nullptr, executable, sizeof(executable));
+	bool success = referenceWindow && liveWindow && pathLength > 0 && pathLength < sizeof(executable);
+	if (success) {
+		const char* separator = strrchr(executable, '\\');
+		referencePath.assign(executable, separator ? separator - executable + 1 : 0);
+		referencePath += "ParticleRenderTest-reference.bmp";
+		const DWORD attributes = GetFileAttributesA(referencePath.c_str());
+		if (attributes == INVALID_FILE_ATTRIBUTES) {
+			captureReference = true;
+		} else {
+			success = Load_Reference(referencePath.c_str(), referenceBitmap, referencePixels, error);
+		}
+	}
 	Update_Title(window);
 	ShowWindow(window, show);
-	WWMath::Init();
-	const bool success = Run_Renderer(window, archives, error);
-	WWMath::Shutdown();
+	if (success) {
+		WWMath::Init();
+		success = Run_Renderer(liveWindow, archives, error);
+		WWMath::Shutdown();
+	}
 	if (!success) {
-		MessageBoxA(window, error.empty() ? "Could not initialize or render the DX8 particle test." : error.c_str(),
+		MessageBoxA(window, error.empty() ? "Could not initialize or render the particle comparison." : error.c_str(),
 			"Particle render test", MB_OK | MB_ICONERROR);
 	}
 	DestroyWindow(window);
+	if (referenceBitmap) DeleteObject(referenceBitmap);
 	UnregisterClassA(WINDOW_CLASS, instance);
 	return success ? 0 : 1;
 }

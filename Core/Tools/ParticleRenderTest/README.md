@@ -1,6 +1,6 @@
 # Particle render test
 
-A hardcoded 960×720 scene with ten overlapping particles: five alpha and five
+A hardcoded scene shown in two 960×720 panes (saved reference left, live rendering right) with ten overlapping particles: five alpha and five
 additive, at distinct depths. Uses the game's `PointGroupClass`, sprite shader
 presets, camera, and `SortingRendererClass`. Particle simulation, INI parsing and
 the game particle manager are not needed for this geometry/blending test.
@@ -78,8 +78,34 @@ cmake --build --preset win32-profile --target z_particlerendertest g_particleren
 The normal tool dependencies, DirectX 8 runtime and supplied game archives are required. No MFC UI is
 used by this executable. The window has a fixed client size; it can be minimized.
 
+## Saved reference
+
+The comparison window displays a frozen screenshot on the left and the live scene
+on the right, at identical resolutions. The reference is stored as
+`ParticleRenderTest-reference.bmp` next to the executable and survives restarts
+and code edits. If the file is absent, the first rendered frame becomes the
+reference. An existing reference is never replaced automatically.
+
+The live label and title report **MATCH** or **DIFFERENT**, the number of differing
+pixels, and the largest RGB channel difference (0–255). Equality is exact across
+all 960×720 RGB pixels; alpha is ignored. The check reads the application's GPU
+backbuffer twice per second, before presentation. It excludes labels, window
+borders and desktop composition. Readback failure reports **CHECK FAILED**.
+
+**V** pauses/resumes comparison for performance measurements. GPU readback can
+stall rendering; FPS includes this cost while checking is enabled. The left
+reference remains displayed when checking is paused.
+
+**C** explicitly replaces the reference with the current live frame. Sorting,
+submission order and background controls affect only the live pane until C is
+pressed. The capture reads the test's own GPU backbuffer, not the desktop.
+The reference uses a separate Windows bitmap panel, adding no GPU draw calls to
+the particle statistics. FPS includes the comparison application's normal overhead.
+
 ## Controls and visual checks
 
+- **V** toggles live RGB comparison (initially on).
+- **C** saves the current live image as the new persistent reference.
 - **F** toggles the frame limiter (initially on); turn it off for throughput comparisons.
 - **S** toggles production triangle sorting (initially on).
 - **R** reverses particle submission order.
