@@ -46,9 +46,11 @@ public:
 	~DebugSession() { DEBUG_SHUTDOWN(); }
 };
 
-const int WINDOW_WIDTH = 960;
-const int WINDOW_HEIGHT = 720;
+const int WINDOW_WIDTH = 2560;
+const int WINDOW_HEIGHT = 1440;
 const int LABEL_HEIGHT = 24;
+int previewWidth = 1280;
+int previewHeight = 720;
 HWND referenceWindow = nullptr;
 HWND liveLabel = nullptr;
 HWND referenceLabel = nullptr;
@@ -63,6 +65,8 @@ std::string referenceDirectory;
 int selectedScene = 0;
 const unsigned STRESS_PARTICLE_COUNT = 4000;
 const unsigned STRESS_SEED = 0x5EED1234u;
+const unsigned OVERDRAW_PARTICLE_COUNT = 100;
+const unsigned OVERDRAW_SEED = 0x0D12A100u;
 const unsigned BATCH_CAPACITY = 512;
 bool captureReference = false;
 const char WINDOW_CLASS[] = "GeneralsParticleRenderTest";
@@ -115,7 +119,7 @@ const int PARTICLE_COUNT = sizeof(PARTICLES) / sizeof(PARTICLES[0]);
 class SceneRandom
 {
 public:
-	SceneRandom() : state(STRESS_SEED) {}
+	explicit SceneRandom(unsigned seed = STRESS_SEED) : state(seed) {}
 	unsigned Next()
 	{
 		state ^= state << 13;
@@ -127,6 +131,19 @@ public:
 private:
 	unsigned state;
 };
+
+void Sort_Submission_Order(const std::vector<TestParticle>& particles, std::vector<unsigned>& order)
+{
+	// Bound the sorting node count. The real triangle sorter restores global
+	// depth order across these texture/mode batches before issuing GPU draws.
+	std::stable_sort(order.begin(), order.end(), [&particles](unsigned a, unsigned b) {
+		const TestParticle& left = particles[a];
+		const TestParticle& right = particles[b];
+		const unsigned leftKey = left.textureIndex * 2 + (left.additive ? 1 : 0);
+		const unsigned rightKey = right.textureIndex * 2 + (right.additive ? 1 : 0);
+		return leftKey < rightKey;
+	});
+}
 
 void Build_Stress_Scene(std::vector<TestParticle>& particles, std::vector<unsigned>& order)
 {
@@ -149,16 +166,53 @@ void Build_Stress_Scene(std::vector<TestParticle>& particles, std::vector<unsign
 		particles.push_back(particle);
 		order.push_back(i);
 	}
-	// Bound the sorting node count. The real triangle sorter restores global
-	// depth order across these texture/mode batches before issuing GPU draws.
-	std::stable_sort(order.begin(), order.end(), [&particles](unsigned a, unsigned b) {
-		const TestParticle& left = particles[a];
-		const TestParticle& right = particles[b];
-		const unsigned leftKey = left.textureIndex * 2 + (left.additive ? 1 : 0);
-		const unsigned rightKey = right.textureIndex * 2 + (right.additive ? 1 : 0);
-		return leftKey < rightKey;
-	});
+	Sort_Submission_Order(particles, order);
 	DEBUG_LOG(("Particle test: generated %u particles with seed 0x%08X", STRESS_PARTICLE_COUNT, STRESS_SEED));
+}
+
+void Build_Overdraw_Scene(std::vector<TestParticle>& particles, std::vector<unsigned>& order)
+{
+	SceneRandom random(OVERDRAW_SEED);
+	for (unsigned i = 0; i < OVERDRAW_PARTICLE_COUNT; ++i) {
+		TestParticle particle = PARTICLES[i % PARTICLE_COUNT];
+		const float depth = 8.0f + 12.0f * (i + random.Unit() * 0.5f) / OVERDRAW_PARTICLE_COUNT;
+		particle.x = (random.Unit() * 2.0f - 1.0f) * depth * 0.08f;
+		particle.y = (random.Unit() * 2.0f - 1.0f) * depth * 0.05f;
+		particle.z = -depth;
+		particle.additive = ((i + i / PARTICLE_COUNT) & 1) != 0;
+		// Keep the blended image visible instead of saturating after 100 layers.
+		const float tintScale = particle.additive ? 0.1f : 1.0f;
+		particle.red = (0.08f + random.Unit() * 0.22f) * tintScale;
+		particle.green = (0.08f + random.Unit() * 0.22f) * tintScale;
+		particle.blue = (0.08f + random.Unit() * 0.22f) * tintScale;
+		particle.alpha = 0.035f + random.Unit() * 0.045f;
+		// At horizontal FOV 0.9, full view width is about 0.97 * depth.
+		// These quads cover the viewport even with their small center offsets.
+		particle.size = depth * (1.2f + random.Unit() * 0.4f);
+		particles.push_back(particle);
+		order.push_back(i);
+	}
+	Sort_Submission_Order(particles, order);
+	DEBUG_LOG(("Particle test: generated %u screen-filling particles with seed 0x%08X", OVERDRAW_PARTICLE_COUNT, OVERDRAW_SEED));
+}
+
+void Build_Atlas_Order(const std::vector<TestParticle>& particles, const std::vector<unsigned>& order, std::vector<unsigned>& atlasOrder)
+{
+	atlasOrder = order;
+	std::stable_sort(atlasOrder.begin(), atlasOrder.end(), [&particles](unsigned a, unsigned b) {
+		return particles[a].z < particles[b].z;
+	});
+}
+
+unsigned Scene_Particle_Count()
+{
+	return selectedScene == 0 ? static_cast<unsigned>(PARTICLE_COUNT) :
+		selectedScene == 1 ? STRESS_PARTICLE_COUNT : OVERDRAW_PARTICLE_COUNT;
+}
+
+const char* Scene_Description()
+{
+	return selectedScene == 0 ? "overlap" : selectedScene == 1 ? "small particles" : "screen-filling overdraw";
 }
 
 const char* Comparison_Name()
@@ -185,8 +239,8 @@ void Update_Title(HWND window)
 {
 	char title[512];
 	snprintf(title, sizeof(title),
-		"Scene %d: %u particles | %s | %.1f FPS | %.2f ms | %u draws | %d triangles | T: atlas %s | I: converted %s | M: distant %s | L: mip >=%u | H: %s | P: premul %s | A: add batching %s | F: %s | S: sorting %s | R: %s | B: bg | C: capture | V: compare | Esc",
-		selectedScene + 1, selectedScene == 0 ? static_cast<unsigned>(PARTICLE_COUNT) : STRESS_PARTICLE_COUNT,
+		"Scene %d: %u particles (%s) | 2560x1440 | %s | %.1f FPS | %.2f ms | %u draws | %d triangles | T: atlas %s | I: converted %s | M: distant %s | L: mip >=%u | H: %s | P: premul %s | A: add batching %s | F: %s | S: sorting %s | R: %s | B: bg | C: capture | V: compare | Esc",
+		selectedScene + 1, Scene_Particle_Count(), Scene_Description(),
 		Comparison_Name(), displayedFps, displayedFrameMs, displayedDraws, displayedTriangles,
 		atlasEnabled ? "ON" : "OFF", isolatedEnabled ? "ON" : "OFF", mipStress ? "ON" : "OFF", forcedMip, trilinear ? "trilinear" : "bilinear",
 		premultiplied ? "ON" : "OFF",
@@ -232,8 +286,9 @@ LRESULT CALLBACK Window_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
 		case 'V': comparisonEnabled = !comparisonEnabled; break;
 		case '1': selectedScene = 0; break;
 		case '2': selectedScene = 1; break;
+		case '3': selectedScene = 2; break;
 		}
-		if (wparam == 'S' || wparam == 'R' || wparam == 'B' || wparam == 'C' || wparam == 'V' || wparam == 'A' || wparam == 'P' || wparam == 'T' || wparam == 'I' || wparam == 'M' || wparam == 'L' || wparam == 'H' || wparam == '1' || wparam == '2') {
+		if (wparam == 'S' || wparam == 'R' || wparam == 'B' || wparam == 'C' || wparam == 'V' || wparam == 'A' || wparam == 'P' || wparam == 'T' || wparam == 'I' || wparam == 'M' || wparam == 'L' || wparam == 'H' || wparam == '1' || wparam == '2' || wparam == '3') {
 			comparisonRequested = true;
 			comparisonState = comparisonEnabled ? COMPARISON_PENDING : COMPARISON_PAUSED;
 			Update_Comparison_Label();
@@ -257,7 +312,11 @@ LRESULT CALLBACK Window_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
 			if (referenceBitmap) {
 				HDC memory = CreateCompatibleDC(dc);
 				HGDIOBJ old = SelectObject(memory, referenceBitmap);
-				BitBlt(dc, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, memory, 0, 0, SRCCOPY);
+				RECT client;
+				GetClientRect(window, &client);
+				SetStretchBltMode(dc, HALFTONE);
+				SetBrushOrgEx(dc, 0, 0, nullptr);
+				StretchBlt(dc, 0, 0, client.right, client.bottom, memory, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, SRCCOPY);
 				SelectObject(memory, old);
 				DeleteDC(memory);
 			}
@@ -284,7 +343,7 @@ bool Load_Reference(const char* path, HBITMAP& bitmap, std::vector<unsigned int>
 		description.bmWidth != WINDOW_WIDTH || description.bmHeight != WINDOW_HEIGHT) {
 		if (bitmap) DeleteObject(bitmap);
 		bitmap = nullptr;
-		error = std::string("Could not load a 960x720 reference bitmap: ") + path;
+		error = std::string("Could not load a 2560x1440 reference bitmap: ") + path;
 		return false;
 	}
 	BITMAPINFO info = {};
@@ -310,8 +369,10 @@ bool Load_Reference(const char* path, HBITMAP& bitmap, std::vector<unsigned int>
 
 bool Select_Scene_Reference(std::string& error)
 {
-	referencePath = referenceDirectory + (selectedScene == 0 ? "ParticleRenderTest-reference.bmp" :
-		"ParticleRenderTest-reference-4000-5EED1234.bmp");
+	const char* sceneIds[] = { "10", "4000-5EED1234", "overdraw-100-0D12A100" };
+	char filename[128];
+	snprintf(filename, sizeof(filename), "ParticleRenderTest-reference-%s-%dx%d.bmp", sceneIds[selectedScene], WINDOW_WIDTH, WINDOW_HEIGHT);
+	referencePath = referenceDirectory + filename;
 	HBITMAP replacement = nullptr;
 	std::vector<unsigned int> pixels;
 	const DWORD attributes = GetFileAttributesA(referencePath.c_str());
@@ -328,8 +389,10 @@ bool Select_Scene_Reference(std::string& error)
 	comparisonRequested = true;
 	comparisonState = comparisonEnabled ? COMPARISON_PENDING : COMPARISON_PAUSED;
 	Update_Comparison_Label();
-	SetWindowTextA(referenceLabel, selectedScene == 0 ? "REFERENCE: scene 1, 10 particles (C replaces it)" :
-		"REFERENCE: scene 2, 4000 particles, seed 0x5EED1234 (C replaces it)");
+	char label[256];
+	snprintf(label, sizeof(label), "REFERENCE: scene %d, %u particles (%s), %dx%d (C replaces it)",
+		selectedScene + 1, Scene_Particle_Count(), Scene_Description(), WINDOW_WIDTH, WINDOW_HEIGHT);
+	SetWindowTextA(referenceLabel, label);
 	InvalidateRect(referenceWindow, nullptr, FALSE);
 	return true;
 }
@@ -512,12 +575,13 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 	std::vector<TestParticle> stressParticles;
 	std::vector<unsigned> stressOrder;
 	Build_Stress_Scene(stressParticles, stressOrder);
-	std::vector<unsigned> atlasOrder = stressOrder;
-	// Depth-contiguous chunks prevent identical atlas state from becoming
-	// interleaved nodes in the existing triangle sorter. It still sorts triangles.
-	std::stable_sort(atlasOrder.begin(), atlasOrder.end(), [&stressParticles](unsigned a, unsigned b) {
-		return stressParticles[a].z < stressParticles[b].z;
-	});
+	std::vector<TestParticle> overdrawParticles;
+	std::vector<unsigned> overdrawOrder;
+	Build_Overdraw_Scene(overdrawParticles, overdrawOrder);
+	std::vector<unsigned> atlasOrder, overdrawAtlasOrder;
+	// Depth-contiguous chunks avoid interleaved nodes in the triangle sorter.
+	Build_Atlas_Order(stressParticles, stressOrder, atlasOrder);
+	Build_Atlas_Order(overdrawParticles, overdrawOrder, overdrawAtlasOrder);
 	int activeScene = selectedScene;
 	PointGroupClass group;
 	group.Set_Point_Mode(PointGroupClass::QUADS);
@@ -590,10 +654,13 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 			group.Render(renderInfo);
 			count = 0;
 		};
-		const unsigned particleCount = selectedScene == 0 ? static_cast<unsigned>(PARTICLE_COUNT) : STRESS_PARTICLE_COUNT;
+		const unsigned particleCount = Scene_Particle_Count();
+		const std::vector<TestParticle>& sceneParticles = selectedScene == 2 ? overdrawParticles : stressParticles;
+		const std::vector<unsigned>& sceneOrder = selectedScene == 2 ?
+			(atlasEnabled ? overdrawAtlasOrder : overdrawOrder) : (atlasEnabled ? atlasOrder : stressOrder);
 		for (unsigned i = 0; i < particleCount; ++i) {
 			const unsigned index = reverseSubmission ? particleCount - 1 - i : i;
-			const TestParticle& particle = selectedScene == 0 ? PARTICLES[index] : stressParticles[(atlasEnabled ? atlasOrder : stressOrder)[index]];
+			const TestParticle& particle = selectedScene == 0 ? PARTICLES[index] : sceneParticles[sceneOrder[index]];
 			if (count == BATCH_CAPACITY || (count > 0 &&
 				(!atlasEnabled && (particle.textureIndex != batchTexture || (!premultiplied && particle.additive != batchAdditive))))) flushBatch();
 			if (count == 0) {
@@ -690,6 +757,16 @@ bool Run_Renderer(HWND window, const BigTextureFileFactory& archives, std::strin
 	if (WW3D::Init(window) != WW3D_ERROR_OK) return false;
 	bool success = false;
 	if (WW3D::Set_Render_Device(0, WINDOW_WIDTH, WINDOW_HEIGHT, 32, 1) == WW3D_ERROR_OK) {
+		// DX8 initially sizes its HWND to the backbuffer; presentation scales
+		// the full 1440p buffer into this smaller desktop preview.
+		MoveWindow(window, previewWidth, LABEL_HEIGHT, previewWidth, previewHeight, TRUE);
+		IDirect3DSurface8* backbuffer = nullptr;
+		if (SUCCEEDED(DX8Wrapper::_Get_D3D_Device8()->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &backbuffer))) {
+			D3DSURFACE_DESC desc;
+			backbuffer->GetDesc(&desc);
+			DEBUG_LOG(("Particle test: render target %ux%u, preview %dx%d", desc.Width, desc.Height, previewWidth, previewHeight));
+			backbuffer->Release();
+		}
 		WW3D::Enable_Static_Sort_Lists(false);
 		success = Run_Scene(window, archives, error);
 	}
@@ -726,7 +803,19 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int show)
 	if (!RegisterClassA(&windowClass)) return 1;
 
 	const DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN;
-	RECT bounds = { 0, 0, WINDOW_WIDTH * 2, WINDOW_HEIGHT + LABEL_HEIGHT };
+	RECT workArea;
+	SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
+	RECT frame = { 0, 0, 0, 0 };
+	AdjustWindowRect(&frame, style, FALSE);
+	const int availableWidth = workArea.right - workArea.left - (frame.right - frame.left);
+	const int availableHeight = workArea.bottom - workArea.top - (frame.bottom - frame.top) - LABEL_HEIGHT;
+	previewWidth = std::min(WINDOW_WIDTH, availableWidth / 2);
+	previewHeight = previewWidth * WINDOW_HEIGHT / WINDOW_WIDTH;
+	if (previewHeight > availableHeight) {
+		previewHeight = availableHeight;
+		previewWidth = previewHeight * WINDOW_WIDTH / WINDOW_HEIGHT;
+	}
+	RECT bounds = { 0, 0, previewWidth * 2, previewHeight + LABEL_HEIGHT };
 	AdjustWindowRect(&bounds, style, FALSE);
 	HWND window = CreateWindowA(WINDOW_CLASS, "Particle render test", style,
 		CW_USEDEFAULT, CW_USEDEFAULT, bounds.right - bounds.left, bounds.bottom - bounds.top,
@@ -737,13 +826,13 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int show)
 	}
 	const DWORD childStyle = WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS;
 	referenceWindow = CreateWindowA(WINDOW_CLASS, "Saved reference", childStyle,
-		0, LABEL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT, window, nullptr, instance, nullptr);
+		0, LABEL_HEIGHT, previewWidth, previewHeight, window, nullptr, instance, nullptr);
 	HWND liveWindow = CreateWindowA(WINDOW_CLASS, "Live rendering", childStyle,
-		WINDOW_WIDTH, LABEL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT, window, nullptr, instance, nullptr);
+		previewWidth, LABEL_HEIGHT, previewWidth, previewHeight, window, nullptr, instance, nullptr);
 	referenceLabel = CreateWindowA("STATIC", "SAVED REFERENCE  (C replaces it)", WS_CHILD | WS_VISIBLE | SS_CENTER,
-		0, 0, WINDOW_WIDTH, LABEL_HEIGHT, window, nullptr, instance, nullptr);
+		0, 0, previewWidth, LABEL_HEIGHT, window, nullptr, instance, nullptr);
 	liveLabel = CreateWindowA("STATIC", "LIVE RENDERING", WS_CHILD | WS_VISIBLE | SS_CENTER,
-		WINDOW_WIDTH, 0, WINDOW_WIDTH, LABEL_HEIGHT, window, nullptr, instance, nullptr);
+		previewWidth, 0, previewWidth, LABEL_HEIGHT, window, nullptr, instance, nullptr);
 	char executable[MAX_PATH];
 	const DWORD pathLength = GetModuleFileNameA(nullptr, executable, sizeof(executable));
 	bool success = referenceWindow && liveWindow && pathLength > 0 && pathLength < sizeof(executable);

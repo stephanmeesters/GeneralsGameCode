@@ -1,7 +1,10 @@
 # Particle render test
 
-A hardcoded scene shown in two 960×720 panes (saved reference left, live rendering right) with ten overlapping particles: five alpha and five
-additive, at distinct depths. Uses the game's `PointGroupClass`, sprite shader
+Three hardcoded scenes rendered at **2560×1440** (16:9), with a saved reference
+on the left and live rendering on the right. Both preview panes are scaled to
+fit the desktop; the backbuffer, reference capture, and pixel comparisons remain
+full 1440p. The original scene has ten overlapping particles: five alpha and
+five additive, at distinct depths. Uses the game's `PointGroupClass`, sprite shader
 presets, camera, and `SortingRendererClass`. Particle simulation, INI parsing and
 the game particle manager are not needed for this geometry/blending test.
 
@@ -76,12 +79,13 @@ cmake --build --preset win32-profile --target z_particlerendertest g_particleren
 ```
 
 The normal tool dependencies, DirectX 8 runtime and supplied game archives are required. No MFC UI is
-used by this executable. The window has a fixed client size; it can be minimized.
+used by this executable. The comparison window is sized to fit the desktop work area at launch and can be minimized.
 
 ## Scenes
 
 - **1**: the original ten overlapping particles.
 - **2**: 4,000 static randomized particles, using seed **`0x5EED1234`**.
+- **3**: 100 screen-filling particles, using seed **`0x0D12A100`**, for heavy overdraw.
 
 The stress scene randomizes positions, sizes, colors, alpha, blend modes and the
 choice among the ten loaded textures. Its explicit xorshift32 generator runs once
@@ -92,21 +96,37 @@ Stress-scene submissions are grouped into texture/blend batches of up to 512
 particles, then the production triangle sorter orders all particles together.
 This avoids exhausting the sorter's 4,096-node table. With sorting disabled,
 rendering follows batch order. The 4,000 quads generate 16,000 vertices and 8,000
-triangles. Both scenes use the same existing texture-loading and rendering paths.
+triangles. All three scenes use the same existing texture-loading and rendering paths.
+
+Scene 3 deliberately covers the viewport with all 100 quads, using the same ten
+archive textures in both alpha and additive modes. Positions, sizes, tint and
+opacity are deterministic; depths are distinct. Low alpha and dim additive tint
+keep the composite visible instead of saturating to white. With M off, this is
+roughly 100 blended layers per pixel, or 369 million fragment samples per frame
+at 2560×1440, despite only 200 submitted triangles. It is intended to expose
+fill-rate, sampling and blend-bandwidth limits rather than draw-call overhead.
+It uses normal 512-particle batching; the atlas scene fits in one draw.
 
 ## Saved reference
 
 The comparison window displays a frozen screenshot on the left and the live scene
-on the right, at identical resolutions. The reference is stored as
-`ParticleRenderTest-reference.bmp` next to the executable and survives restarts
-and code edits. Scene 2 uses its own file,
-`ParticleRenderTest-reference-4000-5EED1234.bmp`, in the same directory.
+on the right. Both are rendered/captured at 2560×1440 and scaled into matching
+preview panes. Each scene has a persistent reference next to the executable:
+
+- `ParticleRenderTest-reference-10-2560x1440.bmp`
+- `ParticleRenderTest-reference-4000-5EED1234-2560x1440.bmp`
+- `ParticleRenderTest-reference-overdraw-100-0D12A100-2560x1440.bmp`
+
+The older 960×720 reference files are left untouched; the resolution and aspect
+ratio change requires new references. Historical FPS/image comparisons below
+were recorded at 960×720 and do not describe the new 1440p workload.
+
 Switching scenes loads the corresponding reference. If its file is absent, the first rendered frame becomes the
 reference. An existing reference is never replaced automatically.
 
 The live label and title report **MATCH** or **DIFFERENT**, the number of differing
 pixels, and the largest RGB channel difference (0–255). Equality is exact across
-all 960×720 RGB pixels; alpha is ignored. The check reads the application's GPU
+all 2560×1440 RGB pixels (3,686,400 pixels); alpha is ignored. The check reads the application's GPU
 backbuffer twice per second, before presentation. It excludes labels, window
 borders and desktop composition. Readback failure reports **CHECK FAILED**.
 
@@ -122,7 +142,7 @@ the particle statistics. FPS includes the comparison application's normal overhe
 
 ## Controls and visual checks
 
-- **1** / **2** switch between the ten-particle scene and the fixed-seed 4,000-particle scene.
+- **1** / **2** / **3** select ten particles, 4,000 small particles, or 100 screen-filling particles.
 - **V** toggles live RGB comparison (initially on).
 - **C** saves the current live image as the new persistent reference.
 - **T** toggles the premultiplied texture atlas (initially off).
@@ -213,7 +233,7 @@ and the sleep limiter for throughput measurements. Exact RGB comparison stays
 strict: finite-precision differences between the fixed-function and programmable
 paths are displayed as DIFFERENT, including the maximum channel delta.
 
-Initial bequiet measurements for the fixed-seed 4,000-particle scene:
+Historical bequiet measurements at 960×720 for the fixed-seed 4,000-particle scene:
 
 | Path | GPU draws/frame |
 |---|---:|
@@ -310,8 +330,9 @@ dynamic atlas management to the game.
 
 ### Atlas verification on bequiet
 
-Both Generals and Zero Hour test targets build successfully. The Zero Hour test
-was checked with the existing reference files preserved:
+The following historical checks were recorded at 960×720, before the 1440p
+upgrade. Both Generals and Zero Hour test targets built successfully, with the
+existing reference files preserved:
 
 | Scene | Original + Ronin | Shader premultiplication | Texture atlas |
 |---|---:|---:|---:|
@@ -362,3 +383,13 @@ atlas chunk order, different texture sampling/conversion, presentation and tool
 overhead. They establish a strong improvement for this fixture, not a prediction
 of full-game FPS. The test was left in scene 2, atlas enabled, with comparison and
 the sleep limiter restored.
+
+## 1440p and overdraw verification
+
+Both win32-profile targets built successfully. The Zero Hour backbuffer and all
+three new reference images were verified as 2560×1440. All three original-mode
+scenes matched their saved RGB references; scene 3 also matched after reversing
+submission and after restarting the executable. Older 960×720 references retained
+their original hashes. Scene 3 submitted 200 triangles in 100 original-mode draws
+or one atlas draw. P and T remain comparison experiments and report their actual
+RGB differences rather than replacing the original reference.
