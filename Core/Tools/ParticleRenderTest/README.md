@@ -148,11 +148,11 @@ the particle statistics. FPS includes the comparison application's normal overhe
 - **T** toggles the premultiplied texture atlas (initially off).
 - **I** toggles isolated converted textures, for checking the atlas against the same mip data.
 - **M** moves particles four times farther away, keeping their screen centers, to stress minification.
+- **Q** toggles half-resolution particle rendering (1280×720), upscaled into the 2560×1440 output.
 - **H** switches bilinear/trilinear filtering (initially bilinear).
 - **L** cycles the minimum sampled mip from 0 through 6 for T/I (0 restores automatic LOD).
 - **P** toggles unified premultiplied-alpha blending (initially off).
 - **A** toggles Ronin's additive-run batching (initially on) for draw-count comparisons.
-- **F** toggles the frame limiter (initially on); turn it off for throughput comparisons.
 - **S** toggles production triangle sorting (initially on).
 - **R** reverses particle submission order.
 - **B** switches between dark and gray backgrounds.
@@ -163,9 +163,9 @@ have distinct depths. With sorting off, reversal should visibly change overlappi
 alpha/additive results. Keep the camera and particles static for reproducible
 comparisons. The title bar shows FPS, average frame time, actual DX8 draw calls per frame,
 triangle count, and the current controls. FPS/frame time update twice per second
-and include presentation and the optional 16 ms sleep. Minimized/device-recovery
-periods reset the sampling interval. Uncapped mode removes the sleep; presentation
-can still be limited by the driver or display synchronization.
+and include presentation. The test runs without a frame limiter. Minimized/device-recovery
+periods reset the sampling interval. Presentation can still be limited by the driver
+or display synchronization.
 
 Draw calls come from `DX8Wrapper::Get_Last_Frame_Statistics().draw_calls` after
 `End_Render`, rather than the general debug counter that also counts sorting
@@ -228,8 +228,8 @@ save some draws while losing the original additive-run regrouping opportunity.
 Texture changes and capacity boundaries still limit batching; this experiment
 does not promise one draw for all particles.
 
-Compare scene 2 with P off/on, keeping S enabled. Use V and F to disable readback
-and the sleep limiter for throughput measurements. Exact RGB comparison stays
+Compare scene 2 with P off/on, keeping S enabled. Use V to disable readback
+for throughput measurements. Exact RGB comparison stays
 strict: finite-precision differences between the fixed-function and programmable
 paths are displayed as DIFFERENT, including the maximum channel delta.
 
@@ -393,3 +393,44 @@ submission and after restarting the executable. Older 960×720 references retain
 their original hashes. Scene 3 submitted 200 triangles in 100 original-mode draws
 or one atlas draw. P and T remain comparison experiments and report their actual
 RGB differences rather than replacing the original reference.
+
+## Half-resolution experiment
+
+Press **Q** to switch particles between native 2560×1440 and **1280×720**. The
+final output, reference capture and RGB comparison stay at 2560×1440; desktop
+preview scaling is separate. Half resolution defaults off and does not change
+the atlas, sorting, source batch capacity, or particle count. Existing reference
+images are neither replaced nor resized by toggling Q.
+
+A single-level ARGB8 default-pool render-target texture is allocated lazily and
+reused. Its exact dimensions/format are checked; unsupported allocation reports
+a reason and returns to native rendering. The engine texture tracker handles its
+default-pool resource lifecycle. Each half-resolution frame:
+
+1. Unbinds the target from last frame's sampler, then binds it as the render target.
+2. Applies the camera against its smaller dimensions and draws all particles.
+3. Flushes the deferred triangle sorter **before** switching targets.
+4. Restores the native backbuffer and adds one bilinearly filtered fullscreen
+   indexed draw using the existing Render2D path and its DX8 pixel alignment.
+
+P/T/I modes accumulate into transparent black with their existing premultiplied
+blend mode. Alpha stores coverage; additive RGB has zero alpha. The fullscreen
+pass uses `ONE / INV_SRC_ALPHA` to composite that layer onto the native background.
+The original separate-blend mode retains its original particle shaders: the flat
+test background is included in the small target, and the fullscreen draw copies
+its RGB with `ONE / ZERO`. This avoids interpreting legacy framebuffer alpha as
+coverage and keeps the original-mode comparison focused on resolution.
+
+Draw/triangle statistics include the fullscreen pass. For scene 3 the atlas path
+therefore changes from **1 draw / 200 triangles** to **2 draws / 202 triangles**.
+The particle pass processes one quarter as many pixels, plus the native-resolution
+upscale. This is not a promise of four times the FPS: compositing, submission,
+presentation and other costs remain. Use V to pause readback when comparing performance;
+let the first allocation frame settle.
+
+Half-resolution output is intentionally approximate. Sampling/mip selection,
+upsampling, and the 8-bit intermediate can change edges, small particles,
+quantization and saturation. Compare against the unchanged native reference.
+The tool has no opaque scene geometry: it reuses the freshly cleared larger depth
+buffer, and particles do not write depth. Real-game integration still needs a
+correct scene-occlusion/depth policy; this toggle does not implement that work.

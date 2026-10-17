@@ -21,6 +21,7 @@
 #include "WWMath/wwmath.h"
 #include "BigTextureFileFactory.h"
 #include "ParticleAtlas.h"
+#include "ParticleResolutionPass.h"
 #include <d3d8.h>
 #include <d3dx8.h>
 #include <string.h>
@@ -71,6 +72,8 @@ const unsigned BATCH_CAPACITY = 512;
 bool captureReference = false;
 const char WINDOW_CLASS[] = "GeneralsParticleRenderTest";
 
+bool halfResolution = false;
+std::string halfResolutionError;
 bool atlasEnabled = false;
 bool isolatedEnabled = false;
 bool mipStress = false;
@@ -82,7 +85,6 @@ std::string premultipliedError;
 bool sorting = true;
 bool reverseSubmission = false;
 bool lightBackground = false;
-bool frameLimiter = true;
 double displayedFps = 0.0;
 double displayedFrameMs = 0.0;
 unsigned displayedDraws = 0;
@@ -239,13 +241,14 @@ void Update_Title(HWND window)
 {
 	char title[512];
 	snprintf(title, sizeof(title),
-		"Scene %d: %u particles (%s) | 2560x1440 | %s | %.1f FPS | %.2f ms | %u draws | %d triangles | T: atlas %s | I: converted %s | M: distant %s | L: mip >=%u | H: %s | P: premul %s | A: add batching %s | F: %s | S: sorting %s | R: %s | B: bg | C: capture | V: compare | Esc",
+		"Scene %d: %u particles (%s) | 2560x1440 | %s | %.1f FPS | %.2f ms | %u draws | %d triangles | Q: %s | T: atlas %s | I: converted %s | M: distant %s | L: mip >=%u | H: %s | P: premul %s | A: add batching %s | S: sorting %s | R: %s | B: bg | C: capture | V: compare | Esc",
 		selectedScene + 1, Scene_Particle_Count(), Scene_Description(),
 		Comparison_Name(), displayedFps, displayedFrameMs, displayedDraws, displayedTriangles,
+		halfResolution ? "half 1280x720" : "full 2560x1440",
 		atlasEnabled ? "ON" : "OFF", isolatedEnabled ? "ON" : "OFF", mipStress ? "ON" : "OFF", forcedMip, trilinear ? "trilinear" : "bilinear",
 		premultiplied ? "ON" : "OFF",
 		SortingRendererClass::Is_Additive_Batching_Enabled() ? "ON" : "OFF",
-		frameLimiter ? "limited" : "uncapped", sorting ? "ON" : "OFF", reverseSubmission ? "reversed" : "original");
+		sorting ? "ON" : "OFF", reverseSubmission ? "reversed" : "original");
 	SetWindowTextA(GetAncestor(window, GA_ROOT), title);
 }
 
@@ -260,7 +263,10 @@ LRESULT CALLBACK Window_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
 		case 'S': sorting = !sorting; break;
 		case 'R': reverseSubmission = !reverseSubmission; break;
 		case 'B': lightBackground = !lightBackground; break;
-		case 'F': frameLimiter = !frameLimiter; break;
+		case 'Q':
+			if (halfResolutionError.empty()) halfResolution = !halfResolution;
+			else MessageBoxA(GetAncestor(window, GA_ROOT), halfResolutionError.c_str(), "Half-resolution rendering unavailable", MB_OK | MB_ICONERROR);
+			break;
 		case 'H':
 			trilinear = !trilinear;
 			WW3D::Set_Texture_Filter(trilinear ? TextureFilterClass::TEXTURE_FILTER_TRILINEAR : TextureFilterClass::TEXTURE_FILTER_BILINEAR);
@@ -288,7 +294,7 @@ LRESULT CALLBACK Window_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
 		case '2': selectedScene = 1; break;
 		case '3': selectedScene = 2; break;
 		}
-		if (wparam == 'S' || wparam == 'R' || wparam == 'B' || wparam == 'C' || wparam == 'V' || wparam == 'A' || wparam == 'P' || wparam == 'T' || wparam == 'I' || wparam == 'M' || wparam == 'L' || wparam == 'H' || wparam == '1' || wparam == '2' || wparam == '3') {
+		if (wparam == 'S' || wparam == 'R' || wparam == 'B' || wparam == 'C' || wparam == 'V' || wparam == 'A' || wparam == 'P' || wparam == 'T' || wparam == 'I' || wparam == 'M' || wparam == 'L' || wparam == 'H' || wparam == 'Q' || wparam == '1' || wparam == '2' || wparam == '3') {
 			comparisonRequested = true;
 			comparisonState = comparisonEnabled ? COMPARISON_PENDING : COMPARISON_PAUSED;
 			Update_Comparison_Label();
@@ -599,6 +605,8 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 	unsigned sampleFrames = 0;
 	LARGE_INTEGER lastComparison = sampleStart;
 	ComparisonReadback readback;
+	ParticleResolutionPass resolutionPass(WINDOW_WIDTH, WINDOW_HEIGHT);
+	bool activeHalfResolution = halfResolution;
 	MSG message = {};
 	for (;;) {
 		while (PeekMessage(&message, nullptr, 0, 0, PM_REMOVE)) {
@@ -620,6 +628,11 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 			QueryPerformanceCounter(&sampleStart);
 			sampleFrames = 0;
 		}
+		if (activeHalfResolution != halfResolution) {
+			activeHalfResolution = halfResolution;
+			QueryPerformanceCounter(&sampleStart);
+			sampleFrames = 0;
+		}
 		WW3D::Enable_Sorting(sorting);
 		const float background = lightBackground ? 0.35f : 0.035f;
 		if (WW3D::Begin_Render(true, true, Vector3(background, background, background)) != WW3D_ERROR_OK) {
@@ -630,11 +643,16 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 			sampleFrames = 0;
 			continue;
 		}
+		const bool converted = atlasEnabled || isolatedEnabled;
+		const bool transparentPass = premultiplied || converted;
+		if (halfResolution && !resolutionPass.Begin(transparentPass, background, halfResolutionError)) {
+			halfResolution = false;
+			MessageBoxA(GetAncestor(window, GA_ROOT), halfResolutionError.c_str(), "Half-resolution rendering unavailable", MB_OK | MB_ICONERROR);
+		}
 		camera.Apply();
 		// Pixel shader binding is immediate, outside the deferred sorting state.
 		// Every submission in this tool frame uses the same experiment setting.
 		DX8Wrapper::Set_Pixel_Shader(premultiplied ? unifiedShader.Get_Handle() : 0);
-		const bool converted = atlasEnabled || isolatedEnabled;
 		group.Set_Texture_UV_Rects(atlasEnabled ? uvRects.Peek() : nullptr);
 		DX8Wrapper::Set_DX8_Texture_Stage_State(0, D3DTSS_MAXMIPLEVEL, converted ? forcedMip : 0);
 		unsigned count = 0;
@@ -685,6 +703,7 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 			++count;
 		}
 		flushBatch();
+		if (halfResolution) resolutionPass.Composite(transparentPass);
 		const bool capturing = captureReference;
 		LARGE_INTEGER comparisonTime;
 		QueryPerformanceCounter(&comparisonTime);
@@ -719,7 +738,6 @@ bool Run_Scene(HWND window, const BigTextureFileFactory& archives, std::string& 
 			DEBUG_LOG(("Particle test: first frame draws=%u polygons=%d sorted=%d",
 				displayedDraws, displayedTriangles, Debug_Statistics::Get_Sorting_Polygons()));
 		}
-		if (frameLimiter) Sleep(16);
 		++sampleFrames;
 		LARGE_INTEGER sampleEnd;
 		QueryPerformanceCounter(&sampleEnd);
