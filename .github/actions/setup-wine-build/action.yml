@@ -12,7 +12,16 @@ runs:
       run: |
         sudo dpkg --add-architecture i386
         sudo apt-get update
-        sudo apt-get install -y wine wine32:i386 wine64 winbind xvfb cabextract msitools unzip zip cmake ninja-build build-essential pkg-config autoconf automake libtool nasm llvm
+        sudo apt-get install -y ca-certificates curl gnupg
+        sudo mkdir -p /etc/apt/keyrings
+        curl --fail --location --retry 3 https://dl.winehq.org/wine-builds/winehq.key \
+          | gpg --dearmor | sudo tee /etc/apt/keyrings/winehq-archive.key > /dev/null
+        sudo curl --fail --location --retry 3 \
+          https://dl.winehq.org/wine-builds/ubuntu/dists/noble/winehq-noble.sources \
+          --output /etc/apt/sources.list.d/winehq-noble.sources
+        sudo apt-get update
+        sudo apt-get install -y --install-recommends winehq-stable winbind xvfb xauth cabextract msitools unzip zip cmake ninja-build build-essential pkg-config autoconf automake libtool nasm llvm
+        wine --version
         echo "CI_TOOLS=$RUNNER_TEMP/windows-tools" >> "$GITHUB_ENV"
         echo "WINEPREFIX=$RUNNER_TEMP/build-prefix" >> "$GITHUB_ENV"
         echo 'WINEDEBUG=-all' >> "$GITHUB_ENV"

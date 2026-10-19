@@ -63,7 +63,8 @@ elif [[ "$PRESET" == win32* ]]; then
         # pass is for native clang, and its byte-based newline rewriting can
         # corrupt UTF-16 MFC resource scripts. Keep the original headers intact.
         # shellcheck disable=SC2016
-        sed '/"\$ORIG"\/fixinclude /d' msvc-wine/install.sh > msvc-wine/install-wine.sh
+        sed '/"\$ORIG"\/fixinclude /c\    :' msvc-wine/install.sh > msvc-wine/install-wine.sh
+        bash -n msvc-wine/install-wine.sh
         WINEDLLOVERRIDES=mscoree,mshtml=d xvfb-run -a bash msvc-wine/install-wine.sh "$CI_TOOLS/msvc"
     fi
     ar_adapter=$(find /usr/share -maxdepth 2 -path '*/automake-*/ar-lib' | sort -V | tail -1)
