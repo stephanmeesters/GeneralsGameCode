@@ -19,6 +19,9 @@ export TMP='C:\build-temp' TEMP='C:\build-temp'
 compiler_flags=()
 
 if [[ "$PRESET" == vc6* ]]; then
+    # CMake defaults to /Zm1000 for VC6. That reservation causes C1060 when
+    # reusing PCH under Wine; the compiler's default-sized buffer works.
+    compiler_flags+=("-DCMAKE_CXX_FLAGS=/DWIN32 /D_WINDOWS /GX /Zm100")
     # MSVC600 uses mixed-case names; Wine resolves these as on Windows.
     vs="$tools_win\\vc6"
     export MSVCDir="$vs\\VC98"
