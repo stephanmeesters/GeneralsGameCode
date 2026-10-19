@@ -41,6 +41,8 @@ jobs:
               - 'GeneralsMD/**'
             shared:
               - '.github/workflows/**'
+              - '.github/actions/**'
+              - '.github/scripts/**'
               - 'Benchmarks/**'
               - 'CMakeLists.txt'
               - 'CMakePresets.json'
@@ -63,7 +65,6 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.generals == 'true' || needs.detect-changes.outputs.shared == 'true' }}
     permissions:
       contents: read
-      packages: write
     strategy:
       matrix:
         include:
@@ -143,7 +144,6 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.generalsmd == 'true' || needs.detect-changes.outputs.shared == 'true' }}
     permissions:
       contents: read
-      packages: write
     strategy:
       matrix:
         include:
@@ -180,7 +180,7 @@ jobs:
 
   replaycheck-generalsmd:
     name: Replay Check GeneralsMD${{ matrix.preset && '' }}
-    needs: build-generalsmd-vc6
+    needs: [detect-changes, build-generalsmd-vc6]
     if: ${{ github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.generalsmd == 'true' || needs.detect-changes.outputs.shared == 'true' }}
     permissions:
       contents: read

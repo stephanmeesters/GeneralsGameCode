@@ -1,0 +1,34 @@
+name: Set up Windows build tools under Wine
+description: Install Wine and cache the VC6 or msvc-wine toolchain on Ubuntu.
+inputs:
+  preset:
+    description: CMake preset to build
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Install Wine dependencies
+      shell: bash
+      run: |
+        sudo dpkg --add-architecture i386
+        sudo apt-get update
+        sudo apt-get install -y wine wine32:i386 wine64 winbind xvfb cabextract msitools unzip zip cmake ninja-build build-essential pkg-config autoconf automake libtool nasm llvm
+        echo "CI_TOOLS=$RUNNER_TEMP/windows-tools" >> "$GITHUB_ENV"
+        echo "WINEPREFIX=$RUNNER_TEMP/build-prefix" >> "$GITHUB_ENV"
+        echo 'WINEDEBUG=-all' >> "$GITHUB_ENV"
+    - name: Cache Windows build tools
+      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      with:
+        path: |
+          ${{ runner.temp }}/windows-tools/cmake
+          ${{ runner.temp }}/windows-tools/ninja
+          ${{ runner.temp }}/windows-tools/git
+          ${{ runner.temp }}/windows-tools/vc6
+          ${{ runner.temp }}/windows-tools/msvc
+          ${{ runner.temp }}/windows-tools/msvc-wine
+        key: wine-tools-${{ runner.os }}-${{ runner.arch }}-${{ startsWith(inputs.preset, 'vc6') && 'vc6' || 'msvc' }}-${{ hashFiles('.github/scripts/setup-wine-build.sh', 'ci-helpers/.github/scripts/setup-wine-build.sh') }}
+    - name: Install Windows build tools
+      shell: bash
+      env:
+        PRESET: ${{ inputs.preset }}
+      run: bash "$GITHUB_ACTION_PATH/../../scripts/setup-wine-build.sh"
