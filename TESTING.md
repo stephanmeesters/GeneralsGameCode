@@ -46,7 +46,8 @@ The `Rendering.*` Google Test suite requires a Direct3D 8 device. CTest excludes
 it from ordinary unit test runs. CI reuses the MSVC `win32` Release test
 executables in a separate Linux job under Wine, DXVK and Mesa lavapipe, which
 renders on the CPU. It runs only `--gtest_filter=Rendering.*` and uploads images,
-Google Test XML and renderer logs. No game assets are required for the initial
+Google Test XML and renderer logs. It also compares the images with those of the
+base commit and uploads an HTML report of the differences. No game assets are required for the initial
 triangle test. See [Tests/Rendering/README.md](Tests/Rendering/README.md) for local
 commands and requirements.
 

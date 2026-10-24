@@ -204,6 +204,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.generals == 'true' || needs.detect-changes.outputs.shared == 'true' }}
     permissions:
       contents: read
+      actions: read
     uses: ./.github/workflows/reusable-check-rendering.yml
     with:
       game: "Generals"
@@ -214,6 +215,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.generalsmd == 'true' || needs.detect-changes.outputs.shared == 'true' }}
     permissions:
       contents: read
+      actions: read
     uses: ./.github/workflows/reusable-check-rendering.yml
     with:
       game: "GeneralsMD"

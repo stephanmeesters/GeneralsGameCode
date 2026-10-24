@@ -201,7 +201,8 @@ jobs:
         with:
           name: ${{ inputs.game }}-win32-rendering-tests
           path: build/rendering-tests
-          retention-days: 7
+          # Kept longer on main, where pull requests download it to compare their rendering with.
+          retention-days: ${{ github.ref == 'refs/heads/main' && 90 || 7 }}
           if-no-files-found: error
 
       - name: Collect ${{ inputs.game }} ${{ inputs.preset }}${{ inputs.tools && '+t' || '' }}${{ inputs.extras && '+e' || '' }} Artifact

@@ -67,3 +67,21 @@ CI uploads these outputs on success and failure. Add future device tests to the
 
 DXVK 2.6.2 is pinned and its download is checked against SHA256. Wine and Mesa
 come from the Ubuntu 24.04 package repositories; these can receive updates.
+
+## Comparison with the Base Commit
+
+There are no stored reference images. The job also downloads the rendering test
+package of the base commit from its earlier GenCI run: the previous `main` commit
+for a push, otherwise the merge base with `main`. It runs both executables under
+the same Wine, Mesa and DXVK, so a difference in the images comes from the code.
+`compare.py` compares every BMP and writes a job summary table and a
+`<game>-rendering-report.html` artifact with the base, result and difference
+images; the artifact opens directly in the browser. Differences are warnings,
+not failures: a reviewer checks the report, and merging accepts the change. The
+comparison is skipped when the base package has expired (90 days on `main`).
+
+To compare two folders of images locally:
+
+```sh
+python3 Tests/Rendering/compare.py Generals result-dir base-dir base-sha report.html
+```
