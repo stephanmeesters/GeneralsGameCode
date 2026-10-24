@@ -60,7 +60,7 @@ bool RunD3D8Probe(const char *output)
     Check(device->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_DIFFUSE), "Color arg");
     struct Vertex { float x, y, z, rhw; DWORD color; };
     const Vertex vertices[] = {
-        {128, 32, 0.5f, 1, 0xffff0000},
+        {136, 32, 0.5f, 1, 0xffff0000},
         {224, 224, 0.5f, 1, 0xff00ff00},
         {32, 224, 0.5f, 1, 0xff0000ff}
     };
