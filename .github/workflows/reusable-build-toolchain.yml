@@ -181,6 +181,30 @@ jobs:
         run: |
           ctest --preset ${{ inputs.preset }} --verbose
 
+      # Keep this package separate from the game release artifacts. Only the plain
+      # win32 Release build is needed for the rendering check in ci.yml.
+      - name: Package Rendering Tests
+        if: ${{ inputs.tests && inputs.preset == 'win32' }}
+        shell: pwsh
+        run: |
+          $testName = if ("${{ inputs.game }}" -eq "Generals") { "g_googletest" } else { "z_googletest" }
+          $destination = New-Item -ItemType Directory -Force -Path "build/rendering-tests"
+          Copy-Item "build/${{ inputs.preset }}/Tests/Google/Release/$testName.exe" $destination
+          # Deploy the Release CRT beside the exe; Wine supplies the Windows/UCRT DLLs.
+          $crtFiles = Get-ChildItem "$env:VCToolsRedistDir/x86/Microsoft.VC*.CRT/*.dll" -ErrorAction Stop
+          if (!$crtFiles) { throw "MSVC x86 redistributable DLLs not found" }
+          $crtFiles | Copy-Item -Destination $destination
+
+      - name: Upload Rendering Test Executable
+        if: ${{ inputs.tests && inputs.preset == 'win32' }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: ${{ inputs.game }}-win32-rendering-tests
+          path: build/rendering-tests
+          # Kept longer on main, where pull requests download it to compare their rendering with.
+          retention-days: ${{ github.ref == 'refs/heads/main' && 90 || 7 }}
+          if-no-files-found: error
+
       - name: Collect ${{ inputs.game }} ${{ inputs.preset }}${{ inputs.tools && '+t' || '' }}${{ inputs.extras && '+e' || '' }} Artifact
         shell: pwsh
         run: |
