@@ -9,7 +9,7 @@ if(RTS_BUILD_ZEROHOUR)
         z_wwaudio
         zi_always
     )
-    add_test(NAME z_googletest COMMAND z_googletest)
+    add_test(NAME z_googletest COMMAND z_googletest --gtest_filter=-Rendering.*)
 endif()
 
 if(RTS_BUILD_GENERALS)
@@ -20,5 +20,5 @@ if(RTS_BUILD_GENERALS)
         g_wwaudio
         gi_always
     )
-    add_test(NAME g_googletest COMMAND g_googletest)
+    add_test(NAME g_googletest COMMAND g_googletest --gtest_filter=-Rendering.*)
 endif()

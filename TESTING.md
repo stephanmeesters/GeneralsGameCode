@@ -40,6 +40,16 @@ A `RELEASE_CRASH` reports its reason as a failure of the running test and then e
 
 The test executables use the regular user data folder of the game, so a `RELEASE_CRASH` also writes its ReleaseCrashInfo.txt there.
 
+# Rendering Tests
+
+The `Rendering.*` Google Test suite requires a Direct3D 8 device. CTest excludes
+it from ordinary unit test runs. CI reuses the MSVC `win32` Release test
+executables in a separate Linux job under Wine, DXVK and Mesa lavapipe, which
+renders on the CPU. It runs only `--gtest_filter=Rendering.*` and uploads images,
+Google Test XML and renderer logs. No game assets are required for the initial
+triangle test. See [Tests/Rendering/README.md](Tests/Rendering/README.md) for local
+commands and requirements.
+
 # Benchmarks
 
 Benchmarks use [Google Benchmark](https://github.com/TheSuperHackers/google-benchmark). Enable them with `RTS_BUILD_OPTION_BENCHMARKS`. They are organized like the unit tests under Benchmarks/Google, with the executables g_googlebenchmark and z_googlebenchmark. CI builds them, but does not run them.

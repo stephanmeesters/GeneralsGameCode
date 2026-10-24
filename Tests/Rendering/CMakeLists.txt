@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.16)
+project(D3D8RenderingProbe LANGUAGES CXX)
+if(NOT WIN32)
+    message(FATAL_ERROR "Build for Windows, for example with MinGW and CMAKE_SYSTEM_NAME=Windows")
+endif()
+add_executable(d3d8_probe main.cpp d3d8_probe.cpp)
+target_compile_features(d3d8_probe PRIVATE cxx_std_11)
+target_link_libraries(d3d8_probe PRIVATE d3d8 user32)
