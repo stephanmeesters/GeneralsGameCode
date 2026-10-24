@@ -72,7 +72,9 @@ come from the Ubuntu 24.04 package repositories; these can receive updates.
 
 There are no stored reference images. The job also downloads the rendering test
 package of the base commit from its earlier GenCI run: the previous `main` commit
-for a push, otherwise the merge base with `main`. It runs both executables under
+for a push, otherwise the merge base with `main`. If that commit has no package,
+because it was pushed together with later commits or its build was skipped, the
+nearest ancestor with one renders the same and is used. It runs both executables under
 the same Wine, Mesa and DXVK, so a difference in the images comes from the code.
 `compare.py` compares every BMP and writes a job summary table and a
 `<game>-rendering-report.html` artifact with the base, result and difference
