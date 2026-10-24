@@ -1,0 +1,66 @@
+name: Check Rendering
+
+# WARNING: Do not declare permissions in this reusable workflow.
+# Declare the required permissions in each calling job:
+#   contents: read - required for rendering checks.
+
+on:
+  workflow_call:
+    inputs:
+      game:
+        required: true
+        type: string
+        description: "Game to check (Generals, GeneralsMD)"
+
+jobs:
+  rendering:
+    name: Wine and lavapipe
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      DXVK_VERSION: 2.6.2
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Download MSVC Rendering Tests
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: ${{ inputs.game }}-win32-rendering-tests
+          path: build/rendering-tests
+
+      - name: Install Wine and Software Vulkan
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            wine wine64 wine32:i386 xvfb xauth \
+            libvulkan1 libvulkan1:i386 mesa-vulkan-drivers mesa-vulkan-drivers:i386
+
+      - name: Download DXVK
+        env:
+          DXVK_SHA256: 17761876556afd55736cb895d184f5a1c55d43350f1b1e3b129f8d28706d7992
+        run: |
+          curl --fail --location --retry 3 --output build/dxvk.tar.gz \
+            "https://github.com/doitsujin/dxvk/releases/download/v${DXVK_VERSION}/dxvk-${DXVK_VERSION}.tar.gz"
+          echo "$DXVK_SHA256  build/dxvk.tar.gz" | sha256sum --check
+          tar -C build -xf build/dxvk.tar.gz
+
+      - name: Run Rendering Google Tests
+        env:
+          TEST_NAME: ${{ inputs.game == 'Generals' && 'g_googletest' || 'z_googletest' }}
+        run: |
+          Tests/Rendering/run-google-wine.sh \
+            "build/rendering-tests/$TEST_NAME.exe" "build/dxvk-${DXVK_VERSION}"
+
+      - name: Upload Rendering Results
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: ${{ inputs.game }}-rendering-results
+          path: |
+            build/rendering-tests/*.bmp
+            build/rendering-tests/*.log
+            build/rendering-tests/results.xml
+          retention-days: 7
+          if-no-files-found: warn

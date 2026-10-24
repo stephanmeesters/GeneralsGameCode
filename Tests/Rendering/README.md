@@ -41,9 +41,10 @@ log identifies the actual llvmpipe device.
 ## MSVC Google Tests in CI
 
 The reusable build workflow packages each game's plain `win32` Release Google
-Test executable with the MSVC x86 Release runtime DLLs. Its dependent
-`Rendering with Wine and lavapipe` job on Ubuntu 24.04 downloads that package,
-installs Wine and both architectures of Mesa/Vulkan, and runs only `Rendering.*`.
+Test executable with the MSVC x86 Release runtime DLLs. The `Rendering Check`
+jobs in GenCI run `reusable-check-rendering.yml` on Ubuntu 24.04. It downloads
+that package, installs Wine and both architectures of Mesa/Vulkan, and runs only
+`Rendering.*`.
 There is no Linux rebuild of the executable. Profile, Debug and vcpkg builds
 continue to run their ordinary unit tests on Windows.
 
