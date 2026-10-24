@@ -71,19 +71,25 @@ jobs:
             pull_request) base=$(gh api "repos/$GITHUB_REPOSITORY/compare/$PR_BASE...$PR_HEAD_OWNER:$PR_HEAD" --jq .merge_base_commit.sha) || base="" ;;
             *) base=$(gh api "repos/$GITHUB_REPOSITORY/compare/main...$GITHUB_SHA" --jq .merge_base_commit.sha) || base="" ;;
           esac
-          runs=""
+          # A commit has no package when it was pushed together with later commits, or when its run
+          # skipped this game's build because nothing it builds from changed. The nearest ancestor
+          # with a package then renders the same.
+          commits=""
           if [ -n "$base" ]; then
-            runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$base" \
-              --jq ".workflow_runs[] | select(.id != $GITHUB_RUN_ID) | .id") || runs=""
+            commits=$(gh api "repos/$GITHUB_REPOSITORY/commits?sha=$base&per_page=20" --jq '.[].sha') || commits=""
           fi
-          for run in $runs; do
-            if gh run download "$run" --repo "$GITHUB_REPOSITORY" --name "$GAME-win32-rendering-tests" \
-              --dir build/rendering-tests-base; then
-              echo "Using the rendering tests of run $run for base commit $base"
-              echo "sha=$base" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            rm -rf build/rendering-tests-base
+          for commit in $commits; do
+            runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$commit" \
+              --jq ".workflow_runs[] | select(.id != $GITHUB_RUN_ID) | .id") || runs=""
+            for run in $runs; do
+              if gh run download "$run" --repo "$GITHUB_REPOSITORY" --name "$GAME-win32-rendering-tests" \
+                --dir build/rendering-tests-base; then
+                echo "Using the rendering tests of run $run for commit $commit (base commit $base)"
+                echo "sha=$commit" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              rm -rf build/rendering-tests-base
+            done
           done
           echo "::notice title=Rendering::No rendering tests found for base commit ${base:-unknown}, so the images are not compared"
 
