@@ -142,25 +142,32 @@ jobs:
           "changes=$changes" >> $env:GITHUB_OUTPUT
           "message=$(if ($changes) { $changes } else { 'No changes' }) $since" >> $env:GITHUB_OUTPUT
           "### $env:GAME Rendering`n`n$(($images | Group-Object State | ForEach-Object { "$($_.Count) $($_.Name)" }) -join ', ') $since.`n" >> $env:GITHUB_STEP_SUMMARY
-          # One page with the images inline, so the browser opens the artifact without unzipping. The difference
-          # blends the new image over the base and brightens the result, so only changed pixels show.
+          # One page with the images inline, so the browser opens the artifact without unzipping. Resemble.js marks
+          # the pixels of each changed image that differ from the base.
           $rows = foreach ($image in $images | Sort-Object State, Name) {
-            $diff = if ($image.State -eq 'changed') { "<div class=diff>$($image.Old)$($image.New)</div>" }
-            "<tr><th>$($image.Name)<br>$($image.State)</th><td>$($image.Old)</td><td>$($image.New)</td><td>$diff</td></tr>"
+            $diff = if ($image.State -eq 'changed') { ' class=diff' }
+            "<tr><th>$($image.Name)<br>$($image.State)</th><td>$($image.Old)</td><td>$($image.New)</td><td$diff></td></tr>"
           }
           @"
           <!doctype html>
           <meta charset="utf-8">
           <title>$env:GAME rendering $since</title>
-          <style>
-          body { font-family: sans-serif } th, td { padding: 8px; text-align: left; vertical-align: top }
-          .diff { position: relative; filter: brightness(1000) } .diff img + img { position: absolute; top: 0; left: 0; mix-blend-mode: difference }
-          </style>
+          <style>body { font-family: sans-serif } th, td { padding: 8px; text-align: left; vertical-align: top }</style>
+          <script src="https://cdn.jsdelivr.net/npm/resemblejs@5.0.0/resemble.js" integrity="sha384-DzcP9yqL1XF598WKUVQbQhW9mpjmq4x8k9J9T/JTfVJffHmQWHLdFXDfQPjdRQd6" crossorigin="anonymous"></script>
           <h1>$env:GAME rendering $since</h1>
           <table>
           <tr><th></th><th>Base</th><th>This commit</th><th>Difference</th></tr>
           $($rows -join "`n")
           </table>
+          <script>
+          resemble.outputSettings({ transparency: 0.3 });
+          for (const cell of document.querySelectorAll('.diff')) {
+            const [base, current] = cell.parentElement.querySelectorAll('img');
+            resemble(base.src).compareTo(current.src).ignoreNothing().onComplete(data => {
+              cell.innerHTML = '<img src="' + data.getImageDataUrl() + '"><br>' + data.misMatchPercentage + '% of the pixels differ';
+            });
+          }
+          </script>
           "@ | Set-Content "build/$env:GAME-rendering-report.html"
 
       # A single file is uploaded unzipped, so its link opens it in the browser.
