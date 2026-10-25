@@ -24,9 +24,9 @@ TEST_F(RenderingTest, Triangle)
 	const DWORD background = 0x102030;
 	clear(background);
 	drawTriangles({
-		{128.0f, 32.0f, 0xff0000},
-		{224.0f, 224.0f, 0x00ff00},
-		{32.0f, 224.0f, 0x0000ff},
+		{128.0f, 80.0f, 0xff0000},
+		{192.0f, 200.0f, 0x00ff00},
+		{64.0f, 200.0f, 0x0000ff},
 	});
 	capture("triangle.png");
 	// GPUs round the blended colors differently, so the exact colors are left to the image comparison of CI.
