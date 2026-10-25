@@ -20,7 +20,6 @@
 
 #include <gtest/gtest.h>
 #include <windows.h>
-#include <d3d8.h>
 #include <functional>
 #include <initializer_list>
 #include <vector>
@@ -29,10 +28,12 @@ class CameraClass;
 class RenderObjClass;
 class TextureClass;
 
-// Each test renders one frame with WW3D on a real D3D8 device. The CTest step of CI skips these tests; its rendering
-// check runs them on Windows under DXVK and Mesa lavapipe and compares the saved images with the base commit.
+// Each test renders one frame with WW3D. The CTest step of CI skips these tests; its rendering check runs them on
+// Windows under DXVK and Mesa lavapipe and compares the saved images with the base commit.
+// The tests draw through WW3D and Renderer only, so that they run unchanged on other render backends. Only capture()
+// reads the back buffer the DX8 way.
 // Write each test as TEST_F(RenderingTest, Name) in a file of its own. The tests share the device, which WW3D creates
-// once for the suite, and each test starts its frame with the default device state and a black back buffer.
+// once for the suite, and each test starts its frame with a black back buffer.
 class RenderingTest : public ::testing::Test
 {
 protected:
@@ -64,7 +65,6 @@ protected:
 	// The color of a captured pixel as 0xRRGGBB.
 	DWORD pixel(UINT x, UINT y) const { return m_pixels[y * Width + x]; }
 
-	static IDirect3DDevice8 *s_device;
 	// Looks down at the origin from the south, with x pointing east, y north and z up.
 	static CameraClass *s_camera;
 
@@ -72,6 +72,4 @@ private:
 	std::vector<DWORD> m_pixels = std::vector<DWORD>(Width * Height);
 	bool m_rendering = false;
 	static HWND s_window;
-	static IDirect3DSurface8 *s_readback;
-	static DWORD s_defaultState;
 };

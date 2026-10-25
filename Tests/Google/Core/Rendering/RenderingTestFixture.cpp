@@ -19,25 +19,26 @@
 #include "RenderingTestFixture.h"
 #include <stb_image_write.h>
 
+#include "WW3D2/Renderer.h"
 #include "WW3D2/camera.h"
 #include "WW3D2/dx8wrapper.h"
+#include "WW3D2/render2d.h"
 #include "WW3D2/scene.h"
 #include "WW3D2/surfaceclass.h"
 #include "WW3D2/texture.h"
 #include "WW3D2/ww3d.h"
 #include "WWMath/wwmath.h"
 
-IDirect3DDevice8 *RenderingTest::s_device = nullptr;
 CameraClass *RenderingTest::s_camera = nullptr;
 HWND RenderingTest::s_window = nullptr;
-IDirect3DSurface8 *RenderingTest::s_readback = nullptr;
-DWORD RenderingTest::s_defaultState = 0;
 
 // Runs once before the first test of the suite. When it fails, Google Test skips the tests of the suite.
 // WW3D starts up as W3DDisplay::init does, with a windowed device whose back buffer the tests render into.
 void RenderingTest::SetUpTestSuite()
 {
-	s_window = CreateWindowA("STATIC", "RenderingTest", WS_OVERLAPPEDWINDOW, 0, 0, Width, Height, nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
+	// Without a border, the window is as large as the back buffer, which backends that size their back buffer from
+	// the window need.
+	s_window = CreateWindowA("STATIC", "RenderingTest", WS_POPUP, 0, 0, Width, Height, nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
 	ASSERT_NE(s_window, nullptr);
 	WWMath::Init();
 	ASSERT_EQ(WW3D::Init(s_window), WW3D_ERROR_OK);
@@ -45,16 +46,6 @@ void RenderingTest::SetUpTestSuite()
 	// Thumbnails need an asset manager, which the tests do without.
 	WW3D::Set_Thumbnail_Enabled(false);
 	ASSERT_EQ(WW3D::Set_Render_Device(0, Width, Height, 32, TRUE), WW3D_ERROR_OK);
-	s_device = DX8Wrapper::_Get_D3D_Device8();
-	// CopyRects needs the format of the back buffer, which WW3D picks from the desktop: X8R8G8B8 or A8R8G8B8.
-	IDirect3DSurface8 *backBuffer = nullptr;
-	ASSERT_HRESULT_SUCCEEDED(s_device->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &backBuffer));
-	D3DSURFACE_DESC desc = {};
-	backBuffer->GetDesc(&desc);
-	backBuffer->Release();
-	ASSERT_HRESULT_SUCCEEDED(s_device->CreateImageSurface(Width, Height, desc.Format, &s_readback));
-	// No test has run yet, so this captures the state that WW3D leaves the device in.
-	ASSERT_HRESULT_SUCCEEDED(s_device->CreateStateBlock(D3DSBT_ALL, &s_defaultState));
 
 	s_camera = NEW_REF(CameraClass, ());
 	Matrix3D transform;
@@ -67,17 +58,6 @@ void RenderingTest::SetUpTestSuite()
 void RenderingTest::TearDownTestSuite()
 {
 	REF_PTR_RELEASE(s_camera);
-	if (s_defaultState != 0)
-	{
-		s_device->DeleteStateBlock(s_defaultState);
-		s_defaultState = 0;
-	}
-	if (s_readback != nullptr)
-	{
-		s_readback->Release();
-		s_readback = nullptr;
-	}
-	s_device = nullptr;
 	WW3D::Shutdown();
 	WWMath::Shutdown();
 	if (s_window != nullptr)
@@ -87,10 +67,8 @@ void RenderingTest::TearDownTestSuite()
 	}
 }
 
-// Undoes the state that the previous test changed on the device directly, before WW3D clears the back buffer.
 void RenderingTest::SetUp()
 {
-	ASSERT_HRESULT_SUCCEEDED(s_device->ApplyStateBlock(s_defaultState));
 	ASSERT_EQ(WW3D::Begin_Render(true, true, Vector3(0.0f, 0.0f, 0.0f)), WW3D_ERROR_OK);
 	m_rendering = true;
 }
@@ -105,23 +83,31 @@ void RenderingTest::TearDown()
 
 void RenderingTest::clear(DWORD color)
 {
-	EXPECT_HRESULT_SUCCEEDED(s_device->Clear(0, nullptr, D3DCLEAR_TARGET, color, 1.0f, 0));
+	const Vector3 rgb((color >> 16 & 0xFF) / 255.0f, (color >> 8 & 0xFF) / 255.0f, (color & 0xFF) / 255.0f);
+	Renderer::Clear(true, false, rgb);
 }
 
+// Render2DClass draws in screen space, and its colors can differ per vertex.
 void RenderingTest::drawTriangles(std::initializer_list<Vertex> vertices)
 {
-	struct TransformedVertex
+	Render2DClass renderer;
+	renderer.Set_Coordinate_Range(RectClass(0.0f, 0.0f, Width, Height));
+	renderer.Enable_Texturing(false);
+	// Draws the triangles whichever way round their vertices go.
+	renderer.Get_Shader()->Set_Cull_Mode(ShaderClass::CULL_MODE_DISABLE);
+	const Vector2 uv(0.0f, 0.0f);
+	for (const Vertex *vertex = vertices.begin(); vertex + 2 < vertices.end(); vertex += 3)
 	{
-		float x, y, z, rhw;
-		DWORD color;
-	};
-	std::vector<TransformedVertex> transformed;
+		renderer.Add_Tri(Vector2(vertex[0].x, vertex[0].y), Vector2(vertex[1].x, vertex[1].y), Vector2(vertex[2].x, vertex[2].y), uv, uv, uv);
+	}
+	// A DynamicVectorClass in Zero Hour and a SimpleDynVecClass in Generals.
+	auto &colors = renderer.Get_Color_Array();
+	int index = 0;
 	for (const Vertex &vertex : vertices)
 	{
-		transformed.push_back({vertex.x, vertex.y, 0.0f, 1.0f, vertex.color});
+		colors[index++] = 0xFF000000 | vertex.color;
 	}
-	ASSERT_HRESULT_SUCCEEDED(s_device->SetVertexShader(D3DFVF_XYZRHW | D3DFVF_DIFFUSE));
-	EXPECT_HRESULT_SUCCEEDED(s_device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, transformed.size() / 3, transformed.data(), sizeof(TransformedVertex)));
+	renderer.Render();
 }
 
 void RenderingTest::render(std::initializer_list<RenderObjClass *> objects)
@@ -154,23 +140,26 @@ TextureClass *RenderingTest::createTexture(UINT width, UINT height, const std::f
 	return texture;
 }
 
+// The one DX8 specific part. Renderer has no way to read the back buffer yet.
 void RenderingTest::capture(const char *imageName)
 {
 	ASSERT_TRUE(m_rendering);
+	// The back buffer keeps the frame until it is presented.
 	WW3D::End_Render(false);
 	m_rendering = false;
-	IDirect3DSurface8 *backBuffer = nullptr;
-	ASSERT_HRESULT_SUCCEEDED(s_device->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &backBuffer));
-	const HRESULT copied = s_device->CopyRects(backBuffer, nullptr, 0, s_readback, nullptr);
-	backBuffer->Release();
-	ASSERT_HRESULT_SUCCEEDED(copied);
-	D3DLOCKED_RECT locked = {};
-	ASSERT_HRESULT_SUCCEEDED(s_readback->LockRect(&locked, nullptr, D3DLOCK_READONLY));
+	SurfaceClass *backBuffer = DX8Wrapper::_Get_DX8_Back_Buffer();
+	ASSERT_NE(backBuffer, nullptr);
+	// CopyRects needs the format of the back buffer, which WW3D picks from the desktop: X8R8G8B8 or A8R8G8B8.
+	SurfaceClass *copy = NEW_REF(SurfaceClass, (Width, Height, Renderer::Get_Back_Buffer_Format()));
+	DX8Wrapper::_Copy_DX8_Rects(backBuffer->Peek_D3D_Surface(), nullptr, 0, copy->Peek_D3D_Surface(), nullptr);
+	REF_PTR_RELEASE(backBuffer);
+	int pitch = 0;
+	const BYTE *bits = static_cast<const BYTE *>(copy->Lock(&pitch));
 	std::vector<unsigned char> rgb;
 	rgb.reserve(Width * Height * 3);
 	for (UINT y = 0; y < Height; ++y)
 	{
-		const DWORD *row = reinterpret_cast<const DWORD *>(static_cast<const BYTE *>(locked.pBits) + y * locked.Pitch);
+		const DWORD *row = reinterpret_cast<const DWORD *>(bits + y * pitch);
 		for (UINT x = 0; x < Width; ++x)
 		{
 			const DWORD color = row[x] & 0x00ffffff;
@@ -180,6 +169,7 @@ void RenderingTest::capture(const char *imageName)
 			rgb.push_back(static_cast<unsigned char>(color));
 		}
 	}
-	ASSERT_HRESULT_SUCCEEDED(s_readback->UnlockRect());
+	copy->Unlock();
+	REF_PTR_RELEASE(copy);
 	EXPECT_NE(stbi_write_png(imageName, Width, Height, 3, rgb.data(), Width * 3), 0) << imageName;
 }
