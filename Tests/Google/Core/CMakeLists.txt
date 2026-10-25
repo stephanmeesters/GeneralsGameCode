@@ -15,6 +15,10 @@ set(COREI_GOOGLETEST_SRC
     Libraries/WWVegas/WWMath/WWMathKeys.h
     Libraries/WWVegas/WWMath/WWMathTest.cpp
     Libraries/WWVegas/WWMath/WWMathTestCase.h
+    Rendering/EXAMPLE_TEMPORARY_ClearTest.cpp
+    Rendering/EXAMPLE_TEMPORARY_TriangleTest.cpp
+    Rendering/RenderingTestFixture.cpp
+    Rendering/RenderingTestFixture.h
 )
 
 add_library(corei_googletest INTERFACE)
@@ -26,6 +30,7 @@ target_link_libraries(corei_googletest INTERFACE
     depsi_googletest
     GTest::gtest
     imm32
+    stb
     vfw32
     winmm
 )
