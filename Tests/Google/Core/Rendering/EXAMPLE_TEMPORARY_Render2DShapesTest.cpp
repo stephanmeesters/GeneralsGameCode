@@ -27,17 +27,17 @@ TEST_F(RenderingTest, Render2DShapes)
 	renderer.Set_Coordinate_Range(RectClass(0.0f, 0.0f, Width, Height));
 	renderer.Enable_Texturing(false);
 
-	// A blue rectangle with a white border, an orange outline, a green line and a red to blue gradient.
-	renderer.Add_Rect(RectClass(16.0f, 16.0f, 112.0f, 112.0f), 4.0f, 0xFFFFFFFF, 0xFF2040C0);
-	renderer.Add_Outline(RectClass(144.0f, 16.0f, 240.0f, 112.0f), 2.0f, 0xFFFFC000);
-	renderer.Add_Line(Vector2(16.0f, 136.0f), Vector2(240.0f, 184.0f), 3.0f, 0xFF40FF40);
-	renderer.Add_Quad_HGradient(RectClass(16.0f, 208.0f, 240.0f, 240.0f), 0xFFFF0000, 0xFF0000FF);
+	// An orange rectangle with a green border, a cyan outline, a yellow line and a green to magenta gradient.
+	renderer.Add_Rect(RectClass(16.0f, 16.0f, 112.0f, 112.0f), 4.0f, 0xFF40FF40, 0xFFC04020);
+	renderer.Add_Outline(RectClass(144.0f, 16.0f, 240.0f, 112.0f), 2.0f, 0xFF00C0FF);
+	renderer.Add_Line(Vector2(16.0f, 136.0f), Vector2(240.0f, 184.0f), 3.0f, 0xFFFFFF40);
+	renderer.Add_Quad_HGradient(RectClass(16.0f, 208.0f, 240.0f, 240.0f), 0xFF00FF00, 0xFFFF00FF);
 	renderer.Render();
 
 	capture("render2d_shapes.png");
 	// The fill and the border of the rectangle, and the inside and the edge of the outline.
-	EXPECT_EQ(pixel(64, 64), 0x2040C0);
-	EXPECT_EQ(pixel(17, 64), 0xFFFFFF);
+	EXPECT_EQ(pixel(64, 64), 0xC04020);
+	EXPECT_EQ(pixel(17, 64), 0x40FF40);
 	EXPECT_EQ(pixel(192, 64), 0x000000);
-	EXPECT_EQ(pixel(145, 64), 0xFFC000);
+	EXPECT_EQ(pixel(145, 64), 0x00C0FF);
 }

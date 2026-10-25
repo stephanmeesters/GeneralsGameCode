@@ -29,22 +29,22 @@ TEST_F(RenderingTest, Render2DBlending)
 	renderer.Set_Coordinate_Range(RectClass(0.0f, 0.0f, Width, Height));
 	renderer.Enable_Texturing(false);
 
-	// Half transparent red.
+	// Half transparent blue.
 	renderer.Enable_Alpha(true);
-	renderer.Add_Quad(RectClass(16.0f, 16.0f, 112.0f, 240.0f), 0x80FF0000);
+	renderer.Add_Quad(RectClass(16.0f, 16.0f, 112.0f, 240.0f), 0x800000FF);
 	renderer.Render();
 
-	// Green added on top, partly over the red.
+	// Red added on top, partly over the blue.
 	renderer.Reset();
 	renderer.Enable_Additive(true);
-	renderer.Add_Quad(RectClass(80.0f, 16.0f, 176.0f, 240.0f), 0xFF006000);
+	renderer.Add_Quad(RectClass(80.0f, 16.0f, 176.0f, 240.0f), 0xFF600000);
 	renderer.Render();
 
-	// Blue multiplied with what is below, partly over the green.
+	// Yellow multiplied with what is below, partly over the red.
 	renderer.Reset();
 	*renderer.Get_Shader() = ShaderClass::_PresetMultiplicative2DShader;
 	renderer.Enable_Texturing(false);
-	renderer.Add_Quad(RectClass(144.0f, 16.0f, 240.0f, 240.0f), 0xFF4080FF);
+	renderer.Add_Quad(RectClass(144.0f, 16.0f, 240.0f, 240.0f), 0xFFFFFF40);
 	renderer.Render();
 
 	capture("render2d_blending.png");

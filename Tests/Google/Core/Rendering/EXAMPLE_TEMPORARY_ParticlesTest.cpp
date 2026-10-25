@@ -37,7 +37,7 @@ TEST_F(RenderingTest, Particles)
 		return 0xFF000000 | brightness << 16 | brightness << 8 | brightness;
 	});
 
-	// A ring of particles on the ground that turn from red to yellow and grow, around one in the middle.
+	// A ring of particles on the ground that turn from blue to cyan and grow, around one in the middle.
 	constexpr int Count = 13;
 	ShareBufferClass<Vector3> *locations = NEW_REF(ShareBufferClass<Vector3>, (Count, "ParticlesTest"));
 	ShareBufferClass<Vector4> *colors = NEW_REF(ShareBufferClass<Vector4>, (Count, "ParticlesTest"));
@@ -45,9 +45,9 @@ TEST_F(RenderingTest, Particles)
 	for (int i = 0; i < Count; ++i)
 	{
 		const float angle = i * WWMATH_PI * 2.0f / (Count - 1);
-		const float radius = i == 0 ? 0.0f : 4.0f;
+		const float radius = i == 0 ? 0.0f : 3.0f;
 		locations->Get_Array()[i] = Vector3(radius * cosf(angle), radius * sinf(angle), 0.0f);
-		colors->Get_Array()[i] = Vector4(1.0f, static_cast<float>(i) / Count, 0.1f, 1.0f);
+		colors->Get_Array()[i] = Vector4(0.1f, static_cast<float>(i) / Count, 1.0f, 1.0f);
 		sizes->Get_Array()[i] = 1.0f + i * 0.1f;
 	}
 

@@ -21,12 +21,12 @@
 // A triangle with a red, a green and a blue corner blends the corner colors across its area.
 TEST_F(RenderingTest, Triangle)
 {
-	const DWORD background = 0x102030;
+	const DWORD background = 0x301020;
 	clear(background);
 	drawTriangles({
-		{128.0f, 32.0f, 0xff0000},
-		{224.0f, 224.0f, 0x00ff00},
-		{32.0f, 224.0f, 0x0000ff},
+		{128.0f, 32.0f, 0x0000ff},
+		{224.0f, 224.0f, 0xff0000},
+		{32.0f, 224.0f, 0x00ff00},
 	});
 	capture("triangle.png");
 	// GPUs round the blended colors differently, so the exact colors are left to the image comparison of CI.
