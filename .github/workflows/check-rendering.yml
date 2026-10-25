@@ -1,0 +1,213 @@
+name: Rendering Check
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.backend }}
+    runs-on: windows-2022
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - backend: dx8
+            preset: win32
+          # bgfx compiles its shaders for one renderer. Direct3D 12 runs the Direct3D 11 build, because both
+          # read the same shaders.
+          - backend: bgfx-dx11
+            preset: win32-bgfx
+            renderer: dx11
+          - backend: bgfx-vulkan
+            preset: win32-bgfx
+            renderer: vulkan
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set Up VC2022 Environment
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: x86
+
+      - name: Build Rendering Tests
+        env:
+          RENDERER: ${{ matrix.renderer }}
+          # As the release builds of bgfx-builds.yml, because the bgfx backend uses some of its variables only to log.
+          BGFX_FLAGS: -DRTS_DEBUG_LOGGING=ON -DRTS_DEBUG_CRASHING=OFF -DRTS_DEBUG_STACKTRACE=OFF -DRTS_DEBUG_PROFILE=OFF
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $flags = '-DRTS_BUILD_GENERALS=OFF', '-DRTS_BUILD_CORE_TOOLS=OFF', '-DRTS_BUILD_ZEROHOUR_TOOLS=OFF', '-DRTS_BUILD_OPTION_TESTS=ON'
+          if ($env:RENDERER) { $flags += @("-DGGC_BGFX_RENDERER=$env:RENDERER") + ($env:BGFX_FLAGS -split ' ') }
+          cmake --preset ${{ matrix.preset }} $flags
+          cmake --build build/${{ matrix.preset }} --config Release --target z_googletest
+
+      - name: Upload Rendering Tests
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: rendering-tests-${{ matrix.backend }}
+          path: build/${{ matrix.preset }}/Tests/Google/Release/z_googletest.exe
+          retention-days: 7
+          if-no-files-found: error
+
+  rendering:
+    name: Run on DX8 and bgfx
+    needs: build
+    # Runs the backends that did build.
+    if: ${{ !cancelled() }}
+    runs-on: windows-2022
+    timeout-minutes: 30
+    env:
+      # Google Test reads its flags from these as well.
+      GTEST_FILTER: RenderingTest.*
+      GTEST_FAIL_IF_NO_TEST_SELECTED: 1
+      # DX8 runs on DXVK and Vulkan on Mesa lavapipe, whose pinned versions decide the rendering. Direct3D 11 and 12
+      # run on WARP, the software renderer of Windows.
+      DXVK_VERSION: 2.6.2
+      DXVK_SHA256: 17761876556afd55736cb895d184f5a1c55d43350f1b1e3b129f8d28706d7992
+      MESA_VERSION: 26.2.4
+      MESA_SHA256: 351fc8c8b695878ffb3eaa044b3ead08672a48b1a045e3c3e3975811df0f6695
+      VULKAN_RUNTIME_VERSION: 1.4.363.0
+      VULKAN_RUNTIME_SHA256: a25a927aa8b9f0371048f1861cf88ac3b9bc9b1fb332c42d897c8ab32695769a
+    steps:
+      - name: Download Rendering Tests
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          pattern: rendering-tests-*
+          path: build
+
+      - name: Install DXVK and Lavapipe
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          function Get-Checked($url, $out, $sha) {
+            curl.exe --fail --location --retry 3 --output $out $url
+            if ((Get-FileHash $out SHA256).Hash -ne $sha) { throw "SHA256 mismatch for $url" }
+          }
+          $dxvk = "dxvk-$env:DXVK_VERSION"
+          Get-Checked "https://github.com/doitsujin/dxvk/releases/download/v$env:DXVK_VERSION/$dxvk.tar.gz" build/dxvk.tar.gz $env:DXVK_SHA256
+          Get-Checked "https://github.com/pal1000/mesa-dist-win/releases/download/$env:MESA_VERSION/mesa3d-$env:MESA_VERSION-release-msvc.7z" build/mesa.7z $env:MESA_SHA256
+          Get-Checked "https://sdk.lunarg.com/sdk/download/$env:VULKAN_RUNTIME_VERSION/windows/vulkan-runtime-components.zip" build/vulkan.zip $env:VULKAN_RUNTIME_SHA256
+          # The 32-bit DLLs that go beside the test exes.
+          New-Item -ItemType Directory build/dxvk | Out-Null
+          tar -C build/dxvk -xf build/dxvk.tar.gz --strip-components=2 "$dxvk/x32/d3d8.dll" "$dxvk/x32/d3d9.dll"
+          7z e build/vulkan.zip -obuild/vulkan "VulkanRT-X64-$env:VULKAN_RUNTIME_VERSION-Components/x86/vulkan-1.dll"
+          7z e build/mesa.7z -obuild/lavapipe x86/vulkan_lvp.dll x86/lvp_icd.x86.json
+          # The runner is elevated, so the Vulkan loader ignores VK_DRIVER_FILES. Register 32-bit lavapipe instead.
+          reg add HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\Drivers /v "$PWD\build\lavapipe\lvp_icd.x86.json" /t REG_DWORD /d 0 /f
+          if (Test-Path build/rendering-tests-dx8) { Copy-Item build/dxvk/*, build/vulkan/* build/rendering-tests-dx8 }
+          if (Test-Path build/rendering-tests-bgfx-vulkan) { Copy-Item build/vulkan/* build/rendering-tests-bgfx-vulkan }
+          if (Test-Path build/rendering-tests-bgfx-dx11) { Copy-Item -Recurse build/rendering-tests-bgfx-dx11 build/rendering-tests-bgfx-dx12 }
+
+      # Each backend runs on, so that the report shows all of them. The check at the end fails for the ones that failed.
+      - name: Run DX8 Rendering Tests
+        id: dx8
+        continue-on-error: true
+        timeout-minutes: 5
+        working-directory: build/rendering-tests-dx8
+        run: ./z_googletest.exe
+
+      - name: Run bgfx Direct3D 11 Rendering Tests
+        id: bgfx-dx11
+        continue-on-error: true
+        timeout-minutes: 5
+        working-directory: build/rendering-tests-bgfx-dx11
+        env:
+          GGC_BGFX_RENDERER: dx11
+        run: ./z_googletest.exe
+
+      - name: Run bgfx Direct3D 12 Rendering Tests
+        id: bgfx-dx12
+        continue-on-error: true
+        timeout-minutes: 5
+        working-directory: build/rendering-tests-bgfx-dx12
+        env:
+          GGC_BGFX_RENDERER: dx12
+        run: ./z_googletest.exe
+
+      - name: Run bgfx Vulkan Rendering Tests
+        id: bgfx-vulkan
+        continue-on-error: true
+        timeout-minutes: 5
+        working-directory: build/rendering-tests-bgfx-vulkan
+        env:
+          GGC_BGFX_RENDERER: vulkan
+        run: ./z_googletest.exe
+
+      - name: Compare Rendering of the Backends
+        id: compare
+        env:
+          STEPS: ${{ toJSON(steps) }}
+        run: |
+          $backends = [ordered]@{ 'dx8' = 'DX8'; 'bgfx-dx11' = 'bgfx Direct3D 11'; 'bgfx-dx12' = 'bgfx Direct3D 12'; 'bgfx-vulkan' = 'bgfx Vulkan' }
+          function Get-Image($path) {
+            if (Test-Path $path) { "<img src=`"data:image/png;base64,$([Convert]::ToBase64String([IO.File]::ReadAllBytes((Resolve-Path $path))))`">" }
+          }
+          # DX8 is the reference. The same PNG encoder wrote every image, so equal pixels give equal files.
+          $differ = @{}
+          $rows = foreach ($name in (Get-ChildItem build/rendering-tests-*/*.png).Name | Sort-Object -Unique) {
+            $reference = Get-Image build/rendering-tests-dx8/$name
+            $cells = foreach ($backend in $backends.Keys) {
+              $image = Get-Image build/rendering-tests-$backend/$name
+              $note = if (!$image) { 'missing' } elseif ($backend -eq 'dx8') { 'reference' } elseif (!$reference) { '' } elseif ($image -eq $reference) { 'same as DX8' } else {
+                $differ[$backend] += 1
+                # The difference blends this image over DX8 and brightens the result, so only differing pixels show.
+                "differs from DX8<div class=frame><div class=diff>$reference$image</div></div>"
+              }
+              "<td>$image<br>$note</td>"
+            }
+            "<tr><th>$name</th>$($cells -join '')</tr>"
+          }
+          $steps = $env:STEPS | ConvertFrom-Json
+          $failed = ($backends.Keys | Where-Object { $steps.$_.outcome -eq 'failure' } | ForEach-Object { $backends[$_] }) -join ', '
+          $differences = ($backends.Keys | Where-Object { $differ[$_] } | ForEach-Object { "$($differ[$_]) on $($backends[$_])" }) -join ', '
+          $message = $(if ($failed) { "Tests failed on $failed. " }) + $(if ($differences) { "Images that differ from DX8: $differences" } else { 'No images differ from DX8' })
+          "failed=$failed" >> $env:GITHUB_OUTPUT
+          "message=$message" >> $env:GITHUB_OUTPUT
+          "### Rendering`n`n$message.`n" >> $env:GITHUB_STEP_SUMMARY
+          # One page with the images inline, so the browser opens the artifact without unzipping.
+          @"
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>Rendering of DX8 and bgfx</title>
+          <style>
+          body { font-family: sans-serif } th, td { padding: 8px; text-align: left; vertical-align: top } img { display: block }
+          .frame { display: inline-block; border: 1px solid #888 }
+          .diff { position: relative; filter: brightness(1000) } .diff img + img { position: absolute; top: 0; left: 0; mix-blend-mode: difference }
+          </style>
+          <h1>Rendering of DX8 and bgfx</h1>
+          <p>$message.</p>
+          <table>
+          <tr><th></th>$(($backends.Values | ForEach-Object { "<th>$_</th>" }) -join '')</tr>
+          $($rows -join "`n")
+          </table>
+          "@ | Set-Content build/rendering-report.html
+
+      # A single file is uploaded unzipped, so its link opens it in the browser.
+      - name: Upload Rendering Report
+        id: report
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          path: build/rendering-report.html
+          archive: false
+          retention-days: 7
+
+      # Comes after the upload, so that its message links to the report. Differences from DX8 are shown, not failed.
+      - name: Check Rendering Tests
+        env:
+          FAILED: ${{ steps.compare.outputs.failed }}
+          MESSAGE: ${{ steps.compare.outputs.message }}
+          REPORT_URL: ${{ steps.report.outputs.artifact-url }}
+        run: |
+          "[Open the rendering report]($env:REPORT_URL)" >> $env:GITHUB_STEP_SUMMARY
+          $level = if ($env:FAILED) { 'error' } else { 'notice' }
+          "::$level title=Rendering::$env:MESSAGE. Report: $env:REPORT_URL"
+          if ($env:FAILED) { exit 1 }

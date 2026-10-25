@@ -124,5 +124,11 @@ if(RTS_BUILD_GENERALS)
     add_subdirectory(Generals)
 endif()
 
+if(RTS_BUILD_OPTION_TESTS)
+    enable_testing()
+    include(cmake/googletest.cmake)
+    add_subdirectory(Tests)
+endif()
+
 feature_summary(WHAT ENABLED_FEATURES DESCRIPTION "Enabled features:")
 feature_summary(WHAT DISABLED_FEATURES DESCRIPTION "Disabled features:")
