@@ -33,7 +33,7 @@ TEST_F(RenderingTest, Laser)
 
 	// A red beam from west to east and a blue one that crosses it on the way up.
 	Vector3 eastWest[] = {Vector3(-6.0f, 0.0f, 0.0f), Vector3(6.0f, 0.0f, 0.0f)};
-	Vector3 diagonal[] = {Vector3(-5.0f, -3.0f, 0.0f), Vector3(5.0f, 3.0f, 2.0f)};
+	Vector3 diagonal[] = {Vector3(-5.0f, -3.0f, 0.0f), Vector3(5.0f, 3.0f, 4.0f)};
 	SegmentedLineClass *red = NEW_REF(SegmentedLineClass, ());
 	red->Set_Points(2, eastWest);
 	red->Set_Color(Vector3(1.0f, 0.2f, 0.1f));

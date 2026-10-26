@@ -33,7 +33,7 @@ TEST_F(RenderingTest, Text)
 	REF_PTR_RELEASE(font);
 
 	// The black shadow first, then the text over it.
-	const WCHAR *text = L"Command & Conquer";
+	const WCHAR *text = L"Command + Conquer";
 	sentence.Build_Sentence(text, nullptr, nullptr);
 	sentence.Set_Location(Vector2(18.0f, 18.0f));
 	sentence.Draw_Sentence(0xFF000000);

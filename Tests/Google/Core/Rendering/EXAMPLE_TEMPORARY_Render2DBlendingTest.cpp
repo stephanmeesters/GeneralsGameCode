@@ -40,11 +40,11 @@ TEST_F(RenderingTest, Render2DBlending)
 	renderer.Add_Quad(RectClass(80.0f, 16.0f, 176.0f, 240.0f), 0xFF006000);
 	renderer.Render();
 
-	// Blue multiplied with what is below, partly over the green.
+	// Orange multiplied with what is below, partly over the green.
 	renderer.Reset();
 	*renderer.Get_Shader() = ShaderClass::_PresetMultiplicative2DShader;
 	renderer.Enable_Texturing(false);
-	renderer.Add_Quad(RectClass(144.0f, 16.0f, 240.0f, 240.0f), 0xFF4080FF);
+	renderer.Add_Quad(RectClass(144.0f, 16.0f, 240.0f, 240.0f), 0xFFFF8040);
 	renderer.Render();
 
 	capture();

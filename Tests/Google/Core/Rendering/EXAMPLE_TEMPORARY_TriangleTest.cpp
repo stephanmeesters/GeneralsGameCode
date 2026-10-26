@@ -19,7 +19,7 @@
 #include "RenderingTestFixture.h"
 #include "WW3D2/render2d.h"
 
-// A triangle with a red, a green and a blue corner blends the corner colors across its area.
+// A triangle with a red, a green and a white corner blends the corner colors across its area.
 TEST_F(RenderingTest, Triangle)
 {
 	const unsigned int background = 0x102030;
@@ -36,10 +36,22 @@ TEST_F(RenderingTest, Triangle)
 	auto &colors = renderer.Get_Color_Array();
 	colors[0] = 0xFFFF0000;
 	colors[1] = 0xFF00FF00;
-	colors[2] = 0xFF0000FF;
+	colors[2] = 0xFFFFFFFF;
 	renderer.Render();
 	capture();
 	// GPUs round the blended colors differently, so the exact colors are left to the image comparison of CI.
+	EXPECT_EQ(pixel(8, 8), background);
+	EXPECT_NE(pixel(128, 160), background);
+
+	// A smaller triangle in a second image, which shows a test that captures more than one image.
+	clear(background);
+	renderer.Reset();
+	renderer.Add_Tri(Vector2(128.0f, 96.0f), Vector2(176.0f, 192.0f), Vector2(80.0f, 192.0f), uv, uv, uv);
+	colors[0] = 0xFFFF0000;
+	colors[1] = 0xFF00FF00;
+	colors[2] = 0xFFFFFFFF;
+	renderer.Render();
+	capture();
 	EXPECT_EQ(pixel(8, 8), background);
 	EXPECT_NE(pixel(128, 160), background);
 }

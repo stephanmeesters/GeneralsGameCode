@@ -27,10 +27,10 @@ TEST_F(RenderingTest, Render2DTexture)
 	const unsigned int background = 0x204060;
 	clear(background);
 
-	// A red and white checkerboard with a transparent top left quarter.
+	// A red and white checkerboard with a transparent top left corner.
 	const auto checkerboard = [](int x, int y) -> unsigned int
 	{
-		const unsigned int alpha = (x < 4 && y < 4) ? 0x00000000 : 0xFF000000;
+		const unsigned int alpha = (x < 2 && y < 2) ? 0x00000000 : 0xFF000000;
 		return alpha | (((x ^ y) & 1) ? 0xFFFFFF : 0xC02020);
 	};
 	TextureClass *sharp = createTexture(8, 8, checkerboard);
