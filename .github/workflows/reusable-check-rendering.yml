@@ -152,10 +152,10 @@ jobs:
             [Math]::Ceiling(10000 * $count / ($old.Length / 4)) / 100
           }
           # The same PNG encoder wrote both images, so only differing files need comparing pixel by pixel.
-          $images = foreach ($name in (Get-ChildItem build/rendering-tests*/*.png).Name | Sort-Object -Unique) {
-            $old = Get-Image build/rendering-tests-base/$name
-            $new = Get-Image build/rendering-tests/$name
-            $mismatch = if ($old -and $new -and $old -ne $new) { Get-Mismatch build/rendering-tests-base/$name build/rendering-tests/$name } else { 0 }
+          $images = foreach ($name in (Get-ChildItem build/rendering-tests*/*_RenderTest/*.png).Name | Sort-Object -Unique) {
+            $old = Get-Image build/rendering-tests-base/*_RenderTest/$name
+            $new = Get-Image build/rendering-tests/*_RenderTest/$name
+            $mismatch = if ($old -and $new -and $old -ne $new) { Get-Mismatch build/rendering-tests-base/*_RenderTest/$name build/rendering-tests/*_RenderTest/$name } else { 0 }
             $state = if (!$old) { 'new' } elseif (!$new) { 'removed' } elseif ($mismatch -eq 0) { 'unchanged' } else { 'changed' }
             [pscustomobject]@{ Name = $name; State = $state; Old = $old; New = $new; Mismatch = $mismatch }
           }

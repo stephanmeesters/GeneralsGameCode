@@ -52,6 +52,7 @@ protected:
 	static TextureClass *createTexture(UINT width, UINT height, const std::function<DWORD(UINT x, UINT y)> &color);
 	// Ends the frame without presenting it, saves the back buffer for the CI report as <test name>_<n>.png, where n
 	// counts the captures of the test, and keeps its pixels for pixel(). Then starts the next frame, black again.
+	// The images go to z_RenderTest for Zero Hour and g_RenderTest for Generals, next to the test executable.
 	void capture();
 	// The color of a captured pixel as 0xRRGGBB.
 	DWORD pixel(UINT x, UINT y) const { return m_pixels[y * Width + x]; }
