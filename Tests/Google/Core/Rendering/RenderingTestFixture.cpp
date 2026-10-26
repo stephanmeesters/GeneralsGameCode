@@ -29,6 +29,12 @@
 #include "WW3D2/ww3d.h"
 #include "WWMath/wwmath.h"
 
+#ifdef RTS_ZEROHOUR
+static const char ImageFolder[] = "z_RenderTest";
+#else
+static const char ImageFolder[] = "g_RenderTest";
+#endif
+
 CameraClass *RenderingTest::s_camera = nullptr;
 HWND RenderingTest::s_window = nullptr;
 
@@ -53,6 +59,9 @@ void RenderingTest::SetUpTestSuite()
 	s_camera->Set_Transform(transform);
 	s_camera->Set_View_Plane(DEG_TO_RADF(50.0f), DEG_TO_RADF(50.0f));
 	s_camera->Set_Clip_Planes(1.0f, 100.0f);
+
+	// The engine makes the folder of the executable the working directory.
+	CreateDirectoryA(ImageFolder, nullptr);
 }
 
 void RenderingTest::TearDownTestSuite()
@@ -121,7 +130,7 @@ TextureClass *RenderingTest::createTexture(UINT width, UINT height, const std::f
 void RenderingTest::capture()
 {
 	ASSERT_TRUE(m_rendering);
-	const std::string imageName = std::string(::testing::UnitTest::GetInstance()->current_test_info()->name()) + "_" + std::to_string(m_captures++) + ".png";
+	const std::string imageName = std::string(ImageFolder) + "/" + ::testing::UnitTest::GetInstance()->current_test_info()->name() + "_" + std::to_string(m_captures++) + ".png";
 	// The back buffer keeps the frame until it is presented.
 	WW3D::End_Render(false);
 	m_rendering = false;

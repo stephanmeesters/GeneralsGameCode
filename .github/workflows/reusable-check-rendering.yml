@@ -132,9 +132,9 @@ jobs:
             if (Test-Path $path) { "<img src=`"data:image/png;base64,$([Convert]::ToBase64String([IO.File]::ReadAllBytes((Resolve-Path $path))))`">" }
           }
           # The same PNG encoder wrote both images, so equal pixels give equal files.
-          $images = foreach ($name in (Get-ChildItem build/rendering-tests*/*.png).Name | Sort-Object -Unique) {
-            $old = Get-Image build/rendering-tests-base/$name
-            $new = Get-Image build/rendering-tests/$name
+          $images = foreach ($name in (Get-ChildItem build/rendering-tests*/*_RenderTest/*.png).Name | Sort-Object -Unique) {
+            $old = Get-Image build/rendering-tests-base/*_RenderTest/$name
+            $new = Get-Image build/rendering-tests/*_RenderTest/$name
             $state = if (!$old) { 'new' } elseif (!$new) { 'removed' } elseif ($old -eq $new) { 'unchanged' } else { 'changed' }
             [pscustomobject]@{ Name = $name; State = $state; Old = $old; New = $new }
           }
