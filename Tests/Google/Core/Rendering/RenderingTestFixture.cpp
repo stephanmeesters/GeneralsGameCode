@@ -17,6 +17,7 @@
 */
 
 #include "RenderingTestFixture.h"
+#include <filesystem>
 #include <string>
 #include <stb_image_write.h>
 
@@ -61,7 +62,7 @@ void RenderingTest::SetUpTestSuite()
 	s_camera->Set_Clip_Planes(1.0f, 100.0f);
 
 	// The engine makes the folder of the executable the working directory.
-	CreateDirectoryA(ImageFolder, nullptr);
+	std::filesystem::create_directory(ImageFolder);
 }
 
 void RenderingTest::TearDownTestSuite()
@@ -130,7 +131,7 @@ TextureClass *RenderingTest::createTexture(UINT width, UINT height, const std::f
 void RenderingTest::capture()
 {
 	ASSERT_TRUE(m_rendering);
-	const std::string imageName = std::string(ImageFolder) + "/" + ::testing::UnitTest::GetInstance()->current_test_info()->name() + "_" + std::to_string(m_captures++) + ".png";
+	const std::string imageName = (std::filesystem::path(ImageFolder) / ::testing::UnitTest::GetInstance()->current_test_info()->name()).string() + "_" + std::to_string(m_captures++) + ".png";
 	// The back buffer keeps the frame until it is presented.
 	WW3D::End_Render(false);
 	m_rendering = false;
