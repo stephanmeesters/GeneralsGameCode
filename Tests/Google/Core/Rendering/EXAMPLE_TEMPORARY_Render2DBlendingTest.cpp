@@ -23,7 +23,7 @@
 // multiplicative blending darkens for shadows.
 TEST_F(RenderingTest, Render2DBlending)
 {
-	const DWORD background = 0x808080;
+	const unsigned int background = 0x808080;
 	clear(background);
 	Render2DClass renderer;
 	renderer.Set_Coordinate_Range(RectClass(0.0f, 0.0f, Width, Height));

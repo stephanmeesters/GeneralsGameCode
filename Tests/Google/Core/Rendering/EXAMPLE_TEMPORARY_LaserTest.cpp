@@ -25,9 +25,9 @@
 TEST_F(RenderingTest, Laser)
 {
 	// Brightest along the middle of the beam, dark at its edges.
-	TextureClass *glow = createTexture(32, 32, [](UINT x, UINT) -> DWORD
+	TextureClass *glow = createTexture(32, 32, [](int x, int) -> unsigned int
 	{
-		const DWORD brightness = 255 - abs(2 * static_cast<int>(x) - 31) * 255 / 31;
+		const unsigned int brightness = 255 - abs(2 * x - 31) * 255 / 31;
 		return 0xFF000000 | brightness << 16 | brightness << 8 | brightness;
 	});
 

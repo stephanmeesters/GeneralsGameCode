@@ -23,7 +23,7 @@
 // including the drop shadow below the text.
 TEST_F(RenderingTest, Text)
 {
-	const DWORD background = 0x204060;
+	const unsigned int background = 0x204060;
 	clear(background);
 
 	FontCharsClass *font = NEW_REF(FontCharsClass, ());
@@ -46,9 +46,9 @@ TEST_F(RenderingTest, Text)
 	EXPECT_GT(extents.X, 100.0f);
 	// GDI and its fonts differ between systems, so only some text color is expected in the middle row of the text.
 	bool found = false;
-	for (UINT x = 16; x < 16 + extents.X; ++x)
+	for (int x = 16; x < 16 + extents.X; ++x)
 	{
-		found |= pixel(x, 16 + static_cast<UINT>(extents.Y) / 2) == 0xFFC000;
+		found |= pixel(x, 16 + static_cast<int>(extents.Y) / 2) == 0xFFC000;
 	}
 	EXPECT_TRUE(found);
 }

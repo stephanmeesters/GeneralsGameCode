@@ -91,7 +91,7 @@ void RenderingTest::TearDown()
 	}
 }
 
-void RenderingTest::clear(DWORD color)
+void RenderingTest::clear(unsigned int color)
 {
 	const Vector3 rgb((color >> 16 & 0xFF) / 255.0f, (color >> 8 & 0xFF) / 255.0f, (color & 0xFF) / 255.0f);
 	Renderer::Clear(true, false, rgb);
@@ -109,16 +109,16 @@ void RenderingTest::render(std::initializer_list<RenderObjClass *> objects)
 	REF_PTR_RELEASE(scene);
 }
 
-TextureClass *RenderingTest::createTexture(UINT width, UINT height, const std::function<DWORD(UINT x, UINT y)> &color)
+TextureClass *RenderingTest::createTexture(int width, int height, const std::function<unsigned int(int x, int y)> &color)
 {
 	SurfaceClass *surface = NEW_REF(SurfaceClass, (width, height, WW3D_FORMAT_A8R8G8B8));
 	int pitch = 0;
-	BYTE *bits = static_cast<BYTE *>(surface->Lock(&pitch));
-	for (UINT y = 0; y < height; ++y)
+	unsigned char *bits = static_cast<unsigned char *>(surface->Lock(&pitch));
+	for (int y = 0; y < height; ++y)
 	{
-		for (UINT x = 0; x < width; ++x)
+		for (int x = 0; x < width; ++x)
 		{
-			reinterpret_cast<DWORD *>(bits + y * pitch)[x] = color(x, y);
+			reinterpret_cast<unsigned int *>(bits + y * pitch)[x] = color(x, y);
 		}
 	}
 	surface->Unlock();
@@ -142,15 +142,15 @@ void RenderingTest::capture()
 	DX8Wrapper::_Copy_DX8_Rects(backBuffer->Peek_D3D_Surface(), nullptr, 0, copy->Peek_D3D_Surface(), nullptr);
 	REF_PTR_RELEASE(backBuffer);
 	int pitch = 0;
-	const BYTE *bits = static_cast<const BYTE *>(copy->Lock(&pitch));
+	const unsigned char *bits = static_cast<const unsigned char *>(copy->Lock(&pitch));
 	std::vector<unsigned char> rgb;
 	rgb.reserve(Width * Height * 3);
-	for (UINT y = 0; y < Height; ++y)
+	for (int y = 0; y < Height; ++y)
 	{
-		const DWORD *row = reinterpret_cast<const DWORD *>(bits + y * pitch);
-		for (UINT x = 0; x < Width; ++x)
+		const unsigned int *row = reinterpret_cast<const unsigned int *>(bits + y * pitch);
+		for (int x = 0; x < Width; ++x)
 		{
-			const DWORD color = row[x] & 0x00ffffff;
+			const unsigned int color = row[x] & 0x00ffffff;
 			m_pixels[y * Width + x] = color;
 			rgb.push_back(static_cast<unsigned char>(color >> 16));
 			rgb.push_back(static_cast<unsigned char>(color >> 8));

@@ -22,7 +22,7 @@
 // A triangle with a red, a green and a white corner blends the corner colors across its area.
 TEST_F(RenderingTest, Triangle)
 {
-	const DWORD background = 0x102030;
+	const unsigned int background = 0x102030;
 	clear(background);
 	Render2DClass renderer;
 	renderer.Set_Coordinate_Range(RectClass(0.0f, 0.0f, Width, Height));
