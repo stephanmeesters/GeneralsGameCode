@@ -29,11 +29,11 @@
 TEST_F(RenderingTest, Particles)
 {
 	// A round puff that fades out towards its edge.
-	TextureClass *puff = createTexture(32, 32, [](UINT x, UINT y) -> DWORD
+	TextureClass *puff = createTexture(32, 32, [](int x, int y) -> unsigned int
 	{
 		const float dx = (x - 15.5f) / 16.0f;
 		const float dy = (y - 15.5f) / 16.0f;
-		const DWORD brightness = static_cast<DWORD>(255.0f * max(0.0f, 1.0f - sqrtf(dx * dx + dy * dy)));
+		const unsigned int brightness = static_cast<unsigned int>(255.0f * max(0.0f, 1.0f - sqrtf(dx * dx + dy * dy)));
 		return 0xFF000000 | brightness << 16 | brightness << 8 | brightness;
 	});
 

@@ -37,31 +37,31 @@ class TextureClass;
 class RenderingTest : public ::testing::Test
 {
 protected:
-	static constexpr UINT Width = 256;
-	static constexpr UINT Height = 256;
+	static constexpr int Width = 256;
+	static constexpr int Height = 256;
 
 	static void SetUpTestSuite();
 	static void TearDownTestSuite();
 	virtual void SetUp() override;
 	virtual void TearDown() override;
 
-	static void clear(DWORD color);
+	static void clear(unsigned int color);
 	// Renders the objects as a scene seen through s_camera.
 	static void render(std::initializer_list<RenderObjClass *> objects);
 	// Creates a texture whose texels get the 0xAARRGGBB colors that color(x, y) returns.
-	static TextureClass *createTexture(UINT width, UINT height, const std::function<DWORD(UINT x, UINT y)> &color);
+	static TextureClass *createTexture(int width, int height, const std::function<unsigned int(int x, int y)> &color);
 	// Ends the frame without presenting it, saves the back buffer for the CI report as <test name>_<n>.png, where n
 	// counts the captures of the test, and keeps its pixels for pixel(). Then starts the next frame, black again.
 	// The images go to z_RenderTest for Zero Hour and g_RenderTest for Generals, next to the test executable.
 	void capture();
 	// The color of a captured pixel as 0xRRGGBB.
-	DWORD pixel(UINT x, UINT y) const { return m_pixels[y * Width + x]; }
+	unsigned int pixel(int x, int y) const { return m_pixels[y * Width + x]; }
 
 	// Looks down at the origin from the south, with x pointing east, y north and z up.
 	static CameraClass *s_camera;
 
 private:
-	std::vector<DWORD> m_pixels = std::vector<DWORD>(Width * Height);
+	std::vector<unsigned int> m_pixels = std::vector<unsigned int>(Width * Height);
 	int m_captures = 0;
 	bool m_rendering = false;
 	static HWND s_window;
