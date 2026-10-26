@@ -71,7 +71,7 @@ jobs:
     strategy:
       matrix:
         include:
-          # This demo only builds what the rendering check needs.
+          # Only the build that the rendering check needs, which keeps the runs of this fork short.
           - preset: "win32"
             # The artifact step collects the core tools, so they are built as well.
             tools: true
