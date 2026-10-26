@@ -22,7 +22,6 @@
 #include "WW3D2/Renderer.h"
 #include "WW3D2/camera.h"
 #include "WW3D2/dx8wrapper.h"
-#include "WW3D2/render2d.h"
 #include "WW3D2/scene.h"
 #include "WW3D2/surfaceclass.h"
 #include "WW3D2/texture.h"
@@ -85,29 +84,6 @@ void RenderingTest::clear(DWORD color)
 {
 	const Vector3 rgb((color >> 16 & 0xFF) / 255.0f, (color >> 8 & 0xFF) / 255.0f, (color & 0xFF) / 255.0f);
 	Renderer::Clear(true, false, rgb);
-}
-
-// Render2DClass draws in screen space, and its colors can differ per vertex.
-void RenderingTest::drawTriangles(std::initializer_list<Vertex> vertices)
-{
-	Render2DClass renderer;
-	renderer.Set_Coordinate_Range(RectClass(0.0f, 0.0f, Width, Height));
-	renderer.Enable_Texturing(false);
-	// Draws the triangles whichever way round their vertices go.
-	renderer.Get_Shader()->Set_Cull_Mode(ShaderClass::CULL_MODE_DISABLE);
-	const Vector2 uv(0.0f, 0.0f);
-	for (const Vertex *vertex = vertices.begin(); vertex + 2 < vertices.end(); vertex += 3)
-	{
-		renderer.Add_Tri(Vector2(vertex[0].x, vertex[0].y), Vector2(vertex[1].x, vertex[1].y), Vector2(vertex[2].x, vertex[2].y), uv, uv, uv);
-	}
-	// A DynamicVectorClass in Zero Hour and a SimpleDynVecClass in Generals.
-	auto &colors = renderer.Get_Color_Array();
-	int index = 0;
-	for (const Vertex &vertex : vertices)
-	{
-		colors[index++] = 0xFF000000 | vertex.color;
-	}
-	renderer.Render();
 }
 
 void RenderingTest::render(std::initializer_list<RenderObjClass *> objects)

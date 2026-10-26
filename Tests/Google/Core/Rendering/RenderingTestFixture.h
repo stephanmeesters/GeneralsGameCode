@@ -40,21 +40,12 @@ protected:
 	static constexpr UINT Width = 256;
 	static constexpr UINT Height = 256;
 
-	// A position on the back buffer in pixels, and its color as 0xRRGGBB.
-	struct Vertex
-	{
-		float x, y;
-		DWORD color;
-	};
-
 	static void SetUpTestSuite();
 	static void TearDownTestSuite();
 	virtual void SetUp() override;
 	virtual void TearDown() override;
 
 	static void clear(DWORD color);
-	// Draws a triangle list and blends the vertex colors across each triangle.
-	static void drawTriangles(std::initializer_list<Vertex> vertices);
 	// Renders the objects as a scene seen through s_camera.
 	static void render(std::initializer_list<RenderObjClass *> objects);
 	// Creates a texture whose texels get the 0xAARRGGBB colors that color(x, y) returns.

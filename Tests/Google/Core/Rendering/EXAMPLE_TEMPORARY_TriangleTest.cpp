@@ -17,17 +17,27 @@
 */
 
 #include "RenderingTestFixture.h"
+#include "WW3D2/render2d.h"
 
 // A triangle with a red, a green and a blue corner blends the corner colors across its area.
 TEST_F(RenderingTest, Triangle)
 {
 	const DWORD background = 0x102030;
 	clear(background);
-	drawTriangles({
-		{128.0f, 32.0f, 0xff0000},
-		{224.0f, 224.0f, 0x00ff00},
-		{32.0f, 224.0f, 0x0000ff},
-	});
+	Render2DClass renderer;
+	renderer.Set_Coordinate_Range(RectClass(0.0f, 0.0f, Width, Height));
+	renderer.Enable_Texturing(false);
+	// Draws the triangle whichever way round its corners go.
+	renderer.Get_Shader()->Set_Cull_Mode(ShaderClass::CULL_MODE_DISABLE);
+	const Vector2 uv(0.0f, 0.0f);
+	renderer.Add_Tri(Vector2(128.0f, 32.0f), Vector2(224.0f, 224.0f), Vector2(32.0f, 224.0f), uv, uv, uv);
+	// Add_Tri gives all corners one color. The color array is a DynamicVectorClass in Zero Hour and a
+	// SimpleDynVecClass in Generals.
+	auto &colors = renderer.Get_Color_Array();
+	colors[0] = 0xFFFF0000;
+	colors[1] = 0xFF00FF00;
+	colors[2] = 0xFF0000FF;
+	renderer.Render();
 	capture("triangle.png");
 	// GPUs round the blended colors differently, so the exact colors are left to the image comparison of CI.
 	EXPECT_EQ(pixel(8, 8), background);
