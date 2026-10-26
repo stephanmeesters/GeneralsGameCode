@@ -145,9 +145,11 @@ jobs:
           "### $env:GAME Rendering`n`n$counts $since.`n" >> $env:GITHUB_STEP_SUMMARY
           # One page with the images inline, so the browser opens the artifact without unzipping. Resemble.js marks
           # the pixels of each changed image that differ from the base.
-          $rows = foreach ($image in $images | Sort-Object State, Name) {
+          # Changes first.
+          $order = 'changed', 'removed', 'new', 'unchanged'
+          $rows = foreach ($image in $images | Sort-Object { $order.IndexOf($_.State) }, Name) {
             $diff = if ($image.State -eq 'changed') { ' class=diff' }
-            "<tr><th>$($image.Name)<span class=`"state $($image.State)`">$($image.State)</span><span class=percent></span></th><td>$($image.Old)</td><td>$($image.New)</td><td$diff></td></tr>"
+            "<tr class=$($image.State)><th>$($image.Name)<span class=`"state $($image.State)`">$($image.State)</span><span class=percent></span></th><td>$($image.Old)</td><td>$($image.New)</td><td$diff></td></tr>"
           }
           @"
           <!doctype html>
@@ -162,15 +164,17 @@ jobs:
           table { @apply mt-4 border-separate border-spacing-y-3; }
           thead th { @apply px-4 text-left text-sm font-medium text-slate-500; }
           tbody tr { @apply bg-white shadow-sm; }
+          tbody tr.changed { @apply bg-rose-50 shadow-rose-200; }
+          tr.changed td:nth-child(3) img { @apply ring-2 ring-rose-400; }
           tbody th, tbody td { @apply p-4 text-left align-top; }
           tbody th { @apply rounded-l-xl font-mono text-sm font-medium; }
           tbody td:last-child { @apply rounded-r-xl; }
           img { @apply rounded-md; }
           .state { @apply mt-2 block w-fit rounded-full px-2 py-0.5 font-sans text-xs; }
-          .changed { @apply bg-amber-100 text-amber-800; }
-          .new { @apply bg-sky-100 text-sky-800; }
-          .removed { @apply bg-rose-100 text-rose-800; }
-          .unchanged { @apply bg-emerald-100 text-emerald-800; }
+          .state.changed { @apply bg-rose-200 text-rose-900; }
+          .state.new { @apply bg-sky-100 text-sky-800; }
+          .state.removed { @apply bg-slate-200 text-slate-700; }
+          .state.unchanged { @apply bg-emerald-100 text-emerald-800; }
           .percent { @apply mt-1 block font-sans text-xs font-normal text-slate-500; }
           </style>
           <h1>$env:GAME rendering</h1>
