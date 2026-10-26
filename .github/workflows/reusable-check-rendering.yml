@@ -141,30 +141,54 @@ jobs:
           $changes = ($images | Where-Object State -in 'changed', 'removed' | ForEach-Object { "$($_.Name) $($_.State)" }) -join ', '
           "changes=$changes" >> $env:GITHUB_OUTPUT
           "message=$(if ($changes) { $changes } else { 'No changes' }) $since" >> $env:GITHUB_OUTPUT
-          "### $env:GAME Rendering`n`n$(($images | Group-Object State | ForEach-Object { "$($_.Count) $($_.Name)" }) -join ', ') $since.`n" >> $env:GITHUB_STEP_SUMMARY
+          $counts = ($images | Group-Object State | ForEach-Object { "$($_.Count) $($_.Name)" }) -join ', '
+          "### $env:GAME Rendering`n`n$counts $since.`n" >> $env:GITHUB_STEP_SUMMARY
           # One page with the images inline, so the browser opens the artifact without unzipping. Resemble.js marks
           # the pixels of each changed image that differ from the base.
           $rows = foreach ($image in $images | Sort-Object State, Name) {
             $diff = if ($image.State -eq 'changed') { ' class=diff' }
-            "<tr><th>$($image.Name)<br>$($image.State)</th><td>$($image.Old)</td><td>$($image.New)</td><td$diff></td></tr>"
+            "<tr><th>$($image.Name)<span class=`"state $($image.State)`">$($image.State)</span><span class=percent></span></th><td>$($image.Old)</td><td>$($image.New)</td><td$diff></td></tr>"
           }
           @"
           <!doctype html>
           <meta charset="utf-8">
           <title>$env:GAME rendering $since</title>
-          <style>body { font-family: sans-serif } th, td { padding: 8px; text-align: left; vertical-align: top }</style>
+          <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js" integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB" crossorigin="anonymous"></script>
           <script src="https://cdn.jsdelivr.net/npm/resemblejs@5.0.0/resemble.js" integrity="sha384-DzcP9yqL1XF598WKUVQbQhW9mpjmq4x8k9J9T/JTfVJffHmQWHLdFXDfQPjdRQd6" crossorigin="anonymous"></script>
-          <h1>$env:GAME rendering $since</h1>
+          <style type="text/tailwindcss">
+          body { @apply bg-slate-100 p-8 font-sans text-slate-800; }
+          h1 { @apply text-2xl font-semibold; }
+          h1 + p { @apply mt-1 text-slate-500; }
+          table { @apply mt-4 border-separate border-spacing-y-3; }
+          thead th { @apply px-4 text-left text-sm font-medium text-slate-500; }
+          tbody tr { @apply bg-white shadow-sm; }
+          tbody th, tbody td { @apply p-4 text-left align-top; }
+          tbody th { @apply rounded-l-xl font-mono text-sm font-medium; }
+          tbody td:last-child { @apply rounded-r-xl; }
+          img { @apply rounded-md; }
+          .state { @apply mt-2 block w-fit rounded-full px-2 py-0.5 font-sans text-xs; }
+          .changed { @apply bg-amber-100 text-amber-800; }
+          .new { @apply bg-sky-100 text-sky-800; }
+          .removed { @apply bg-rose-100 text-rose-800; }
+          .unchanged { @apply bg-emerald-100 text-emerald-800; }
+          .percent { @apply mt-1 block font-sans text-xs font-normal text-slate-500; }
+          </style>
+          <h1>$env:GAME rendering</h1>
+          <p>$counts $since</p>
           <table>
-          <tr><th></th><th>Base</th><th>This commit</th><th>Difference</th></tr>
+          <thead><tr><th></th><th>Base</th><th>This commit</th><th>Difference</th></tr></thead>
+          <tbody>
           $($rows -join "`n")
+          </tbody>
           </table>
           <script>
           resemble.outputSettings({ transparency: 0.3 });
           for (const cell of document.querySelectorAll('.diff')) {
-            const [base, current] = cell.parentElement.querySelectorAll('img');
+            const row = cell.parentElement;
+            const [base, current] = row.querySelectorAll('img');
             resemble(base.src).compareTo(current.src).ignoreNothing().onComplete(data => {
-              cell.innerHTML = '<img src="' + data.getImageDataUrl() + '"><br>' + data.misMatchPercentage + '% of the pixels differ';
+              cell.innerHTML = '<img src="' + data.getImageDataUrl() + '">';
+              row.querySelector('.percent').textContent = data.misMatchPercentage + '% of the pixels differ';
             });
           }
           </script>
