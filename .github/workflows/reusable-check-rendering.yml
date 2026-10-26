@@ -143,13 +143,22 @@ jobs:
           "message=$(if ($changes) { $changes } else { 'No changes' }) $since" >> $env:GITHUB_OUTPUT
           $counts = ($images | Group-Object State | ForEach-Object { "$($_.Count) $($_.Name)" }) -join ', '
           "### $env:GAME Rendering`n`n$counts $since.`n" >> $env:GITHUB_STEP_SUMMARY
-          # One page with the images inline, so the browser opens the artifact without unzipping. Resemble.js marks
-          # the pixels of each changed image that differ from the base.
-          # Changes first.
+          # One page with the images inline, so the browser opens the artifact without unzipping. Each test gets a card
+          # with its images, which capture() names <test>_<n>.png. Resemble.js marks the pixels of each changed image
+          # that differ from the base. Changes come first.
           $order = 'changed', 'removed', 'new', 'unchanged'
-          $rows = foreach ($image in $images | Sort-Object { $order.IndexOf($_.State) }, Name) {
-            $diff = if ($image.State -eq 'changed') { ' class=diff' }
-            "<tr class=$($image.State)><th>$($image.Name)<span class=`"state $($image.State)`">$($image.State)</span><span class=percent></span></th><td>$($image.Old)</td><td>$($image.New)</td><td$diff></td></tr>"
+          $tests = $images | Group-Object { $_.Name -replace '_\d+\.png$' } | ForEach-Object {
+            [pscustomobject]@{ Name = $_.Name; Images = $_.Group; State = $_.Group.State | Sort-Object { $order.IndexOf($_) } | Select-Object -First 1 }
+          }
+          $cards = foreach ($test in $tests | Sort-Object { $order.IndexOf($_.State) }, Name) {
+            $index = 0
+            $rows = foreach ($image in $test.Images | Sort-Object { ($_.Name -replace '^.*_(\d+)\.png$', '$1') -as [int] }) {
+              $title = if ($index++ -eq 0) { "<h2>$($test.Name)</h2>" }
+              $number = if ($test.Images.Count -gt 1) { "<span class=number>$($image.Name -replace '^.*_(\d+)\.png$', '#$1')</span>" }
+              $diff = if ($image.State -eq 'changed') { ' class=diff' }
+              "<div class=`"image $($image.State)`"><div>$title$number<span class=`"state $($image.State)`">$($image.State)</span><span class=percent></span></div><div>$($image.Old)</div><div>$($image.New)</div><div$diff></div></div>"
+            }
+            "<section class=$($test.State)>$($rows -join '')</section>"
           }
           @"
           <!doctype html>
@@ -161,30 +170,26 @@ jobs:
           body { @apply bg-slate-100 p-8 font-sans text-slate-800; }
           h1 { @apply text-2xl font-semibold; }
           h1 + p { @apply mt-1 text-slate-500; }
-          table { @apply mt-4 border-separate border-spacing-y-3; }
-          thead th { @apply px-4 text-left text-sm font-medium text-slate-500; }
-          tbody tr { @apply bg-white shadow-sm; }
-          tbody tr.changed { @apply bg-rose-50 shadow-rose-200; }
-          tr.changed td:nth-child(3) img { @apply ring-2 ring-rose-400; }
-          tbody th, tbody td { @apply p-4 text-left align-top; }
-          tbody th { @apply rounded-l-xl font-mono text-sm font-medium; }
-          tbody td:last-child { @apply rounded-r-xl; }
+          .columns, .image { @apply grid gap-8; grid-template-columns: 12rem repeat(3, 256px); }
+          .columns { @apply mt-6 px-4 text-sm font-medium text-slate-500; }
+          section { @apply mt-3 w-fit rounded-xl bg-white p-4 shadow-sm; }
+          section.changed { @apply bg-rose-50 shadow-rose-200; }
+          .image + .image { @apply mt-4; }
+          .image.changed > :nth-child(3) img { @apply ring-2 ring-rose-400; }
+          h2 { @apply mb-2 font-mono text-sm font-medium; }
           img { @apply rounded-md; }
-          .state { @apply mt-2 block w-fit rounded-full px-2 py-0.5 font-sans text-xs; }
+          .number { @apply mr-2 text-xs text-slate-500; }
+          .state { @apply inline-block rounded-full px-2 py-0.5 text-xs; }
           .state.changed { @apply bg-rose-200 text-rose-900; }
           .state.new { @apply bg-sky-100 text-sky-800; }
           .state.removed { @apply bg-slate-200 text-slate-700; }
           .state.unchanged { @apply bg-emerald-100 text-emerald-800; }
-          .percent { @apply mt-1 block font-sans text-xs font-normal text-slate-500; }
+          .percent { @apply mt-1 block text-xs text-slate-500; }
           </style>
           <h1>$env:GAME rendering</h1>
           <p>$counts $since</p>
-          <table>
-          <thead><tr><th></th><th>Base</th><th>This commit</th><th>Difference</th></tr></thead>
-          <tbody>
-          $($rows -join "`n")
-          </tbody>
-          </table>
+          <div class=columns><div></div><div>Base</div><div>This commit</div><div>Difference</div></div>
+          $($cards -join "`n")
           <script>
           resemble.outputSettings({ transparency: 0.3 });
           for (const cell of document.querySelectorAll('.diff')) {
