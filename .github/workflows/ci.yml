@@ -73,7 +73,8 @@ jobs:
         include:
           # This demo only builds what the rendering check needs.
           - preset: "win32"
-            tools: false
+            # The artifact step collects the core tools, so they are built as well.
+            tools: true
             extras: false
       fail-fast: false
     uses: ./.github/workflows/reusable-build-toolchain.yml
