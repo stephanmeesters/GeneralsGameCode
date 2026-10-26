@@ -22,9 +22,9 @@
 // Tracers are 3D lines, which W3DTracerDraw fades out by lowering their opacity.
 TEST_F(RenderingTest, Tracer)
 {
-	// A solid cyan tracer, crossed by a magenta one at half opacity.
-	Line3DClass *solid = NEW_REF(Line3DClass, (Vector3(-6.0f, -2.0f, 0.0f), Vector3(6.0f, 2.0f, 0.0f), 0.3f, 0.2f, 0.9f, 1.0f));
-	Line3DClass *faded = NEW_REF(Line3DClass, (Vector3(-6.0f, 2.0f, 0.0f), Vector3(6.0f, -2.0f, 0.0f), 0.3f, 1.0f, 0.2f, 1.0f, 0.5f));
+	// A solid yellow tracer, crossed by a blue one at half opacity.
+	Line3DClass *solid = NEW_REF(Line3DClass, (Vector3(-6.0f, -2.0f, 0.0f), Vector3(6.0f, 2.0f, 0.0f), 0.2f, 1.0f, 0.9f, 0.2f));
+	Line3DClass *faded = NEW_REF(Line3DClass, (Vector3(-6.0f, 2.0f, 0.0f), Vector3(6.0f, -2.0f, 0.0f), 0.2f, 0.2f, 0.4f, 1.0f, 0.5f));
 
 	render({solid, faded});
 	REF_PTR_RELEASE(solid);

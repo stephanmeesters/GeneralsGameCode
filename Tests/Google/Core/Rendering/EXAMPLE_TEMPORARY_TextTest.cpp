@@ -23,7 +23,7 @@
 // including the drop shadow below the text.
 TEST_F(RenderingTest, Text)
 {
-	const DWORD background = 0x302020;
+	const DWORD background = 0x204060;
 	clear(background);
 
 	FontCharsClass *font = NEW_REF(FontCharsClass, ());
@@ -33,12 +33,12 @@ TEST_F(RenderingTest, Text)
 	REF_PTR_RELEASE(font);
 
 	// The black shadow first, then the text over it.
-	const WCHAR *text = L"Generals Zero Hour";
+	const WCHAR *text = L"Command + Conquer";
 	sentence.Build_Sentence(text, nullptr, nullptr);
 	sentence.Set_Location(Vector2(18.0f, 18.0f));
 	sentence.Draw_Sentence(0xFF000000);
 	sentence.Set_Location(Vector2(16.0f, 16.0f));
-	sentence.Draw_Sentence(0xFF40C0FF);
+	sentence.Draw_Sentence(0xFFFFC000);
 	sentence.Render();
 	const Vector2 extents = sentence.Get_Text_Extents(text);
 
@@ -48,7 +48,7 @@ TEST_F(RenderingTest, Text)
 	bool found = false;
 	for (UINT x = 16; x < 16 + extents.X; ++x)
 	{
-		found |= pixel(x, 16 + static_cast<UINT>(extents.Y) / 2) == 0x40C0FF;
+		found |= pixel(x, 16 + static_cast<UINT>(extents.Y) / 2) == 0xFFC000;
 	}
 	EXPECT_TRUE(found);
 }

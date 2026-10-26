@@ -21,7 +21,7 @@
 // Clearing the render target fills it with the clear color from corner to corner.
 TEST_F(RenderingTest, Clear)
 {
-	const DWORD color = 0x603010;
+	const DWORD color = 0x102030;
 	clear(color);
 	capture("clear.png");
 	EXPECT_EQ(pixel(0, 0), color);

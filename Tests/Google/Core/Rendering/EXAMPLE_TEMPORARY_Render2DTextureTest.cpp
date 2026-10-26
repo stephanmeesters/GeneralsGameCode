@@ -24,14 +24,14 @@
 // linear filtering blends them, and transparent texels let the background show through.
 TEST_F(RenderingTest, Render2DTexture)
 {
-	const DWORD background = 0x402060;
+	const DWORD background = 0x204060;
 	clear(background);
 
-	// A blue and white checkerboard with a transparent top left quarter.
+	// A red and white checkerboard with a transparent top left corner.
 	const auto checkerboard = [](UINT x, UINT y) -> DWORD
 	{
-		const DWORD alpha = (x < 4 && y < 4) ? 0x00000000 : 0xFF000000;
-		return alpha | (((x ^ y) & 1) ? 0xFFFFFF : 0x2080C0);
+		const DWORD alpha = (x < 2 && y < 2) ? 0x00000000 : 0xFF000000;
+		return alpha | (((x ^ y) & 1) ? 0xFFFFFF : 0xC02020);
 	};
 	TextureClass *sharp = createTexture(8, 8, checkerboard);
 	sharp->Get_Filter().Set_Min_Filter(TextureFilterClass::FILTER_TYPE_NONE);
@@ -53,8 +53,8 @@ TEST_F(RenderingTest, Render2DTexture)
 	REF_PTR_RELEASE(smooth);
 
 	capture("render2d_texture.png");
-	// Each texel covers 12 by 12 pixels. These are the centers of texel (5, 5), which is blue, and texel (1, 1),
+	// Each texel covers 12 by 12 pixels. These are the centers of texel (5, 5), which is red, and texel (1, 1),
 	// which is transparent.
-	EXPECT_EQ(pixel(16 + 5 * 12 + 6, 64 + 5 * 12 + 6), 0x2080C0);
+	EXPECT_EQ(pixel(16 + 5 * 12 + 6, 64 + 5 * 12 + 6), 0xC02020);
 	EXPECT_EQ(pixel(16 + 1 * 12 + 6, 64 + 1 * 12 + 6), background);
 }

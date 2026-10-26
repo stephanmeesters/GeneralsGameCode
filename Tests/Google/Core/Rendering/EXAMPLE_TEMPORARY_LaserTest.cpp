@@ -31,20 +31,20 @@ TEST_F(RenderingTest, Laser)
 		return 0xFF000000 | brightness << 16 | brightness << 8 | brightness;
 	});
 
-	// A green beam from west to east and a magenta one that crosses it on the way up.
+	// A red beam from west to east and a blue one that crosses it on the way up.
 	Vector3 eastWest[] = {Vector3(-6.0f, 0.0f, 0.0f), Vector3(6.0f, 0.0f, 0.0f)};
-	Vector3 diagonal[] = {Vector3(-5.0f, -3.0f, 0.0f), Vector3(5.0f, 3.0f, 2.0f)};
+	Vector3 diagonal[] = {Vector3(-5.0f, -3.0f, 0.0f), Vector3(5.0f, 3.0f, 4.0f)};
 	SegmentedLineClass *red = NEW_REF(SegmentedLineClass, ());
 	red->Set_Points(2, eastWest);
-	red->Set_Color(Vector3(0.2f, 1.0f, 0.2f));
+	red->Set_Color(Vector3(1.0f, 0.2f, 0.1f));
 	SegmentedLineClass *blue = NEW_REF(SegmentedLineClass, ());
 	blue->Set_Points(2, diagonal);
-	blue->Set_Color(Vector3(1.0f, 0.2f, 1.0f));
+	blue->Set_Color(Vector3(0.2f, 0.4f, 1.0f));
 	for (SegmentedLineClass *laser : {red, blue})
 	{
 		laser->Set_Texture(glow);
 		laser->Set_Shader(ShaderClass::_PresetAdditiveShader);
-		laser->Set_Width(1.2f);
+		laser->Set_Width(0.8f);
 	}
 
 	render({red, blue});
