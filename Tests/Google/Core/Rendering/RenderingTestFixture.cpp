@@ -17,12 +17,12 @@
 */
 
 #include "RenderingTestFixture.h"
+#include <string>
 #include <stb_image_write.h>
 
 #include "WW3D2/Renderer.h"
 #include "WW3D2/camera.h"
 #include "WW3D2/dx8wrapper.h"
-#include "WW3D2/render2d.h"
 #include "WW3D2/scene.h"
 #include "WW3D2/surfaceclass.h"
 #include "WW3D2/texture.h"
@@ -87,29 +87,6 @@ void RenderingTest::clear(DWORD color)
 	Renderer::Clear(true, false, rgb);
 }
 
-// Render2DClass draws in screen space, and its colors can differ per vertex.
-void RenderingTest::drawTriangles(std::initializer_list<Vertex> vertices)
-{
-	Render2DClass renderer;
-	renderer.Set_Coordinate_Range(RectClass(0.0f, 0.0f, Width, Height));
-	renderer.Enable_Texturing(false);
-	// Draws the triangles whichever way round their vertices go.
-	renderer.Get_Shader()->Set_Cull_Mode(ShaderClass::CULL_MODE_DISABLE);
-	const Vector2 uv(0.0f, 0.0f);
-	for (const Vertex *vertex = vertices.begin(); vertex + 2 < vertices.end(); vertex += 3)
-	{
-		renderer.Add_Tri(Vector2(vertex[0].x, vertex[0].y), Vector2(vertex[1].x, vertex[1].y), Vector2(vertex[2].x, vertex[2].y), uv, uv, uv);
-	}
-	// A DynamicVectorClass in Zero Hour and a SimpleDynVecClass in Generals.
-	auto &colors = renderer.Get_Color_Array();
-	int index = 0;
-	for (const Vertex &vertex : vertices)
-	{
-		colors[index++] = 0xFF000000 | vertex.color;
-	}
-	renderer.Render();
-}
-
 void RenderingTest::render(std::initializer_list<RenderObjClass *> objects)
 {
 	SimpleSceneClass *scene = NEW_REF(SimpleSceneClass, ());
@@ -141,9 +118,10 @@ TextureClass *RenderingTest::createTexture(UINT width, UINT height, const std::f
 }
 
 // The one DX8 specific part. Renderer has no way to read the back buffer yet.
-void RenderingTest::capture(const char *imageName)
+void RenderingTest::capture()
 {
 	ASSERT_TRUE(m_rendering);
+	const std::string imageName = std::string(::testing::UnitTest::GetInstance()->current_test_info()->name()) + "_" + std::to_string(m_captures++) + ".png";
 	// The back buffer keeps the frame until it is presented.
 	WW3D::End_Render(false);
 	m_rendering = false;
@@ -171,5 +149,7 @@ void RenderingTest::capture(const char *imageName)
 	}
 	copy->Unlock();
 	REF_PTR_RELEASE(copy);
-	EXPECT_NE(stbi_write_png(imageName, Width, Height, 3, rgb.data(), Width * 3), 0) << imageName;
+	EXPECT_NE(stbi_write_png(imageName.c_str(), Width, Height, 3, rgb.data(), Width * 3), 0) << imageName;
+	ASSERT_EQ(WW3D::Begin_Render(true, true, Vector3(0.0f, 0.0f, 0.0f)), WW3D_ERROR_OK);
+	m_rendering = true;
 }

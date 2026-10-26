@@ -17,19 +17,41 @@
 */
 
 #include "RenderingTestFixture.h"
+#include "WW3D2/render2d.h"
 
 // A triangle with a red, a green and a white corner blends the corner colors across its area.
 TEST_F(RenderingTest, Triangle)
 {
 	const DWORD background = 0x102030;
 	clear(background);
-	drawTriangles({
-		{128.0f, 32.0f, 0xff0000},
-		{224.0f, 224.0f, 0x00ff00},
-		{32.0f, 224.0f, 0xffffff},
-	});
-	capture("triangle.png");
+	Render2DClass renderer;
+	renderer.Set_Coordinate_Range(RectClass(0.0f, 0.0f, Width, Height));
+	renderer.Enable_Texturing(false);
+	// Draws the triangle whichever way round its corners go.
+	renderer.Get_Shader()->Set_Cull_Mode(ShaderClass::CULL_MODE_DISABLE);
+	const Vector2 uv(0.0f, 0.0f);
+	renderer.Add_Tri(Vector2(128.0f, 32.0f), Vector2(224.0f, 224.0f), Vector2(32.0f, 224.0f), uv, uv, uv);
+	// Add_Tri gives all corners one color. The color array is a DynamicVectorClass in Zero Hour and a
+	// SimpleDynVecClass in Generals.
+	auto &colors = renderer.Get_Color_Array();
+	colors[0] = 0xFFFF0000;
+	colors[1] = 0xFF00FF00;
+	colors[2] = 0xFFFFFFFF;
+	renderer.Render();
+	capture();
 	// GPUs round the blended colors differently, so the exact colors are left to the image comparison of CI.
+	EXPECT_EQ(pixel(8, 8), background);
+	EXPECT_NE(pixel(128, 160), background);
+
+	// A smaller triangle in a second image, which shows a test that captures more than one image.
+	clear(background);
+	renderer.Reset();
+	renderer.Add_Tri(Vector2(128.0f, 96.0f), Vector2(176.0f, 192.0f), Vector2(80.0f, 192.0f), uv, uv, uv);
+	colors[0] = 0xFFFF0000;
+	colors[1] = 0xFF00FF00;
+	colors[2] = 0xFFFFFFFF;
+	renderer.Render();
+	capture();
 	EXPECT_EQ(pixel(8, 8), background);
 	EXPECT_NE(pixel(128, 160), background);
 }

@@ -40,28 +40,19 @@ protected:
 	static constexpr UINT Width = 256;
 	static constexpr UINT Height = 256;
 
-	// A position on the back buffer in pixels, and its color as 0xRRGGBB.
-	struct Vertex
-	{
-		float x, y;
-		DWORD color;
-	};
-
 	static void SetUpTestSuite();
 	static void TearDownTestSuite();
 	virtual void SetUp() override;
 	virtual void TearDown() override;
 
 	static void clear(DWORD color);
-	// Draws a triangle list and blends the vertex colors across each triangle.
-	static void drawTriangles(std::initializer_list<Vertex> vertices);
 	// Renders the objects as a scene seen through s_camera.
 	static void render(std::initializer_list<RenderObjClass *> objects);
 	// Creates a texture whose texels get the 0xAARRGGBB colors that color(x, y) returns.
 	static TextureClass *createTexture(UINT width, UINT height, const std::function<DWORD(UINT x, UINT y)> &color);
-	// Ends the frame without presenting it, saves the back buffer as a PNG for the CI report and keeps its pixels
-	// for pixel().
-	void capture(const char *imageName);
+	// Ends the frame without presenting it, saves the back buffer for the CI report as <test name>_<n>.png, where n
+	// counts the captures of the test, and keeps its pixels for pixel(). Then starts the next frame, black again.
+	void capture();
 	// The color of a captured pixel as 0xRRGGBB.
 	DWORD pixel(UINT x, UINT y) const { return m_pixels[y * Width + x]; }
 
@@ -70,6 +61,7 @@ protected:
 
 private:
 	std::vector<DWORD> m_pixels = std::vector<DWORD>(Width * Height);
+	int m_captures = 0;
 	bool m_rendering = false;
 	static HWND s_window;
 };

@@ -52,7 +52,7 @@ TEST_F(RenderingTest, Laser)
 	REF_PTR_RELEASE(blue);
 	REF_PTR_RELEASE(glow);
 
-	capture("laser.png");
+	capture();
 	EXPECT_EQ(pixel(8, 8), 0x000000);
 	EXPECT_NE(pixel(Width / 2, Height / 2), 0x000000);
 }

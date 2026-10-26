@@ -34,7 +34,7 @@ TEST_F(RenderingTest, Render2DShapes)
 	renderer.Add_Quad_HGradient(RectClass(16.0f, 208.0f, 240.0f, 240.0f), 0xFFFF0000, 0xFF0000FF);
 	renderer.Render();
 
-	capture("render2d_shapes.png");
+	capture();
 	// The fill and the border of the rectangle, and the inside and the edge of the outline.
 	EXPECT_EQ(pixel(64, 64), 0x2040C0);
 	EXPECT_EQ(pixel(17, 64), 0xFFFFFF);

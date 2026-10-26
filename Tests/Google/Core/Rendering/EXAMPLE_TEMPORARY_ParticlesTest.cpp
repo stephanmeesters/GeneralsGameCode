@@ -70,7 +70,7 @@ TEST_F(RenderingTest, Particles)
 	REF_PTR_RELEASE(sizes);
 	REF_PTR_RELEASE(puff);
 
-	capture("particles.png");
+	capture();
 	EXPECT_EQ(pixel(8, 8), 0x000000);
 	EXPECT_NE(pixel(Width / 2, Height / 2), 0x000000);
 }

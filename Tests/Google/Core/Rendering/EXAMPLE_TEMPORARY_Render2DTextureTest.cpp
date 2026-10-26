@@ -52,7 +52,7 @@ TEST_F(RenderingTest, Render2DTexture)
 	REF_PTR_RELEASE(sharp);
 	REF_PTR_RELEASE(smooth);
 
-	capture("render2d_texture.png");
+	capture();
 	// Each texel covers 12 by 12 pixels. These are the centers of texel (5, 5), which is red, and texel (1, 1),
 	// which is transparent.
 	EXPECT_EQ(pixel(16 + 5 * 12 + 6, 64 + 5 * 12 + 6), 0xC02020);
