@@ -30,7 +30,7 @@ TEST_F(RenderingTest, Tracer)
 	REF_PTR_RELEASE(solid);
 	REF_PTR_RELEASE(faded);
 
-	capture("tracer.png");
+	capture();
 	EXPECT_EQ(pixel(8, 8), 0x000000);
 	EXPECT_NE(pixel(Width / 2, Height / 2), 0x000000);
 }

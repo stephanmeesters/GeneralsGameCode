@@ -23,7 +23,7 @@ TEST_F(RenderingTest, Clear)
 {
 	const DWORD color = 0x102030;
 	clear(color);
-	capture("clear.png");
+	capture();
 	EXPECT_EQ(pixel(0, 0), color);
 	EXPECT_EQ(pixel(Width - 1, Height - 1), color);
 }

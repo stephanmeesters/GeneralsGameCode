@@ -38,7 +38,7 @@ TEST_F(RenderingTest, Triangle)
 	colors[1] = 0xFF00FF00;
 	colors[2] = 0xFF0000FF;
 	renderer.Render();
-	capture("triangle.png");
+	capture();
 	// GPUs round the blended colors differently, so the exact colors are left to the image comparison of CI.
 	EXPECT_EQ(pixel(8, 8), background);
 	EXPECT_NE(pixel(128, 160), background);

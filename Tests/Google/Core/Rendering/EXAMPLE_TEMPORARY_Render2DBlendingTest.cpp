@@ -47,7 +47,7 @@ TEST_F(RenderingTest, Render2DBlending)
 	renderer.Add_Quad(RectClass(144.0f, 16.0f, 240.0f, 240.0f), 0xFF4080FF);
 	renderer.Render();
 
-	capture("render2d_blending.png");
+	capture();
 	// The exact blended colors depend on how the GPU rounds, so they are left to the image comparison of CI.
 	EXPECT_EQ(pixel(8, 8), background);
 	EXPECT_NE(pixel(48, 128), background);

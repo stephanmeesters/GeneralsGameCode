@@ -42,7 +42,7 @@ TEST_F(RenderingTest, Text)
 	sentence.Render();
 	const Vector2 extents = sentence.Get_Text_Extents(text);
 
-	capture("text.png");
+	capture();
 	EXPECT_GT(extents.X, 100.0f);
 	// GDI and its fonts differ between systems, so only some text color is expected in the middle row of the text.
 	bool found = false;

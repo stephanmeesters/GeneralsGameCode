@@ -50,9 +50,9 @@ protected:
 	static void render(std::initializer_list<RenderObjClass *> objects);
 	// Creates a texture whose texels get the 0xAARRGGBB colors that color(x, y) returns.
 	static TextureClass *createTexture(UINT width, UINT height, const std::function<DWORD(UINT x, UINT y)> &color);
-	// Ends the frame without presenting it, saves the back buffer as a PNG for the CI report and keeps its pixels
-	// for pixel().
-	void capture(const char *imageName);
+	// Ends the frame without presenting it, saves the back buffer for the CI report as <test name>_<n>.png, where n
+	// counts the captures of the test, and keeps its pixels for pixel(). Then starts the next frame, black again.
+	void capture();
 	// The color of a captured pixel as 0xRRGGBB.
 	DWORD pixel(UINT x, UINT y) const { return m_pixels[y * Width + x]; }
 
@@ -61,6 +61,7 @@ protected:
 
 private:
 	std::vector<DWORD> m_pixels = std::vector<DWORD>(Width * Height);
+	int m_captures = 0;
 	bool m_rendering = false;
 	static HWND s_window;
 };

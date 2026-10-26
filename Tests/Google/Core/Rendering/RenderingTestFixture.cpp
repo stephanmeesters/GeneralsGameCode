@@ -17,6 +17,7 @@
 */
 
 #include "RenderingTestFixture.h"
+#include <string>
 #include <stb_image_write.h>
 
 #include "WW3D2/Renderer.h"
@@ -117,9 +118,10 @@ TextureClass *RenderingTest::createTexture(UINT width, UINT height, const std::f
 }
 
 // The one DX8 specific part. Renderer has no way to read the back buffer yet.
-void RenderingTest::capture(const char *imageName)
+void RenderingTest::capture()
 {
 	ASSERT_TRUE(m_rendering);
+	const std::string imageName = std::string(::testing::UnitTest::GetInstance()->current_test_info()->name()) + "_" + std::to_string(m_captures++) + ".png";
 	// The back buffer keeps the frame until it is presented.
 	WW3D::End_Render(false);
 	m_rendering = false;
@@ -147,5 +149,7 @@ void RenderingTest::capture(const char *imageName)
 	}
 	copy->Unlock();
 	REF_PTR_RELEASE(copy);
-	EXPECT_NE(stbi_write_png(imageName, Width, Height, 3, rgb.data(), Width * 3), 0) << imageName;
+	EXPECT_NE(stbi_write_png(imageName.c_str(), Width, Height, 3, rgb.data(), Width * 3), 0) << imageName;
+	ASSERT_EQ(WW3D::Begin_Render(true, true, Vector3(0.0f, 0.0f, 0.0f)), WW3D_ERROR_OK);
+	m_rendering = true;
 }
