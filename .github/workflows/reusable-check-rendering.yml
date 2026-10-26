@@ -31,9 +31,6 @@ jobs:
       VULKAN_RUNTIME_VERSION: 1.4.363.0
       VULKAN_RUNTIME_SHA256: a25a927aa8b9f0371048f1861cf88ac3b9bc9b1fb332c42d897c8ab32695769a
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
       - name: Download MSVC Rendering Tests
         uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
